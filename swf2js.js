@@ -3696,7 +3696,7 @@ if (!("swf2js" in window)){(function(window)
 
         image.src = "data:image/jpeg;base64," +
             _this.base64encode(_this.parseJpegData(JPEGData));
-        
+
         // for android bug
         _setTimeout(function () {}, 0);
     };
@@ -9132,8 +9132,8 @@ if (!("swf2js" in window)){(function(window)
     {
         this.register[index] = stack.pop();
     };
-    
-    
+
+
         /**
      * @param stack
      */
@@ -9234,7 +9234,7 @@ if (!("swf2js" in window)){(function(window)
         var value = stack.pop();
         var prop = this.names[index];
         var obj = stack.pop();
-        
+
     };
 
     /**
@@ -18963,7 +18963,12 @@ if (!("swf2js" in window)){(function(window)
                         css = ctx.createRadialGradient(0, 0, 0, 0, 0, 16384);
                     } else {
                         var xy = _this.linearGradientXY(m);
-                        css = ctx.createLinearGradient(xy[0], xy[1], xy[2], xy[3]);
+                        if (!_isNaN(xy[0]) && !_isNaN(xy[1])) {
+                            css = ctx.createLinearGradient(xy[0], xy[1], xy[2], xy[3]);
+                        } else {
+                            // MAX: something better for hidden outside gradients?
+                            css = ctx.createLinearGradient(0, 0, 0, 0);
+                        }
                     }
 
                     var records = styleObj.gradient.GradientRecords;
@@ -20780,7 +20785,7 @@ if (!("swf2js" in window)){(function(window)
                 for (var idx = 0; idx < sLen; idx++) {
                     gridData.dx = gridData.startDx;
                     var txt = splits[idx];
-                    
+
                     if (wordWrap && multiline) {
                         if (gridData.txtTotalWidth > gridData.areaWidth) {
                             var txtLength = txt.length;
@@ -24664,7 +24669,7 @@ if (!("swf2js" in window)){(function(window)
         _this.FlashVars = {};
         _this.quality = "medium"; // low = 0.25, medium = 0.8, high = 1.0
         _this.bgcolor = null;
-        
+
         // event
         _this.mouse = new Mouse();
 
@@ -26429,7 +26434,7 @@ if (!("swf2js" in window)){(function(window)
                     canvas.style.cursor = "auto";
                 }
             }
-            
+
             if (touchObj) {
                 button = touchObj.button;
                 mc = touchObj.parent;
