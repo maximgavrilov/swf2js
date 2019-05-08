@@ -66,7 +66,7 @@ if (!("swf2js" in window)){(function(window)
     var xmlHttpRequest = new XMLHttpRequest();
     var isXHR2 = (typeof xmlHttpRequest.responseType !== "undefined");
     var isArrayBuffer = window.ArrayBuffer;
-    var quality = (isWebGL) ? 1 : 0.8;
+    var quality = 1; // (isWebGL) ? 1 : 0.8;
     var devicePixelRatio = window.devicePixelRatio || 1;
     var _devicePixelRatio = devicePixelRatio * quality;
     var _event = null;
@@ -1619,25 +1619,6 @@ if (!("swf2js" in window)){(function(window)
     };
 
     /**
-     * @param offset
-     * @returns {number}
-     */
-    BitIO.prototype.ReadU30 = function (offset)
-    {
-        var _this = this;
-        var value = 0;
-        var data = _this.data;
-        for (var i = 0; i < 5; i++) {
-            var num = data[offset++];
-            value |= ((num & 0x7f) << (7 * i));
-            if (!(num & 0x80)) {
-                break;
-            }
-        }
-        return value;
-    };
-
-    /**
      * @returns {string}
      */
     BitIO.prototype.AbcReadString = function ()
@@ -1645,7 +1626,7 @@ if (!("swf2js" in window)){(function(window)
         var _this = this;
         var offset = _this.byte_offset;
         var data = _this.data;
-        var length = _this.ReadU30(offset) + 1;
+        var length = _this.getU30();
         var ret = [];
         for (var i = 0; i < length; i++) {
             var code = data[_this.byte_offset++];
@@ -6260,7 +6241,7 @@ if (!("swf2js" in window)){(function(window)
                 tObj.name = ABCBitIO.getU30();
                 var tag = ABCBitIO.getUI8();
                 var kind = tag & 0x0f;
-                var attributes = (kind >> 4) & 0x0f;
+                var attributes = (tag >> 4) & 0x0f;
 
                 var data = {};
                 switch (kind) {
@@ -16755,8 +16736,8 @@ if (!("swf2js" in window)){(function(window)
             var height = _abs(_ceil((yMax - yMin) * yScale));
 
             var canvas = cacheStore.getCanvas();
-            canvas.width = width;
-            canvas.height = height;
+            canvas.width = width || 1;
+            canvas.height = height || 1;
             cache = canvas.getContext("2d");
             cache._offsetX = 0;
             cache._offsetY = 0;
