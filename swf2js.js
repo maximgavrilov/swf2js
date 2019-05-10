@@ -639,68 +639,68 @@ if (!("swf2js" in window)){(function(window)
     VectorToCanvas.prototype.toCanvas2D = function (cache)
     {
         var length = cache.length;
-        var str = "";
+        var str = [];
         var i = 0;
         while (i < length) {
             var a = cache[i];
             switch (a[0]) {
                 case 0:
-                    str += "ctx.moveTo(" + a[1] + "," + a[2] + ");";
+                    str.push("ctx.moveTo(" + a[1] + "," + a[2] + ");");
                     break;
                 case 1:
-                    str += "ctx.quadraticCurveTo(" + a[1] + "," + a[2] + "," + a[3] + "," + a[4] + ");";
+                    str.push("ctx.quadraticCurveTo(" + a[1] + "," + a[2] + "," + a[3] + "," + a[4] + ");");
                     break;
                 case 2:
-                    str += "ctx.lineTo(" + a[1] + "," + a[2] + ");";
+                    str.push("ctx.lineTo(" + a[1] + "," + a[2] + ");");
                     break;
                 case 3:
-                    str += "ctx.bezierCurveTo(" + a[1] + "," + a[2] + "," + a[3] + "," + a[4] + "," + a[5] + "," + a[6] + ");";
+                    str.push("ctx.bezierCurveTo(" + a[1] + "," + a[2] + "," + a[3] + "," + a[4] + "," + a[5] + "," + a[6] + ");");
                     break;
                 case 4:
-                    str += "ctx.moveTo(" + (a[1] + a[3]) + "," + a[2] + ");";
-                    str += "ctx.arc(" + a[1] + "," + a[2] + "," + a[3] + ",0 , Math.PI*2, false);";
+                    str.push("ctx.moveTo(" + (a[1] + a[3]) + "," + a[2] + ");");
+                    str.push("ctx.arc(" + a[1] + "," + a[2] + "," + a[3] + ",0 , Math.PI*2, false);");
                     break;
 
                 // Graphics
                 case 5: // fillStyle
-                    str += "var r = Math.max(0, Math.min(("+ a[1] +" * ct[0]) + ct[4], 255))|0;";
-                    str += "var g = Math.max(0, Math.min(("+ a[2] +" * ct[1]) + ct[5], 255))|0;";
-                    str += "var b = Math.max(0, Math.min(("+ a[3] +" * ct[2]) + ct[6], 255))|0;";
-                    str += "var a = Math.max(0, Math.min(("+ a[4] +" * 255 * ct[3]) + ct[7], 255)) / 255;";
-                    str += "ctx.fillStyle = 'rgba('+r+', '+g+', '+b+', '+a+')';";
+                    str.push("var r = Math.max(0, Math.min(("+ a[1] +" * ct[0]) + ct[4], 255))|0;");
+                    str.push("var g = Math.max(0, Math.min(("+ a[2] +" * ct[1]) + ct[5], 255))|0;");
+                    str.push("var b = Math.max(0, Math.min(("+ a[3] +" * ct[2]) + ct[6], 255))|0;");
+                    str.push("var a = Math.max(0, Math.min(("+ a[4] +" * 255 * ct[3]) + ct[7], 255)) / 255;");
+                    str.push("ctx.fillStyle = 'rgba('+r+', '+g+', '+b+', '+a+')';");
                     break;
                 case 6: // strokeStyle
-                    str += "var r = Math.max(0, Math.min(("+ a[1] +" * ct[0]) + ct[4], 255))|0;";
-                    str += "var g = Math.max(0, Math.min(("+ a[2] +" * ct[1]) + ct[5], 255))|0;";
-                    str += "var b = Math.max(0, Math.min(("+ a[3] +" * ct[2]) + ct[6], 255))|0;";
-                    str += "var a = Math.max(0, Math.min(("+ a[4] +" * 255 * ct[3]) + ct[7], 255)) / 255;";
-                    str += "ctx.strokeStyle = 'rgba('+r+', '+g+', '+b+', '+a+')';";
+                    str.push("var r = Math.max(0, Math.min(("+ a[1] +" * ct[0]) + ct[4], 255))|0;");
+                    str.push("var g = Math.max(0, Math.min(("+ a[2] +" * ct[1]) + ct[5], 255))|0;");
+                    str.push("var b = Math.max(0, Math.min(("+ a[3] +" * ct[2]) + ct[6], 255))|0;");
+                    str.push("var a = Math.max(0, Math.min(("+ a[4] +" * 255 * ct[3]) + ct[7], 255)) / 255;");
+                    str.push("ctx.strokeStyle = 'rgba('+r+', '+g+', '+b+', '+a+')';");
                     break;
                 case 7: // fill
-                    str += "if (!isClip) { ctx.fill(); }";
+                    str.push("if (!isClip) { ctx.fill(); }");
                     break;
                 case 8: // stroke
-                    str += "if (!isClip) { ctx.stroke(); }";
+                    str.push("if (!isClip) { ctx.stroke(); }");
                     break;
                 case 9: // width
-                    str += "ctx.lineWidth = "+ a[1] +";";
+                    str.push("ctx.lineWidth = "+ a[1] +";");
                     break;
                 case 10: // lineCap
-                    str += "ctx.lineCap = '"+ a[1] +"';";
+                    str.push("ctx.lineCap = '"+ a[1] +"';");
                     break;
                 case 11: // lineJoin
-                    str += "ctx.lineJoin = '"+ a[1] +"';";
+                    str.push("ctx.lineJoin = '"+ a[1] +"';");
                     break;
                 case 12: // miterLimit
-                    str += "ctx.lineJoin = '"+ a[1] +"';";
+                    str.push("ctx.lineJoin = '"+ a[1] +"';");
                     break;
                 case 13: // beginPath
-                    str += "ctx.beginPath();";
+                    str.push("ctx.beginPath();");
                     break;
             }
             i++;
         }
-        return new this.FUNCTION("ctx", "ct", "isClip", str);
+        return new this.FUNCTION("ctx", "ct", "isClip", str.join(''));
     };
 
     /**
@@ -2860,6 +2860,8 @@ if (!("swf2js" in window)){(function(window)
             case 81: // 81 (invalid)
             case 85: // 85 (invalid)
             case 92: // 92 (invalid)
+                console.log("ERROR TAG" + tagType);
+                break;
                 break;
             default: // null
                 break;
@@ -5490,6 +5492,7 @@ if (!("swf2js" in window)){(function(window)
         obj.tagType = tagType;
         obj.Flags = bitio.getUI32();
         obj.Name = bitio.getDataUntil("\0");
+
         var offset = length - (bitio.byte_offset - startOffset);
         var ABCData = bitio.getData(offset);
         var ABCBitIO = new BitIO();
@@ -5785,7 +5788,7 @@ if (!("swf2js" in window)){(function(window)
      */
     SwfTag.prototype.ABCInteger = function (ABCBitIO)
     {
-        var array = [];
+        var array = [ 0 ];
         var count = ABCBitIO.getU30();
         if (count) {
             for (var i = 1; i < count; i++) {
@@ -5801,7 +5804,7 @@ if (!("swf2js" in window)){(function(window)
      */
     SwfTag.prototype.ABCUinteger = function (ABCBitIO)
     {
-        var array = [];
+        var array = [ 0 ];
         var count = ABCBitIO.getU30();
         if (count) {
             for (var i = 1; i < count; i++) {
@@ -5817,7 +5820,7 @@ if (!("swf2js" in window)){(function(window)
      */
     SwfTag.prototype.ABCDouble = function (ABCBitIO)
     {
-        var array = [];
+        var array = [ 0 ];
         var count = ABCBitIO.getU30();
         if (count) {
             for (var i = 1; i < count; i++) {
@@ -5853,11 +5856,25 @@ if (!("swf2js" in window)){(function(window)
         var count = ABCBitIO.getU30();
         if (count) {
             for (var i = 1; i < count; i++) {
-                array[i] =
-                {
-                    kind: ABCBitIO.getUI8(),
-                    name: ABCBitIO.getU30()
-                };
+                var obj = {};
+                obj.kind = ABCBitIO.getUI8();
+                switch (obj.kind) {
+                    default:
+                        console.log("ERROR NS:" + kind);
+                        break;
+
+                    case 0x08: // CONSTANT_Namespace
+                    case 0x16: // CONSTANT_PackageNamespace
+                    case 0x17: // CONSTANT_PackageInternalNs
+                    case 0x18: // CONSTANT_ProtectedNamespace
+                    case 0x19: // CONSTANT_ExplicitNamespace
+                    case 0x1A: // CONSTANT_StaticProtectedNs
+                    case 0x05: // CONSTANT_PrivateNs
+                        break;
+                }
+                obj.name = ABCBitIO.getU30();
+
+                array[i] = obj;
             }
         }
         return array;
@@ -5878,6 +5895,9 @@ if (!("swf2js" in window)){(function(window)
                 if (nsCount) {
                     for (var j = 0; j < nsCount; j++) {
                         ns[j] = ABCBitIO.getU30();
+
+                        if (ns[j] === 0)
+                            console.log("ERROR ZERO NSSET");
                     }
                 }
                 array[i] = ns;
@@ -5899,6 +5919,10 @@ if (!("swf2js" in window)){(function(window)
                 var obj = {};
                 obj.kind = ABCBitIO.getUI8();
                 switch (obj.kind) {
+                    default:
+                        console.log("ERROR MULTINAME:", obj.kind, array);
+                        break;
+
                     case 0x07: // QName
                     case 0x0D: // QNameA
                         obj.ns = ABCBitIO.getU30();
@@ -5912,13 +5936,22 @@ if (!("swf2js" in window)){(function(window)
                     case 0x0E: // MultinameA
                         obj.name = ABCBitIO.getU30();
                         obj.ns_set = ABCBitIO.getU30();
+                        if (obj.ns_set === 0)
+                            console.log("ERROR ZERO NS_SET");
                         break;
                     case 0x1B: // MultinameL
                     case 0x1C: // MultinameLA
                         obj.ns_set = ABCBitIO.getU30();
+                        if (obj.ns_set === 0)
+                            console.log("ERROR ZERO NS_SET");
                         break;
                     case 0x11: // RTQNameL
                     case 0x12: // RTQNameLA
+                        break;
+                    case 0x1D: // Postfix
+                        obj.param1 = ABCBitIO.getU30(); // multiname
+                        obj.param2 = ABCBitIO.getU30(); // counter?
+                        obj.param3 = ABCBitIO.getU30(); // multiname
                         break;
                 }
                 array[i] = obj;
@@ -5951,7 +5984,7 @@ if (!("swf2js" in window)){(function(window)
         obj.flags = ABCBitIO.getUI8();
 
         obj.options = [];
-        if (obj.flags === 0x08) {
+        if (obj.flags & 0x08) {
             var options = [];
             var optionCount = ABCBitIO.getU30();
             if (optionCount) {
@@ -5966,7 +5999,7 @@ if (!("swf2js" in window)){(function(window)
         }
 
         obj.paramName = [];
-        if (obj.flags === 0x80) {
+        if (obj.flags & 0x80) {
             var paramName = [];
             if (count) {
                 for (i = 0; i < count; i++) {
@@ -6246,7 +6279,7 @@ if (!("swf2js" in window)){(function(window)
                 var data = {};
                 switch (kind) {
                     default:
-                        console.log("ERROR:"+ kind);
+                        console.log("ERROR TRAIT:"+ kind);
                         break;
                     case 0: // Trait_Slot
                     case 6: // Trait_Const
@@ -18787,6 +18820,7 @@ if (!("swf2js" in window)){(function(window)
 
             cacheKey = cacheStore.generateKey("Shape", cacheId, [xScale, yScale], rColorTransform);
             cache = cacheStore.getCache(cacheKey);
+
             if (!cache &&
                 stage.getWidth() > W &&
                 stage.getHeight() > H &&
@@ -26984,6 +27018,8 @@ if (!("swf2js" in window)){(function(window)
                         case 304:
                             var data = (isXHR2) ? xmlHttpRequest.response : xmlHttpRequest.responseText;
                             stage.parse(data, url);
+                            console.log('parsed');
+
                             cacheStore.reset();
                             break;
                         default :
