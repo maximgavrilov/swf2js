@@ -638,6 +638,83 @@ if (!("swf2js" in window)){(function(window)
      */
     VectorToCanvas.prototype.toCanvas2D = function (cache)
     {
+        var _this = this;
+        return function (ctx, ct, isClip) {
+            _this.executeCanvas2D(cache, ctx, ct, isClip);
+        };
+    };
+
+    VectorToCanvas.prototype.executeCanvas2D = function (cache, ctx, ct, isClip)
+    {
+        var length = cache.length;
+        var i = 0;
+        while (i < length) {
+            var a = cache[i];
+            switch (a[0]) {
+                case 0:
+                    ctx.moveTo(a[1], a[2]);
+                    break;
+                case 1:
+                    ctx.quadraticCurveTo(a[1], a[2], a[3], a[4]);
+                    break;
+                case 2:
+                    ctx.lineTo(a[1], a[2]);
+                    break;
+                case 3:
+                    ctx.bezierCurveTo(a[1], a[2], a[3], a[4], a[5], a[6]);
+                    break;
+                case 4:
+                    ctx.moveTo((a[1] + a[3]), a[2]);
+                    ctx.arc(a[1], a[2], a[3], 0, Math.PI*2, false);
+                    break;
+
+                // Graphics
+                case 5: // fillStyle
+                    var r = Math.max(0, Math.min((a[1] * ct[0]) + ct[4], 255))|0;
+                    var g = Math.max(0, Math.min((a[2] * ct[1]) + ct[5], 255))|0;
+                    var b = Math.max(0, Math.min((a[3] * ct[2]) + ct[6], 255))|0;
+                    var a = Math.max(0, Math.min((a[4] * 255 * ct[3]) + ct[7], 255)) / 255;
+                    ctx.fillStyle = 'rgba('+r+', '+g+', '+b+', '+a+')';
+                    break;
+                case 6: // strokeStyle
+                    var r = Math.max(0, Math.min((a[1] * ct[0]) + ct[4], 255))|0;
+                    var g = Math.max(0, Math.min((a[2] * ct[1]) + ct[5], 255))|0;
+                    var b = Math.max(0, Math.min((a[3] * ct[2]) + ct[6], 255))|0;
+                    var a = Math.max(0, Math.min((a[4] * 255 * ct[3]) + ct[7], 255)) / 255;
+                    ctx.strokeStyle = 'rgba('+r+', '+g+', '+b+', '+a+')';
+                    break;
+                case 7: // fill
+                    if (!isClip) { ctx.fill(); }
+                    break;
+                case 8: // stroke
+                    if (!isClip) { ctx.stroke(); }
+                    break;
+                case 9: // width
+                    ctx.lineWidth = a[1];
+                    break;
+                case 10: // lineCap
+                    ctx.lineCap = '' + a[1];
+                    break;
+                case 11: // lineJoin
+                    ctx.lineJoin = '' + a[1];
+                    break;
+                case 12: // miterLimit
+                    ctx.lineJoin = '' + a[1];
+                    break;
+                case 13: // beginPath
+                    ctx.beginPath();
+                    break;
+            }
+            i++;
+        }
+    };
+
+    /**
+     * @param cache
+     * @returns {*}
+     */
+    VectorToCanvas.prototype.toCanvas2D_compiled = function (cache)
+    {
         var length = cache.length;
         var str = [];
         var i = 0;
@@ -27017,8 +27094,9 @@ if (!("swf2js" in window)){(function(window)
                         case 200:
                         case 304:
                             var data = (isXHR2) ? xmlHttpRequest.response : xmlHttpRequest.responseText;
+                            console.time('parse');
                             stage.parse(data, url);
-                            console.log('parsed');
+                            console.timeEnd('parse');
 
                             cacheStore.reset();
                             break;
