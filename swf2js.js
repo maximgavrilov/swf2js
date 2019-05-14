@@ -233,30 +233,31 @@ if (!("swf2js" in window)){(function(window)
      */
     VectorToCanvas.prototype.clone = function (src)
     {
-        var execute = function (src, obj)
-        {
-            var prop;
-            for (prop in src) {
-                if (!src.hasOwnProperty(prop)) {
-                    continue;
-                }
-                var value = src[prop];
-                if (value instanceof Array) {
-                    obj[prop] = [];
-                    execute(value, obj[prop]);
-                } else if (value instanceof Object) {
-                    obj[prop] = {};
-                    execute(value, obj[prop]);
-                } else {
-                    obj[prop] = value;
-                }
-            }
-        };
-
         var obj = {};
-        execute(src, obj);
+        this.cloneDeep(src, obj);
         return obj;
     };
+
+    VectorToCanvas.prototype.cloneDeep = function (src, obj)
+    {
+        var prop;
+        for (prop in src) {
+            if (!src.hasOwnProperty(prop)) {
+                continue;
+            }
+            var value = src[prop];
+            if (value instanceof Array) {
+                obj[prop] = [];
+                this.cloneDeep(value, obj[prop]);
+            } else if (value instanceof Object) {
+                obj[prop] = {};
+                this.cloneDeep(value, obj[prop]);
+            } else {
+                obj[prop] = value;
+            }
+        }
+    };
+
 
     /**
      * @param shapes
@@ -6208,12 +6209,13 @@ if (!("swf2js" in window)){(function(window)
     SwfTag.prototype.ABCBuildCode = function (ABCBitIO, count)
     {
         var array = [];
-        var cacheOffset;
-        for (var i = 0; i < count; i++) {
+        var i = 0;
+        while (i < count) {
             var obj = {};
-            var offset = 0;
 
+            var cacheOffset = ABCBitIO.byte_offset;
             var code = ABCBitIO.getUI8();
+
             obj.code = code;
             switch (code) {
                 default:
@@ -6338,31 +6340,25 @@ if (!("swf2js" in window)){(function(window)
                 case 0x61: // setproperty
                 case 0x6d: // setslot
                 case 0x05: // setsuper
-                    cacheOffset = ABCBitIO.byte_offset;
                     obj.value1 = ABCBitIO.getU30();
-                    offset += (ABCBitIO.byte_offset - cacheOffset);
                     break;
 
                 case 0x1b: // lookupswitch
-                    cacheOffset = ABCBitIO.byte_offset;
                     obj.offset = ABCBitIO.getSI24();
                     obj.count = ABCBitIO.getU30();
                     obj.array = [];
                     for (var j = 0; j <= obj.count; j++)
                         obj.array[j] = ABCBitIO.getSI24();
-                    offset += (ABCBitIO.byte_offset - cacheOffset);
                     break;
 
                 case 0x65: // getscopeobject
                 case 0x24: // pushbyte
                     obj.value1 = ABCBitIO.getUI8();
-                    offset += 1;
                     break;
 
                 case 0x32: // hasnext2
                     obj.value1 = ABCBitIO.getSI8();
                     obj.value2 = ABCBitIO.getSI8();
-                    offset += 2;
                     break;
 
                 case 0x13: // ifeq
@@ -6381,7 +6377,6 @@ if (!("swf2js" in window)){(function(window)
                 case 0x11: // iftrue
                 case 0x10: // jump
                     obj.value1 = ABCBitIO.getSI24();
-                    offset += 3;
                     break;
 
                 case 0x43: // callmethod
@@ -6392,27 +6387,27 @@ if (!("swf2js" in window)){(function(window)
                 case 0x45: // callsuper
                 case 0x4e: // callsupervoid
                 case 0x4a: // constructprop
-                    cacheOffset = ABCBitIO.byte_offset;
                     obj.value1 = ABCBitIO.getU30();
                     obj.value2 = ABCBitIO.getU30();
-                    offset += (ABCBitIO.byte_offset - cacheOffset);
                     break;
 
                 case 0xef: // debug
-                    cacheOffset = ABCBitIO.byte_offset;
                     obj.type = ABCBitIO.getUI8();
                     obj.index = ABCBitIO.getU30();
                     obj.reg = ABCBitIO.getUI8();
                     obj.extra = ABCBitIO.getU30();
-                    offset += (ABCBitIO.byte_offset - cacheOffset);
                     break;
             }
 
-            obj.offset = offset;
-            array.push(obj);
+            obj.len = ABCBitIO.byte_offset - cacheOffset;
+            array[i] = obj;
 
-            i += offset;
+            i += obj.len;
         }
+
+        if (i !== count)
+            console.log("ERROR ABC OVERFLOW");
+
         return array;
     };
 
@@ -7198,9 +7193,18 @@ if (!("swf2js" in window)){(function(window)
 
         _this.setOptions();
 
-        while(i < length) {
+        while (true) {
+            if (i >= codes.length)
+                throw new Error('No return');
+
             var obj = codes[i];
+            var offset = obj.len;
+
             switch (obj.code) {
+                default:
+                    console.log("ERROR WRONG CODE:", obj);
+                    break;
+
                 case 0xa0:
                     _this.ActionAdd(stack);
                     break;
@@ -7394,56 +7398,43 @@ if (!("swf2js" in window)){(function(window)
                     _this.ActionHasNext2(stack, obj.value1, obj.value2);
                     break;
                 case 0x12:
-                    offset = _this.ActionIfFalse(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfFalse(stack, obj.value1);
                     break;
                 case 0x18:
-                    offset = _this.ActionIfGe(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfGe(stack, obj.value1);
                     break;
                 case 0x17:
-                    offset = _this.ActionIfGt(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfGt(stack, obj.value1);
                     break;
                 case 0x16:
-                    offset = _this.ActionIfLe(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfLe(stack, obj.value1);
                     break;
                 case 0x15:
-                    offset = _this.ActionIfLt(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfLt(stack, obj.value1);
                     break;
                 case 0x0f:
-                    offset = _this.ActionIfNge(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfNge(stack, obj.value1);
                     break;
                 case 0x0e:
-                    offset = _this.ActionIfNgt(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfNgt(stack, obj.value1);
                     break;
                 case 0x0d:
-                    offset = _this.ActionIfNle(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfNle(stack, obj.value1);
                     break;
                 case 0x0c:
-                    offset = _this.ActionIfNlt(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfNlt(stack, obj.value1);
                     break;
                 case 0x14:
-                    offset = _this.ActionIfNe(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfNe(stack, obj.value1);
                     break;
                 case 0x19:
-                    offset = _this.ActionIfStrictEq(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfStrictEq(stack, obj.value1);
                     break;
                 case 0x1a:
-                    offset = _this.ActionIfStrictNe(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfStrictNe(stack, obj.value1);
                     break;
                 case 0x11:
-                    offset = _this.ActionIfTrue(stack, obj.value1);
-                    i += offset;
+                    offset += _this.ActionIfTrue(stack, obj.value1);
                     break;
                 case 0xb4:
                     _this.ActionIn(stack, obj.value1);
@@ -7474,7 +7465,6 @@ if (!("swf2js" in window)){(function(window)
                     break;
                 case 0x10: // ActionJump
                     offset = obj.value1;
-                    i += offset;
                     break;
                 case 0x08:
                     _this.ActionKill(stack, obj.value1);
@@ -7644,8 +7634,7 @@ if (!("swf2js" in window)){(function(window)
                     break;
             }
 
-            i += obj.offset;
-            i += 1;
+            i += offset;
         }
     };
 
@@ -7776,10 +7765,9 @@ if (!("swf2js" in window)){(function(window)
     ActionScript3.prototype.ActionCallProperty = function (stack, index, argCount)
     {
         var _this = this;
-        var params = [];
-        for (var i = argCount; i--;) {
-            params[params.length] = stack.pop();
-        }
+        var params = new Array(argCount);
+        for (var i = argCount - 1; i >= 0; i--)
+            params[i] = stack.pop();
         var prop = _this.names[index];
         var obj = stack.pop();
 
@@ -8691,7 +8679,7 @@ if (!("swf2js" in window)){(function(window)
     {
         var value2 = stack.pop();
         var value1 = stack.pop();
-        return (value1 < value2) ? index : 0;
+        return (value1 < value2) ? 0 : index;
     };
 
     /**
@@ -8703,7 +8691,7 @@ if (!("swf2js" in window)){(function(window)
     {
         var value2 = stack.pop();
         var value1 = stack.pop();
-        return (value1 > value2) ? index : 0;
+        return (value2 < value1) ? index : 0;
     };
 
     /**
@@ -8715,7 +8703,7 @@ if (!("swf2js" in window)){(function(window)
     {
         var value2 = stack.pop();
         var value1 = stack.pop();
-        return (value2 < value1) ? index : 0;
+        return (value2 < value1) ? 0 : index;
     };
 
     /**
@@ -8751,7 +8739,7 @@ if (!("swf2js" in window)){(function(window)
     {
         var value2 = stack.pop();
         var value1 = stack.pop();
-        return (value2 < value1) ? index : 0;
+        return (value2 < value1) ? 0 : index;
     };
 
     /**
@@ -8775,7 +8763,7 @@ if (!("swf2js" in window)){(function(window)
     {
         var value2 = stack.pop();
         var value1 = stack.pop();
-        return (value1 < value2) ? index : 0;
+        return (value1 < value2) ? 0 : index;
     };
 
     /**
