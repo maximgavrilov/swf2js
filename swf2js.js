@@ -5600,6 +5600,9 @@ if (!("swf2js" in window)){(function(window)
         // multiname_info;
         obj.multiname_info = _this.ABCMultiNameInfo(ABCBitIO);
 
+        // build names
+        obj = _this.ABCMultinameToString(obj);
+
         var i = 0;
 
         // method_info
@@ -5665,9 +5668,6 @@ if (!("swf2js" in window)){(function(window)
             }
             obj.methodBody = methodBody;
         }
-
-        // build names
-        obj = _this.ABCMultinameToString(obj);
 
         // build instance
         _this.ABCBuildInstance(obj);
@@ -6216,6 +6216,86 @@ if (!("swf2js" in window)){(function(window)
             var code = ABCBitIO.getUI8();
             obj.code = code;
             switch (code) {
+                default:
+                    console.log('ERROR CODE: 0x' + (code && code.toString(16)));
+                    break;
+
+                case 0x02: // nop
+                case 0x03: // throw
+                case 0x09: // label
+                case 0x1c: // pushwith
+                case 0x1d: // popscope
+                case 0x1e: // nextname
+                case 0x1f: // hasnext
+                case 0x20: // pushnull
+                case 0x21: // pushundefined
+                case 0x23: // nextvalue
+                case 0x26: // pushtrue
+                case 0x27: // pushfalse
+                case 0x28: // pushnan
+                case 0x29: // pop
+                case 0x2a: // dup
+                case 0x2b: // swap
+                case 0x30: // pushscope
+                case 0x47: // returnvoid
+                case 0x48: // returnvalue
+                case 0x57: // newactivation
+                case 0x64: // getglobalscope
+                case 0x70: // convert_s
+                case 0x71: // esc_xelem
+                case 0x72: // esc_xattr
+                case 0x73: // convert_i
+                case 0x74: // convert_u
+                case 0x75: // convert_d
+                case 0x76: // convert_b
+                case 0x77: // convert_o
+                case 0x78: // checkfilter
+                case 0x82: // coerce_a
+                case 0x85: // coerce_s
+                case 0x87: // astypelate
+                case 0x90: // negate
+                case 0x91: // increment
+                case 0x93: // decrement
+                case 0x95: // typeof
+                case 0x96: // not
+                case 0x97: // bitnot
+                case 0xa0: // add
+                case 0xa1: // subtract
+                case 0xa2: // multiply
+                case 0xa3: // divide
+                case 0xa4: // modulo
+                case 0xa5: // lshift
+                case 0xa6: // rshift
+                case 0xa7: // urshift
+                case 0xa8: // bitand
+                case 0xa9: // bitor
+                case 0xaa: // bitxor
+                case 0xab: // equals
+                case 0xac: // strictequals
+                case 0xad: // lessthan
+                case 0xae: // lessequals
+                case 0xaf: // greaterthan
+                case 0xb0: // greaterequals
+                case 0xb1: // instanceof
+                case 0xb2: // istype
+                case 0xb3: // istypelate
+                case 0xb4: // in
+                case 0xc0: // increment_i
+                case 0xc1: // decrement_i
+                case 0xc4: // negate_i
+                case 0xc5: // add_i
+                case 0xc6: // subtract_i
+                case 0xc7: // multiply_i
+                case 0xd0: // getlocal_0
+                case 0xd1: // getlocal_1
+                case 0xd2: // getlocal_2
+                case 0xd3: // getlocal_3
+                case 0xd4: // setlocal_0
+                case 0xd5: // setlocal_1
+                case 0xd6: // setlocal_2
+                case 0xd7: // setlocal_3
+                    break;
+
                 case 0x86: // astype
                 case 0x41: // call
                 case 0x80: // coerce
@@ -6227,6 +6307,7 @@ if (!("swf2js" in window)){(function(window)
                 case 0xc3: // declocal_i
                 case 0x6a: // deleteproperty
                 case 0x06: // dxns
+                case 0x53: // applytype
                 case 0x5e: // findproperty
                 case 0x5d: // findpropstrict
                 case 0x59: // getdescendants
@@ -6261,25 +6342,29 @@ if (!("swf2js" in window)){(function(window)
                     obj.value1 = ABCBitIO.getU30();
                     offset += (ABCBitIO.byte_offset - cacheOffset);
                     break;
+
                 case 0x1b: // lookupswitch
-                    obj.value1 = ABCBitIO.getSI24();
-                    offset += 3;
                     cacheOffset = ABCBitIO.byte_offset;
-                    obj.value2 = ABCBitIO.getSI24();
+                    obj.offset = ABCBitIO.getSI24();
+                    obj.count = ABCBitIO.getU30();
+                    obj.array = [];
+                    for (var j = 0; j <= obj.count; j++)
+                        obj.array[j] = ABCBitIO.getSI24();
                     offset += (ABCBitIO.byte_offset - cacheOffset);
-                    obj.value3 = ABCBitIO.getSI24();
-                    offset += 3;
                     break;
+
                 case 0x65: // getscopeobject
                 case 0x24: // pushbyte
-                    obj.value1 = ABCBitIO.getSI8();
+                    obj.value1 = ABCBitIO.getUI8();
                     offset += 1;
                     break;
+
                 case 0x32: // hasnext2
                     obj.value1 = ABCBitIO.getSI8();
                     obj.value2 = ABCBitIO.getSI8();
                     offset += 2;
                     break;
+
                 case 0x13: // ifeq
                 case 0x12: // iffalse
                 case 0x18: // ifge
@@ -6298,6 +6383,7 @@ if (!("swf2js" in window)){(function(window)
                     obj.value1 = ABCBitIO.getSI24();
                     offset += 3;
                     break;
+
                 case 0x43: // callmethod
                 case 0x46: // callproperty
                 case 0x4c: // callproplex
@@ -6306,16 +6392,24 @@ if (!("swf2js" in window)){(function(window)
                 case 0x45: // callsuper
                 case 0x4e: // callsupervoid
                 case 0x4a: // constructprop
-                case 0xef: // debug
                     cacheOffset = ABCBitIO.byte_offset;
                     obj.value1 = ABCBitIO.getU30();
                     obj.value2 = ABCBitIO.getU30();
                     offset += (ABCBitIO.byte_offset - cacheOffset);
                     break;
+
+                case 0xef: // debug
+                    cacheOffset = ABCBitIO.byte_offset;
+                    obj.type = ABCBitIO.getUI8();
+                    obj.index = ABCBitIO.getU30();
+                    obj.reg = ABCBitIO.getUI8();
+                    obj.extra = ABCBitIO.getU30();
+                    offset += (ABCBitIO.byte_offset - cacheOffset);
+                    break;
             }
 
             obj.offset = offset;
-            array[i] = obj;
+            array.push(obj);
 
             i += offset;
         }
@@ -7195,7 +7289,7 @@ if (!("swf2js" in window)){(function(window)
                     _this.ActionConvertS(stack);
                     break;
                 case 0xef:
-                    _this.ActionDebug(stack, obj.value1, obj.value2, obj.value3, obj.value4);
+                    _this.ActionDebug(stack, obj.type, obj.index, obj.reg, obj.extra);
                     break;
                 case 0xf1:
                     _this.ActionDebugFile(stack, obj.value1);
@@ -7238,6 +7332,9 @@ if (!("swf2js" in window)){(function(window)
                     break;
                 case 0x71:
                     _this.ActionEscXElem(stack);
+                    break;
+                case 0x53:
+                    _this.ActionApplyType(stack, obj.value1);
                     break;
                 case 0x5e:
                     _this.ActionFindProperty(stack, obj.value1);
@@ -7392,7 +7489,7 @@ if (!("swf2js" in window)){(function(window)
                     _this.ActionLessThan(stack);
                     break;
                 case 0x1b:
-                    _this.ActionLookupSwitch(stack, obj.value1, obj.value1, obj.value3);
+                    _this.ActionLookupSwitch(stack, obj.offset, obj.count, obj.array);
                     break;
                 case 0xa5:
                     _this.ActionLShift(stack);
@@ -8216,6 +8313,15 @@ if (!("swf2js" in window)){(function(window)
     {
         var value = stack.pop();
         stack[stack.length] = String(value);
+    };
+
+    /**
+     * @param stack
+     * @param index
+     */
+    ActionScript3.prototype.ActionApplyType = function (stack, argCount)
+    {
+        // TODO
     };
 
     /**
