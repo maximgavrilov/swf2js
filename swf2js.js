@@ -2740,6 +2740,9 @@ if (!("swf2js" in window)){(function(window)
         var stage = _this.stage;
 
         switch (tagType) {
+            default: // null
+                console.log('ERROR UNKNOWN TAG ' + tagType);
+                break;
             case 0: // End
                 break;
             case 1: // ShowFrame
@@ -2939,9 +2942,6 @@ if (!("swf2js" in window)){(function(window)
             case 85: // 85 (invalid)
             case 92: // 92 (invalid)
                 console.log("ERROR TAG" + tagType);
-                break;
-                break;
-            default: // null
                 break;
         }
 
@@ -3684,8 +3684,6 @@ if (!("swf2js" in window)){(function(window)
             }
             exportAssets[name] = id;
         }
-
-        stage.exportAssets = exportAssets;
     };
 
     /**
@@ -6501,11 +6499,14 @@ if (!("swf2js" in window)){(function(window)
         var bitio = this.bitio;
         var stage = this.stage;
         var symbols = stage.symbols;
+        var exportAssets = stage.exportAssets;
         var count = bitio.getUI16();
         if (count) {
             while (count--) {
                 var tagId = bitio.getUI16();
-                symbols[tagId] = bitio.getDataUntil("\0");
+                var name = bitio.getDataUntil("\0");
+                symbols[tagId] = name;
+                exportAssets[name] = tagId;
             }
         }
     };
@@ -24888,7 +24889,7 @@ if (!("swf2js" in window)){(function(window)
         _this._colorTransform = [1,1,1,1,0,0,0,0];
         _this.characters = [];
         _this.initActions = [];
-        _this.exportAssets = [];
+        _this.exportAssets = {};
         _this.packages = [];
         _this.registerClass = [];
         _this.buttonHits = [];
@@ -24932,7 +24933,7 @@ if (!("swf2js" in window)){(function(window)
         _this.align = "";
         _this.avm2 = new packages(_this);
         _this.abc = new packages(_this);
-        _this.symbols = [];
+        _this.symbols = {};
         _this.abcFlag = false;
 
         // render
@@ -27195,7 +27196,7 @@ if (!("swf2js" in window)){(function(window)
                             cacheStore.reset();
                             break;
                         default :
-                            alert(xmlHttpRequest.statusText);
+                            alert('http status: ' + status + ' ' + xmlHttpRequest.statusText);
                             break;
                     }
                 }
