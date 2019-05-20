@@ -1,0 +1,9 @@
+{
+    "compilerOptions": {
+        "forceConsistentCasingInFileNames": true,
+        "importHelpers": true,
+        "module": "commonjs",
+        "outDir": "../dist/",
+        "target": "es5"
+    }
+}
