@@ -10,7 +10,7 @@
 export class CacheStore {
     private store: { [key: string]: CanvasRenderingContext2D } = {};
     private pool: CanvasRenderingContext2D[] = [];
-    private size = 73400320; // 70M
+    private _size = 73400320; // 70M
 
     reset(): void {
         for (const key in this.store) {
@@ -26,7 +26,11 @@ export class CacheStore {
             this.destroy(value);
         }
         this.store = {};
-        this.size = 73400320;
+        this._size = 73400320;
+    }
+
+    get size(): number {
+        return this._size;
     }
 
     destroy(ctx: CanvasRenderingContext2D): void {
@@ -35,55 +39,35 @@ export class CacheStore {
         ctx.clearRect(0, 0, canvas.width + 1, canvas.height + 1);
         canvas.width = canvas.height = 1;
 
-        this.pool.push(canvas);
+        this.pool.push(ctx);
     }
 
-/**
- * @returns {*}
- */
-CacheStore.prototype.getCanvas = function ()
-{
-    return this.pool.pop() || _document.createElement("canvas");
-};
-
-/**
- * @param key
- * @returns {*}
- */
-CacheStore.prototype.getCache = function (key)
-{
-    return this.store[key];
-};
-
-/**
- * @param key
- * @param value
- */
-CacheStore.prototype.setCache = function (key, value)
-{
-    var _this = this;
-    if (value instanceof CanvasRenderingContext2D) {
-        var canvas = value.canvas;
-        _this.size -= (canvas.width * canvas.height);
+    getCanvas(): HTMLCanvasElement {
+        const ctx = this.pool.pop();
+        return ctx ? ctx.canvas : document.createElement('canvas');
     }
-    this.store[key] = value;
-};
 
-/**
- * @param name
- * @param id
- * @param matrix
- * @param cxForm
- * @returns {string}
- */
-CacheStore.prototype.generateKey = function (name, id, matrix, cxForm)
-{
-    var key = name + "_" + id;
-    if (matrix instanceof Array) {
-        key += "_" + matrix.join("_");
+    getCache(key: string): CanvasRenderingContext2D {
+        return this.store[key];
     }
-    if (cxForm instanceof Array) {
-        key += "_" + cxForm.join("_");
+
+    setCache(key: string, value: CanvasRenderingContext2D): void {
+        if (value instanceof CanvasRenderingContext2D) {
+            const canvas = value.canvas;
+            this._size -= (canvas.width * canvas.height);
+        }
+
+        this.store[key] = value;
     }
-    return key;
-};
+
+    generateKey(name: string, id: string, matrix: number[], cxForm: number[]): string {
+        let key = name + "_" + id;
+        if (matrix instanceof Array) {
+            key += "_" + matrix.join("_");
+        }
+        if (cxForm instanceof Array) {
+            key += "_" + cxForm.join("_");
+        }
+        return key;
+    }
+}

@@ -2709,6 +2709,9 @@ if (!("swf2js" in window)){(function(window)
 
             var o = bitio.byte_offset - tagDataStartOffset;
             if (o !== length) {
+                if (o > length)
+                    throw new Error('Tag overflow');
+
                 if (o < length) {
                     var eat = (length - o);
                     if (eat > 0) {
