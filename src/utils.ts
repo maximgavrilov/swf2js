@@ -7,7 +7,9 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
-export function cloneArray<T>(src: T[]): T[] {
+export function cloneArray<T>(src: T): T
+export function cloneArray<T>(src: T[]): T[]
+{
     const dst = new Array(src.length);
 
     for (let i = 0; i < src.length; i++)
@@ -30,6 +32,35 @@ export type BlendMode = 'normal'
                       | 'erase'
                       | 'overlay'
                       | 'hardlight';
+
+export type Color = {
+    R: number;
+    G: number;
+    B: number;
+    A: number;
+};
+
+export type ColorTransform = [
+    number, number, number, number,
+    number, number, number, number
+];
+
+export type Filter = any;
+
+export type FilterOperation = 'source-over'
+                     | 'source-in'
+                     | 'source-out'
+                     | 'copy'
+                     | 'source-atop'
+                     | 'destination-over';
+
+
+export type Matrix = [
+    number, number, number,
+    number, number, number
+];
+
+export type Stage = any;
 
 const BLEND_MODES: BlendMode[] = [
     'normal', 'layer', 'multiply', 'screen', 'lighten', 'darken', 'difference',

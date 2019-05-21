@@ -27,7 +27,7 @@ function cloneDeep(src: any, obj: any): void {
     }
 }
 
-export class VectorToCanvas {
+class VectorToCanvas {
     clone(src: any): any {
         const obj: any = {};
         cloneDeep(src, obj);
@@ -430,3 +430,4 @@ export class VectorToCanvas {
     }
 }
 
+export const vtc = new VectorToCanvas();

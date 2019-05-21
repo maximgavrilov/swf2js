@@ -7,11 +7,7 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
-import { BlendMode, cloneArray, getBlendName } from './utils';
-
-type Matrix = number[];
-type ColorTransform = number[];
-type Filter = any;
+import { BlendMode, ColorTransform, cloneArray, Filter, getBlendName, Matrix } from './utils';
 
 export class PlaceObject {
     private matrix: Matrix = cloneArray([1, 0, 0, 1, 0, 0]);

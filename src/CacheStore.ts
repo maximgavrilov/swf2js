@@ -7,7 +7,7 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
-export class CacheStore {
+class CacheStore {
     private store: { [key: string]: CanvasRenderingContext2D } = {};
     private pool: CanvasRenderingContext2D[] = [];
     private _size = 73400320; // 70M
@@ -71,3 +71,6 @@ export class CacheStore {
         return key;
     }
 }
+
+export const cacheStore = new CacheStore();
+
