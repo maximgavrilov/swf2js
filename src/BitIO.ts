@@ -11,7 +11,7 @@ import { JCT11280 } from './JCT11280';
 
 const isArrayBuffer: boolean = (window as any).ArrayBuffer;
 
-interface Data {
+export interface Data {
     readonly length: number;
     [index: number]: number; // uint8
 }
