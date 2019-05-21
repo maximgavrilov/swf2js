@@ -8,8 +8,10 @@
  */
 
 import { cacheStore } from './CacheStore';
-import { Color, ColorTransform, FilterOperation, Matrix, Stage } from './utils';
-
+import {
+    Color, ColorTransform, FilterOperation, Matrix, Stage,
+    generateColorTransform, intToRGBA, toColorInt
+} from './utils';
 
 export abstract class BitmapFilter {
     abstract clone(): BitmapFilter;
@@ -17,24 +19,6 @@ export abstract class BitmapFilter {
                     matrix: Matrix,
                     colorTransform: ColorTransform,
                     stage: Stage): CanvasRenderingContext2D;
-
-    generateColorTransform(color: Color, data: ColorTransform): Color {
-        return {
-            R: Math.max(0, Math.min((color.R * data[0]) + data[4], 255))|0,
-            G: Math.max(0, Math.min((color.G * data[1]) + data[5], 255))|0,
-            B: Math.max(0, Math.min((color.B * data[2]) + data[6], 255))|0,
-            A: Math.max(0, Math.min((color.A * 255 * data[3]) + data[7], 255)) / 255
-        };
-    }
-
-    intToRGBA(int: number, alpha: number = 100): Color {
-        return {
-            R: (int & 0xff0000) >> 16,
-            G: (int & 0x00ff00) >> 8,
-            B: (int & 0x0000ff),
-            A: (alpha / 100)
-        };
-    }
 
     filterOperation(inner: boolean, knockout: boolean, hideObject: boolean = false): FilterOperation {
         if (knockout)
@@ -87,21 +71,6 @@ export abstract class BitmapFilter {
             }
         }
         return ctx;
-    }
-
-    toColorInt(rgb: string | number): number {
-        if (typeof rgb === 'string') {
-            const canvas = cacheStore.getCanvas();
-            canvas.width = 1;
-            canvas.height = 1;
-
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = rgb;
-            rgb = parseInt('0x' + ctx.fillStyle.substr(1));
-
-            cacheStore.destroy(ctx);
-        }
-        return rgb;
     }
 }
 
@@ -422,7 +391,7 @@ export class DropShadowFilter extends BitmapFilter {
         if (!isNaN(angle) && 0 <= angle && 360 >= angle)
             this.angle = angle;
 
-        color = this.toColorInt(color);
+        color = toColorInt(color);
         if (!isNaN(color))
             this.color = color;
 
@@ -483,9 +452,9 @@ export class DropShadowFilter extends BitmapFilter {
         var ctx = blurFilter.render(cache, matrix, colorTransform, stage);
 
         // dropShadow
-        var intColor = this.toColorInt(this.color);
-        var filterColor = this.intToRGBA(intColor);
-        var color = this.generateColorTransform(filterColor, colorTransform);
+        var intColor = toColorInt(this.color);
+        var filterColor = intToRGBA(intColor);
+        var color = generateColorTransform(filterColor, colorTransform);
         ctx = this.coatOfColor(ctx, color, inner, strength);
 
         // synthesis
@@ -570,7 +539,7 @@ export class GlowFilter extends BitmapFilter {
     {
         super();
 
-        color = this.toColorInt(color);
+        color = toColorInt(color);
         if (!isNaN(color))
             this.color = color;
 
@@ -626,9 +595,9 @@ export class GlowFilter extends BitmapFilter {
         var width = ctx.canvas.width + cache._offsetX;
         var height = ctx.canvas.height + cache._offsetY;
 
-        var intColor = this.toColorInt(this.color);
-        var filterColor = this.intToRGBA(intColor);
-        var color = this.generateColorTransform(filterColor, colorTransform);
+        var intColor = toColorInt(this.color);
+        var filterColor = intToRGBA(intColor);
+        var color = generateColorTransform(filterColor, colorTransform);
         ctx = this.coatOfColor(ctx, color, inner, strength);
 
         var synCanvas = cacheStore.getCanvas();
@@ -703,7 +672,7 @@ export class BevelFilter extends BitmapFilter {
         if (!isNaN(angle) && 0 <= angle && 360 >= angle)
             this.angle = angle;
 
-        highlightColor = this.toColorInt(highlightColor);
+        highlightColor = toColorInt(highlightColor);
         if (!isNaN(highlightColor))
             this.highlightColor = highlightColor;
 
@@ -711,7 +680,7 @@ export class BevelFilter extends BitmapFilter {
         if (!isNaN(highlightAlpha) && 0 <= highlightAlpha && 1 >= highlightAlpha)
             this.highlightAlpha = highlightAlpha;
 
-        shadowColor = this.toColorInt(shadowColor);
+        shadowColor = toColorInt(shadowColor);
         if (!isNaN(shadowColor))
             this.shadowColor = shadowColor;
 
@@ -783,9 +752,9 @@ export class BevelFilter extends BitmapFilter {
         shadowCanvas.height = canvas.height;
         var shadowCtx = shadowCanvas.getContext('2d');
         shadowCtx.drawImage(canvas, 0, 0);
-        var intShadowColor = this.toColorInt(shadowColor);
-        filterColor = this.intToRGBA(intShadowColor);
-        color = this.generateColorTransform(filterColor, colorTransform);
+        var intShadowColor = toColorInt(shadowColor);
+        filterColor = intToRGBA(intShadowColor);
+        color = generateColorTransform(filterColor, colorTransform);
         shadowCtx = this.coatOfColor(shadowCtx, color, false, strength);
 
         // shadow
@@ -794,9 +763,9 @@ export class BevelFilter extends BitmapFilter {
         highlightCanvas.height = canvas.height;
         var highlightCtx = highlightCanvas.getContext('2d');
         highlightCtx.drawImage(canvas, 0, 0);
-        var intHighlightColor = this.toColorInt(highlightColor);
-        filterColor = this.intToRGBA(intHighlightColor);
-        color = this.generateColorTransform(filterColor, colorTransform);
+        var intHighlightColor = toColorInt(highlightColor);
+        filterColor = intToRGBA(intHighlightColor);
+        color = generateColorTransform(filterColor, colorTransform);
         highlightCtx = this.coatOfColor(highlightCtx, color, false, strength);
 
         var isInner = (type === 'inner' || type === 'full');

@@ -7,6 +7,7 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
+import { ColorTransform } from './utils';
 
 function cloneDeep(src: any, obj: any): void {
     for (const prop in src) {
@@ -26,6 +27,52 @@ function cloneDeep(src: any, obj: any): void {
         }
     }
 }
+
+export const enum CAP {
+    ROUND = 0,
+    NO = 1,
+    SQUARE = 2
+};
+
+export const enum JOIN {
+    ROUND = 0,
+    BEVEL = 1,
+    MITER = 2
+};
+
+export const enum CMD {
+    MOVE_TO = 0,
+    CURVE_TO = 1,
+    LINE_TO = 2,
+    CUBIC = 3,
+    ARC = 4,
+    FILL_STYLE = 5,
+    STROKE_STYLE = 6,
+    FILL = 7,
+    STROKE = 8,
+    LINE_WIDTH = 9,
+    LINE_CAP = 10,
+    LINE_JOIN = 11,
+    MITER_LIMIT = 12,
+    BEGIN_PATH = 13
+};
+
+export type Command = [ CMD.MOVE_TO, number, number ]
+                    | [ CMD.CURVE_TO, number, number, number, number ]
+                    | [ CMD.LINE_TO, number, number ]
+                    | [ CMD.CUBIC, number, number, number, number, number, number ]
+                    | [ CMD.ARC, number, number, number ]
+                    | [ CMD.FILL_STYLE, number, number, number, number ]
+                    | [ CMD.STROKE_STYLE, number, number, number, number ]
+                    | [ CMD.FILL ]
+                    | [ CMD.STROKE ]
+                    | [ CMD.LINE_WIDTH, number ]
+                    | [ CMD.LINE_CAP, CAP ]
+                    | [ CMD.LINE_JOIN, JOIN ]
+                    | [ CMD.MITER_LIMIT, number ]
+                    | [ CMD.BEGIN_PATH ];
+
+export type CommandF = (ctx: CanvasRenderingContext2D, ct: ColorTransform, isClip: boolean) => void;
 
 class VectorToCanvas {
     clone(src: any): any {
@@ -354,72 +401,96 @@ class VectorToCanvas {
                 var data = array[i];
                 stack[stack.length] = {
                     obj: data.obj,
-                    cmd: this.buildCommand.call(this, data.cache)
+                    cmd: this.buildCommand(data.cache)
                 };
             }
         }
         return stack;
     }
 
-    buildCommand(cache: any): any {
+    buildCommand(cache: Command[]): CommandF {
         return this.executeCanvas2D.bind(this, cache);
     }
 
-    executeCanvas2D(cache: any, ctx: CanvasRenderingContext2D, ct: any, isClip: boolean): void {
+    executeCanvas2D(cache: Command[], ctx: CanvasRenderingContext2D, ct: ColorTransform, isClip: boolean): void {
         var length = cache.length;
         var i = 0;
         while (i < length) {
             var a = cache[i];
             switch (a[0]) {
-                case 0:
+                case CMD.MOVE_TO:
                     ctx.moveTo(a[1], a[2]);
                     break;
-                case 1:
+                case CMD.CURVE_TO:
                     ctx.quadraticCurveTo(a[1], a[2], a[3], a[4]);
                     break;
-                case 2:
+                case CMD.LINE_TO:
                     ctx.lineTo(a[1], a[2]);
                     break;
-                case 3:
+                case CMD.CUBIC:
                     ctx.bezierCurveTo(a[1], a[2], a[3], a[4], a[5], a[6]);
                     break;
-                case 4:
+                case CMD.ARC:
                     ctx.moveTo((a[1] + a[3]), a[2]);
                     ctx.arc(a[1], a[2], a[3], 0, Math.PI*2, false);
                     break;
 
                 // Graphics
-                case 5: // fillStyle
+                case CMD.FILL_STYLE:
                     var r = Math.max(0, Math.min((a[1] * ct[0]) + ct[4], 255))|0;
                     var g = Math.max(0, Math.min((a[2] * ct[1]) + ct[5], 255))|0;
                     var b = Math.max(0, Math.min((a[3] * ct[2]) + ct[6], 255))|0;
                     var al = Math.max(0, Math.min((a[4] * 255 * ct[3]) + ct[7], 255)) / 255;
                     ctx.fillStyle = 'rgba('+r+', '+g+', '+b+', '+al+')';
                     break;
-                case 6: // strokeStyle
+                case CMD.STROKE_STYLE:
                     var r = Math.max(0, Math.min((a[1] * ct[0]) + ct[4], 255))|0;
                     var g = Math.max(0, Math.min((a[2] * ct[1]) + ct[5], 255))|0;
                     var b = Math.max(0, Math.min((a[3] * ct[2]) + ct[6], 255))|0;
                     var al = Math.max(0, Math.min((a[4] * 255 * ct[3]) + ct[7], 255)) / 255;
                     ctx.strokeStyle = 'rgba('+r+', '+g+', '+b+', '+al+')';
                     break;
-                case 7: // fill
+                case CMD.FILL:
                     if (!isClip) { ctx.fill(); }
                     break;
-                case 8: // stroke
+                case CMD.STROKE:
                     if (!isClip) { ctx.stroke(); }
                     break;
-                case 9: // width
+                case CMD.LINE_WIDTH:
                     ctx.lineWidth = a[1];
                     break;
-                case 10: // lineCap
-                    ctx.lineCap = ('' + a[1]) as any;
+                case CMD.LINE_CAP:
+                    switch (a[1]) {
+                        case CAP.ROUND:
+                            ctx.lineCap = 'round';
+                            break;
+                        case CAP.NO:
+                            ctx.lineCap = 'butt';
+                            break;
+                        case CAP.SQUARE:
+                            ctx.lineCap = 'square';
+                            break;
+                        default:
+                            ((x: never) => {})(a[1]);
+                    }
                     break;
-                case 11: // lineJoin
-                    ctx.lineJoin = ('' + a[1]) as any;
+                case CMD.LINE_JOIN:
+                    switch (a[1]) {
+                        case JOIN.ROUND:
+                            ctx.lineJoin = 'round';
+                            break;
+                        case JOIN.BEVEL:
+                            ctx.lineJoin = 'bevel';
+                            break;
+                        case JOIN.MITER:
+                            ctx.lineJoin = 'miter';
+                            break;
+                        default:
+                            ((x: never) => {})(a[1]);
+                    }
                     break;
                 case 12: // miterLimit
-                    ctx.lineJoin = ('' + a[1]) as any;
+                    ctx.miterLimit = ('' + a[1]) as any;
                     break;
                 case 13: // beginPath
                     ctx.beginPath();
