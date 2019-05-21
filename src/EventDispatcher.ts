@@ -50,8 +50,8 @@ type EventListenerU = EventListener | undefined;
 
 export class EventDispatcher {
     private events: { [type: string]: EventListener[] } = {};
-    private isLoad = false;
-    private active = false;
+    protected isLoad = false;
+    protected active = false;
     protected variables: { [type: string]: EventListenerU } = {};
 
     get onEnterFrame(): EventListenerU {

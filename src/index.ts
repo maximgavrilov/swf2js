@@ -16,9 +16,15 @@ import {
 } from './BitmapFilter';
 import { cacheStore } from './CacheStore';
 import { ClipEvent, EventDispatcher } from './EventDispatcher';
+import { DisplayObject } from './DisplayObject';
 import { Graphics } from './Graphics';
 import { PlaceObject } from './PlaceObject';
+import { keyClass } from './Key';
 import { vtc } from './VectorToCanvas';
+import {
+    ColorTransform, Matrix,
+    cloneArray, generateColorTransform, multiplicationColor, multiplicationMatrix, intToRGBA
+} from './utils';
 
 if (!("swf2js" in window)){(function(window)
 {
@@ -63,10 +69,11 @@ if (!("swf2js" in window)){(function(window)
 
     // params
     var resizeId = 0;
-    var stageId = 0;
-    var stages = [];
+    var stageId = 1;
+    var stages = {};
+    DisplayObject.stages = stages; // any
     var loadStages = [];
-    var instanceId = 0;
+    DisplayObject.loadStages = loadStages; // any
     var tmpContext;
     var StartDate = new Date();
     var _navigator = window.navigator;
@@ -81,8 +88,6 @@ if (!("swf2js" in window)){(function(window)
     var quality = 1; // (isWebGL) ? 1 : 0.8;
     var devicePixelRatio = window.devicePixelRatio || 1;
     var _devicePixelRatio = devicePixelRatio * quality;
-    var _event = null;
-    var _keyEvent = null;
     var startEvent = "mousedown";
     var moveEvent = "mousemove";
     var endEvent = "mouseup";
@@ -10913,2448 +10918,6 @@ if (!("swf2js" in window)){(function(window)
     /**
      * @constructor
      */
-    var AccessibilityProperties = function () {};
-
-    /**
-     * @constructor
-     */
-    var DisplayObject = function ()
-    {
-        var _this = this;
-        EventDispatcher.call(_this);
-        _this.initialize();
-    };
-
-    /**
-     * extends
-     * @type {EventDispatcher}
-     */
-    DisplayObject.prototype = Object.create(EventDispatcher.prototype);
-    DisplayObject.prototype.constructor = DisplayObject;
-
-    /**
-     * properties
-     */
-    Object.defineProperties(DisplayObject.prototype,
-    {
-        accessibilityProperties: {
-            value: new AccessibilityProperties()
-        },
-        alpha: {
-            get: function () {
-                return this.getAlpha() / 100;
-            },
-            set: function (alpha) {
-                this.setAlpha(alpha * 100);
-            }
-        },
-        _alpha: {
-            get: function () {
-                return this.getAlpha();
-            },
-            set: function (alpha) {
-                this.setAlpha(alpha);
-            }
-        },
-        name: {
-            get: function () {
-                return this.getName();
-            },
-            set: function (name) {
-                this.setName(name);
-            }
-        },
-        _name: {
-            get: function () {
-                return this.getName();
-            },
-            set: function (name) {
-                this.setName(name);
-            }
-        },
-        blendMode: {
-            get: function () {
-                return this.getBlendMode();
-            },
-            set: function (blendMode) {
-                this.setBlendMode(blendMode);
-            }
-        },
-        filters: {
-            get: function () {
-                return this.getFilters();
-            },
-            set: function (filters) {
-                this.setFilters(filters);
-            }
-        },
-        _visible: {
-            get: function () {
-                return this.getVisible();
-            },
-            set: function (visible) {
-                this.setVisible(visible);
-            }
-        },
-        visible: {
-            get: function () {
-                return this.getVisible();
-            },
-            set: function (visible) {
-                this.setVisible(visible);
-            }
-        },
-        _rotation: {
-            get: function () {
-                return this.getRotation();
-            },
-            set: function (rotation) {
-                this.setRotation(rotation);
-            }
-        },
-        rotation: {
-            get: function () {
-                return this.getRotation();
-            },
-            set: function (rotation) {
-                this.setRotation(rotation);
-            }
-        },
-        _height: {
-            get: function () {
-                return this.getHeight();
-            },
-            set: function (height) {
-                this.setHeight(height);
-            }
-        },
-        height: {
-            get: function () {
-                return this.getHeight();
-            },
-            set: function (height) {
-                this.setHeight(height);
-            }
-        },
-        _width: {
-            get: function () {
-                return this.getWidth();
-            },
-            set: function (width) {
-                this.setWidth(width);
-            }
-        },
-        width: {
-            get: function () {
-                return this.getWidth();
-            },
-            set: function (width) {
-                this.setWidth(width);
-            }
-        },
-        _x: {
-            get: function () {
-                return this.getX();
-            },
-            set: function (x) {
-                this.setX(x);
-            }
-        },
-        x: {
-            get: function () {
-                return this.getX();
-            },
-            set: function (x) {
-                this.setX(x);
-            }
-        },
-        _y: {
-            get: function () {
-                return this.getY();
-            },
-            set: function (y) {
-                this.setY(y);
-            }
-        },
-        y: {
-            get: function () {
-                return this.getY();
-            },
-            set: function (y) {
-                this.setY(y);
-            }
-        },
-        _xscale: {
-            get: function () {
-                return this.getXScale();
-            },
-            set: function (xscale) {
-                this.setXScale(xscale);
-            }
-        },
-        scaleX: {
-            get: function () {
-                return this.getXScale();
-            },
-            set: function (xscale) {
-                this.setXScale(xscale);
-            }
-        },
-        _yscale: {
-            get: function () {
-                return this.getYScale();
-            },
-            set: function (yscale) {
-                this.setYScale(yscale);
-            }
-        },
-        scaleY: {
-            get: function () {
-                return this.getYScale();
-            },
-            set: function (yscale) {
-                this.setYScale(yscale);
-            }
-        },
-        _xmouse: {
-            get: function () {
-                return this.getXMouse();
-            },
-            set: function () {
-            }
-        },
-        mouseX: {
-            get: function () {
-                return this.getXMouse();
-            },
-            set: function () {
-            }
-        },
-        _ymouse: {
-            get: function () {
-                return this.getYMouse();
-            },
-            set: function () {
-            }
-        },
-        mouseY: {
-            get: function () {
-                return this.getYMouse();
-            },
-            set: function () {
-            }
-        },
-        mask: {
-            get: function () {
-                return this.getMask();
-            },
-            set: function (obj) {
-                this.setMask(obj);
-            }
-        },
-        enabled: {
-            get: function () {
-                return this.getEnabled();
-            },
-            set: function (enabled) {
-                this.setEnabled(enabled);
-            }
-        },
-        _parent: {
-            get: function () {
-                return this.getParent();
-            },
-            set: function (parent) {
-                this.setParent(parent);
-            }
-        },
-        parent: {
-            get: function () {
-                return this.getParent();
-            },
-            set: function (parent) {
-                this.setParent(parent);
-            }
-        }
-    });
-
-    /**
-     * initialize
-     */
-    DisplayObject.prototype.initialize = function ()
-    {
-        var _this = this;
-
-        // common
-        _this.instanceId = instanceId++;
-        _this.characterId = 0;
-        _this.tagType = 0;
-        _this.ratio = 0;
-        _this.isMask = false;
-        _this.clipDepth = 0;
-        _this.isClipDepth = false;
-        _this.stageId = null;
-        _this.loadStageId = null;
-        _this.variables = {};
-        _this.buttonStatus = "up";
-        _this.removeFlag = false;
-        _this.parentId = null;
-
-        // properties
-        _this.__visible = true;
-        _this.__name = null;
-        _this._url = null;
-        _this._highquality = 1;
-        _this._focusrect = 1;
-        _this._soundbuftime = null;
-        _this._totalframes = 1;
-        _this._level = 0;
-        _this._depth = null;
-        _this._framesloaded = 0;
-        _this._target = "";
-        _this._lockroot = undefined;
-        _this._enabled = true;
-        _this._blendMode = null;
-        _this._filters = null;
-        _this._filterCacheKey = null;
-        _this._parentPlace = null;
-        _this._mask = null;
-        _this._matrix = null;
-        _this._colorTransform = null;
-        _this._extend = false;
-
-        // avm2
-        _this.avm2 = null;
-    };
-
-    // filters
-    DisplayObject.prototype.flash = {
-        filters: {
-            DropShadowFilter: DropShadowFilter,
-            BlurFilter: BlurFilter,
-            GlowFilter: GlowFilter,
-            BevelFilter: BevelFilter,
-            GradientGlowFilter: GradientGlowFilter,
-            ConvolutionFilter: ConvolutionFilter,
-            ColorMatrixFilter: ColorMatrixFilter,
-            GradientBevelFilter: GradientBevelFilter,
-            BitmapFilter: BitmapFilter
-        }
-    };
-
-    /**
-     * @returns {string}
-     */
-    DisplayObject.prototype.toString = function ()
-    {
-        var target = this.getTarget();
-        var str = "_level0";
-        var array = target.split("/");
-        str += array.join(".");
-        return str;
-    };
-
-    /**
-     * @param a
-     * @param b
-     * @returns []
-     */
-    DisplayObject.prototype.multiplicationMatrix = function(a, b)
-    {
-        return [
-            a[0] * b[0] + a[2] * b[1],
-            a[1] * b[0] + a[3] * b[1],
-            a[0] * b[2] + a[2] * b[3],
-            a[1] * b[2] + a[3] * b[3],
-            a[0] * b[4] + a[2] * b[5] + a[4],
-            a[1] * b[4] + a[3] * b[5] + a[5]
-        ];
-    };
-
-    /**
-     * @param a
-     * @param b
-     * @returns []
-     */
-    DisplayObject.prototype.multiplicationColor = function(a, b)
-    {
-        return [
-            a[0] * b[0], a[1] * b[1],
-            a[2] * b[2], a[3] * b[3],
-            a[0] * b[4] + a[4], a[1] * b[5] + a[5],
-            a[2] * b[6] + a[6], a[3] * b[7] + a[7]
-        ];
-    };
-
-    /**
-     * @param bounds
-     * @param matrix
-     * @param object
-     * @returns {{xMin: Number, xMax: number, yMin: Number, yMax: number}}
-     */
-    DisplayObject.prototype.boundsMatrix = function (bounds, matrix, object)
-    {
-        var no = _Number.MAX_VALUE;
-        var xMax = -no;
-        var yMax = -no;
-        var xMin = no;
-        var yMin = no;
-
-        if (object) {
-            xMin = object.xMin;
-            xMax = object.xMax;
-            yMin = object.yMin;
-            yMax = object.yMax;
-        }
-
-        var x0 = bounds.xMax * matrix[0] + bounds.yMax * matrix[2] + matrix[4];
-        var x1 = bounds.xMax * matrix[0] + bounds.yMin * matrix[2] + matrix[4];
-        var x2 = bounds.xMin * matrix[0] + bounds.yMax * matrix[2] + matrix[4];
-        var x3 = bounds.xMin * matrix[0] + bounds.yMin * matrix[2] + matrix[4];
-        var y0 = bounds.xMax * matrix[1] + bounds.yMax * matrix[3] + matrix[5];
-        var y1 = bounds.xMax * matrix[1] + bounds.yMin * matrix[3] + matrix[5];
-        var y2 = bounds.xMin * matrix[1] + bounds.yMax * matrix[3] + matrix[5];
-        var y3 = bounds.xMin * matrix[1] + bounds.yMin * matrix[3] + matrix[5];
-
-        xMax = _max(_max(_max(_max(xMax, x0), x1), x2), x3);
-        xMin = _min(_min(_min(_min(xMin, x0), x1), x2), x3);
-        yMax = _max(_max(_max(_max(yMax, y0), y1), y2), y3);
-        yMin = _min(_min(_min(_min(yMin, y0), y1), y2), y3);
-
-        return {xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax};
-    };
-
-    /**
-     * @param color
-     * @param data
-     * @returns {{R: number, G: number, B: number, A: number}}
-     */
-    DisplayObject.prototype.generateColorTransform = function (color, data)
-    {
-        return {
-            R: _max(0, _min((color.R * data[0]) + data[4], 255))|0,
-            G: _max(0, _min((color.G * data[1]) + data[5], 255))|0,
-            B: _max(0, _min((color.B * data[2]) + data[6], 255))|0,
-            A: _max(0, _min((color.A * 255 * data[3]) + data[7], 255)) / 255
-        };
-    };
-
-    /**
-     * @param src
-     * @returns {Array}
-     */
-    DisplayObject.prototype.cloneArray = function(src)
-    {
-        var arr = [];
-        var length = src.length;
-        for (var i = 0; i < length; i++) {
-            arr[i] = src[i];
-        }
-        return arr;
-    };
-
-    /**
-     * @param blendMode
-     * @returns {String}
-     */
-    DisplayObject.prototype.getBlendName = function (blendMode)
-    {
-        var mode = null;
-        switch (blendMode) {
-            case 1:
-            case "normal":
-                mode = "normal";
-                break;
-            case 2:
-            case "layer":
-                mode = "layer";
-                break;
-            case 3:
-            case "multiply":
-                mode = "multiply";
-                break;
-            case 4:
-            case "screen":
-                mode = "screen";
-                break;
-            case 5:
-            case "lighten":
-                mode = "lighten";
-                break;
-            case 6:
-            case "darken":
-                mode = "darken";
-                break;
-            case 7:
-            case "difference":
-                mode = "difference";
-                break;
-            case 8:
-            case "add":
-                mode = "add";
-                break;
-            case 9:
-            case "subtract":
-                mode = "subtract";
-                break;
-            case 10:
-            case "invert":
-                mode = "invert";
-                break;
-            case 11:
-            case "alpha":
-                mode = "alpha";
-                break;
-            case 12:
-            case "erase":
-                mode = "erase";
-                break;
-            case 13:
-            case "overlay":
-                mode = "overlay";
-                break;
-            case 14:
-            case "hardlight":
-                mode = "hardlight";
-                break;
-        }
-        return mode;
-    };
-
-    /**
-     * @param stage
-     */
-    DisplayObject.prototype.setStage = function (stage)
-    {
-        var _this = this;
-        _this.stageId = stage.getId();
-        if (_this instanceof SimpleButton) {
-            _this = _this as any;
-            var upState = _this.getSprite("up");
-            upState.setStage(stage);
-            var downState = _this.getSprite("down");
-            downState.setStage(stage);
-            var hitState = _this.getSprite("hit");
-            hitState.setStage(stage);
-            var overState = _this.getSprite("over");
-            overState.setStage(stage);
-        }
-        stage.setInstance(_this);
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getStage = function ()
-    {
-        var _this = this;
-        var stage = _this.getLoadStage();
-        if (!stage) {
-            stage = _this.getParentStage();
-        }
-        return stage;
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getParentStage = function ()
-    {
-        var stageId = this.stageId;
-        if (stageId !== null) {
-            if (stageId in stages) {
-                return stages[stageId];
-            } else {
-                return loadStages[stageId];
-            }
-        }
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getLoadStage = function ()
-    {
-        var loadStageId = this.loadStageId;
-        if (loadStageId !== null) {
-            if (loadStageId in stages) {
-                return stages[loadStageId];
-            } else {
-                return loadStages[loadStageId];
-            }
-        }
-    };
-
-    /**
-     * @param stage
-     */
-    DisplayObject.prototype.setLoadStage = function (stage)
-    {
-        var _this = this;
-        _this.loadStageId = null;
-        if (stage !== null) {
-            stage.setInstance(_this);
-            _this.loadStageId = stage.getId();
-        }
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getCharacterId = function ()
-    {
-        return this.characterId;
-    };
-
-    /**
-     * @param characterId
-     */
-    DisplayObject.prototype.setCharacterId = function (characterId)
-    {
-        this.characterId = characterId;
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getTagType = function ()
-    {
-        return this.tagType;
-    };
-
-    /**
-     * @param tagType
-     */
-    DisplayObject.prototype.setTagType = function (tagType)
-    {
-        this.tagType = tagType;
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getRatio = function ()
-    {
-        return this.ratio;
-    };
-
-    /**
-     * @param ratio
-     */
-    DisplayObject.prototype.setRatio = function (ratio)
-    {
-        this.ratio = ratio;
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getParent = function ()
-    {
-        var _this = this;
-        var stage = _this.getLoadStage();
-        var parent;
-        var pId = _this.parentId;
-        if (stage) {
-            parent = stage.getInstance(pId);
-        }
-        if (!parent) {
-            stage = _this.getParentStage();
-            parent = stage.getInstance(pId);
-        }
-        return parent;
-    };
-
-    /**
-     * @param parent
-     */
-    DisplayObject.prototype.setParent = function (parent)
-    {
-        var _this = this;
-        if (parent instanceof DisplayObjectContainer) {
-            (parent as any).setInstance(_this);
-        }
-        _this.parentId = parent.instanceId;
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getParentSprite = function ()
-    {
-        var _this = this;
-        var stage = _this.getStage();
-        return stage.getInstance(_this._sprite);
-    };
-
-    /**
-     * @param sprite
-     */
-    DisplayObject.prototype.setParentSprite = function (sprite)
-    {
-        this._sprite = sprite.instanceId;
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getButtonStatus = function ()
-    {
-        return this.buttonStatus;
-    };
-
-    /**
-     * @param status
-     */
-    DisplayObject.prototype.setButtonStatus = function (status)
-    {
-        this.buttonStatus = status;
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getMask = function ()
-    {
-        return this._mask;
-    };
-
-    /**
-     * @param obj
-     */
-    DisplayObject.prototype.setMask = function (obj)
-    {
-        var _this = this;
-        var maskMc = _this._mask;
-        if (maskMc) {
-            maskMc.isMask = false;
-        }
-        obj.isMask = true;
-        _this._mask = obj;
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getEnabled = function ()
-    {
-        return this._enabled;
-    };
-
-    /**
-     * @param enabled
-     */
-    DisplayObject.prototype.setEnabled = function (enabled)
-    {
-        this._enabled = enabled;
-    };
-
-    /**
-     * @returns {boolean}
-     */
-    DisplayObject.prototype.getButtonMode = function ()
-    {
-        return this._buttonMode;
-    };
-
-    /**
-     * @param buttonMode
-     */
-    DisplayObject.prototype.setButtonMode = function (buttonMode)
-    {
-        this._buttonMode = buttonMode;
-    };
-
-    /**
-     * @returns {string}
-     */
-    DisplayObject.prototype.getTarget = function ()
-    {
-        return this._target;
-    };
-
-    /**
-     * @param target
-     */
-    DisplayObject.prototype.setTarget = function (target)
-    {
-        this._target = target;
-    };
-
-    /**
-     * @param path
-     * @returns {{scope: DisplayObject, target: *}}
-     */
-    DisplayObject.prototype.splitPath = function (path)
-    {
-        var _this = this;
-        var scope = _this;
-        var target = path;
-        var split;
-        var targetPath = "";
-        if (typeof path === "string") {
-            if (path.indexOf("::") !== -1) {
-                scope = _this;
-                target = path;
-            } else if (path.indexOf(":") !== -1) {
-                split = path.split(":");
-                targetPath = split[0];
-                target = split[1];
-            } else if (path.indexOf(".") !== -1) {
-                split = path.split(".");
-                target = split.pop();
-                targetPath += split.join(".");
-            }
-
-            if (targetPath !== "") {
-                var mc = _this.getDisplayObject(targetPath);
-                if (mc) {
-                    scope = mc;
-                }
-            }
-        }
-
-        return {
-            "scope": scope,
-            "target": target
-        };
-    };
-
-    /**
-     * @param name
-     * @param parse
-     * @returns {undefined}
-     */
-    DisplayObject.prototype.getProperty = function (name, parse)
-    {
-        var _this = this;
-        var target = name;
-        if (parse !== false) {
-            var obj = _this.splitPath(name);
-            _this = obj.scope;
-            target = obj.target;
-        }
-
-        if (_this.removeFlag) {
-            return undefined;
-        }
-
-        var value;
-        var prop = (typeof target === "string") ? target.toLowerCase() : target;
-        switch (prop) {
-            case 0:
-            case "_x":
-                value = _this.getX();
-                break;
-            case 1:
-            case "_y":
-                value = _this.getY();
-                break;
-            case 2:
-            case "_xscale":
-                value = _this.getXScale();
-                break;
-            case 3:
-            case "_yscale":
-                value = _this.getYScale();
-                break;
-            case 4:
-            case "_currentframe":
-                if (_this instanceof MovieClip) {
-                    value = (_this as any).getCurrentFrame();
-                }
-                break;
-            case 5:
-            case "_totalframes":
-                if (_this instanceof MovieClip) {
-                    value = (_this as any).getTotalFrames();
-                }
-                break;
-            case 6:
-            case "_alpha":
-                value = _this.getAlpha();
-                break;
-            case 7:
-            case "_visible":
-                value = _this.getVisible();
-                break;
-            case 8:
-            case "_width":
-                value = _this.getWidth();
-                break;
-            case 9:
-            case "_height":
-                value = _this.getHeight();
-                break;
-            case 10:
-            case "_rotation":
-                value = _this.getRotation();
-                break;
-            case 11:
-            case "_target":
-                value = _this.getTarget();
-                break;
-            case 12:
-            case "_framesloaded":
-                value = _this._framesloaded;
-                break;
-            case 13:
-            case "_name":
-                value = _this.getName();
-                break;
-            case 14:
-            case "_droptarget":
-                if (_this instanceof MovieClip) {
-                    value = (_this as any).getDropTarget();
-                }
-                break;
-            case 15:
-            case "_url":
-                value = _this._url;
-                break;
-            case 16:
-            case "_highquality":
-                value = _this._highquality;
-                break;
-            case 17:
-            case "_focusrect":
-                value = _this._focusrect;
-                break;
-            case 18:
-            case "_soundbuftime":
-                value = _this._soundbuftime;
-                break;
-            case 19:
-            case "_quality":
-                value = _this._quality;
-                break;
-            case 20:
-            case "_xmouse":
-                value = _this.getXMouse();
-                break;
-            case 21:
-            case "_ymouse":
-                value = _this.getYMouse();
-                break;
-            case "text":
-            case "htmltext":
-                if (_this instanceof TextField) {
-                    _this = _this as any;
-                    var variable = _this.getVariable("variable");
-                    if (variable) {
-                        var mc = _this.getParent();
-                        value = mc.getProperty(variable);
-                    } else {
-                        value = _this.getVariable("text");
-                    }
-                } else {
-                    value = _this.getVariable(target);
-                }
-                break;
-            case "$version":
-                value = "swf2js 8,0,0";
-                break;
-            case "enabled":
-                value = _this.getEnabled();
-                break;
-            case "blendmode":
-                value = _this.getBlendMode();
-                break;
-            case "sharedobject":
-                value = new SharedObject();
-                break;
-            case "key":
-                value = keyClass;
-                break;
-            case "mouse":
-                var _root = _this.getDisplayObject("_root");
-                var rootStage = _root.getStage();
-                value = rootStage.mouse;
-                break;
-            default:
-                value = _this.getVariable(target, parse);
-                if (value === undefined && target !== name) {
-                    value = _this.getGlobalVariable(name);
-                }
-                break;
-        }
-
-        return value;
-    };
-
-    /**
-     * @param name
-     * @param value
-     * @param parse
-     */
-    DisplayObject.prototype.setProperty = function (name, value, parse)
-    {
-        var _this = this;
-        var target = name;
-        if (parse !== false) {
-            var obj = _this.splitPath(name);
-            _this = obj.scope;
-            target = obj.target;
-        }
-
-        var prop = (typeof target === "string") ? target.toLowerCase() : target;
-        switch (prop) {
-            case 0:
-            case "_x":
-                _this.setX(value);
-                break;
-            case 1:
-            case "_y":
-                _this.setY(value);
-                break;
-            case 2:
-            case "_xscale":
-                _this.setXScale(value);
-                break;
-            case 3:
-            case "_yscale":
-                _this.setYScale(value);
-                break;
-            case 4:
-            case "_currentframe":
-            case 5:
-            case "_totalframes":
-            case 15:
-            case "_url":
-            case 20:
-            case "_xmouse":
-            case 21:
-            case "_ymouse":
-            case 11:
-            case "_target":
-            case 12:
-            case "_framesloaded":
-            case 14:
-            case "_droptarget":
-                // readonly
-                break;
-            case 6:
-            case "_alpha":
-                _this.setAlpha(value);
-                break;
-            case 7:
-            case "_visible":
-                _this.setVisible(value);
-                break;
-            case 8:
-            case "_width":
-                _this.setWidth(value);
-                break;
-            case 9:
-            case "_height":
-                _this.setHeight(value);
-                break;
-            case 10:
-            case "_rotation":
-                _this.setRotation(value);
-                break;
-            case 13:
-            case "_name":
-                _this.setName(value);
-                break;
-            case 16:
-            case "_highquality":
-                _this._highquality = value;
-                break;
-            case 17:
-            case "_focusrect":
-                _this._focusrect = value;
-                break;
-            case 18:
-            case "_soundbuftime":
-                _this._soundbuftime = value;
-                break;
-            case 19:
-            case "_quality":
-                _this._quality = value;
-                break;
-            case "text":
-            case "htmltext":
-                if (_this instanceof TextField) {
-                    _this = _this as any;
-                    var variable = _this.getVariable("variable");
-                    if (variable) {
-                        var mc = _this.getParent();
-                        mc.setProperty(variable, value);
-                    } else {
-                        _this.setVariable("text", value);
-                    }
-                    var input = _this.input;
-                    if (input) {
-                        input.value = value;
-                    }
-                } else {
-                    _this.setVariable(target, value);
-                }
-                break;
-            case "blendmode":
-                _this.setBlendMode(value);
-                break;
-            case "enabled":
-                _this.setEnabled(value);
-                break;
-            case "filters":
-                _this.setFilters(value);
-                break;
-            default:
-                _this.setVariable(target, value);
-                break;
-        }
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getDepth = function ()
-    {
-        var _this = this;
-        var _depth = _this._depth;
-        var depth = (_depth !== null) ? _depth : _this.getLevel();
-        return depth - 16384;
-    };
-
-    /**
-     * @param depth
-     * @param swapDepth
-     * @param swapMc
-     */
-    DisplayObject.prototype.setDepth = function (depth, swapDepth, swapMc)
-    {
-        var _this = this;
-        var parent = _this.getParent();
-        var _depth = _this._depth;
-        var level = (_depth !== null) ? _depth : _this.getLevel();
-        var totalFrame = parent.getTotalFrames() + 1;
-
-        if (!swapMc) {
-            _this._depth = depth;
-        } else {
-            _this._depth = swapDepth;
-            swapMc._depth = depth;
-        }
-
-        var container = parent.container;
-        var instanceId = _this.instanceId;
-        for (var frame = 1; frame < totalFrame; frame++) {
-            if (!(frame in container)) {
-                container[frame] = [];
-            }
-
-            var tags = container[frame];
-            if (swapMc) {
-                if (level in tags && tags[level] === instanceId) {
-                    tags[depth] = swapMc.instanceId;
-                }
-
-                if (swapDepth in tags && tags[swapDepth] === swapMc.instanceId) {
-                    tags[swapDepth] = instanceId;
-                }
-            } else {
-                if (!(level in tags) || level in tags && tags[level] === instanceId) {
-                    delete tags[level];
-                    tags[depth] = instanceId;
-                }
-            }
-
-            container[frame] = tags;
-        }
-        _this.setController(false, false, false, false);
-        if (swapMc) {
-            swapMc.setController(false, false, false, false);
-        }
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getX = function ()
-    {
-        var matrix = this.getMatrix();
-        return (matrix) ? matrix[4] / 20 : undefined;
-    };
-
-    /**
-     * @param x
-     */
-    DisplayObject.prototype.setX = function (x)
-    {
-        x = +x;
-        if (!_isNaN(x)) {
-            var _this = this;
-            var _matrix = _this.getMatrix();
-            var matrix = _this.cloneArray(_matrix);
-            matrix[4] = x * 20;
-            _this.setMatrix(matrix);
-        }
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getY = function ()
-    {
-        var matrix = this.getMatrix();
-        return (matrix) ? matrix[5] / 20 : undefined;
-    };
-
-    /**
-     * @param y
-     */
-    DisplayObject.prototype.setY = function (y)
-    {
-        y = +y;
-        if (!_isNaN(y)) {
-            var _this = this;
-            var _matrix = _this.getMatrix();
-            var matrix = _this.cloneArray(_matrix);
-            matrix[5] = y * 20;
-            _this.setMatrix(matrix);
-        }
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getXScale = function ()
-    {
-        var matrix = this.getMatrix();
-        var xScale = _sqrt(matrix[0] * matrix[0] + matrix[1] * matrix[1]) * 100;
-        if (0 > matrix[0]) {
-            xScale *= -1;
-        }
-        return xScale;
-    };
-
-    /**
-     * @param xscale
-     */
-    DisplayObject.prototype.setXScale = function (xscale)
-    {
-        xscale = +xscale;
-        if (!_isNaN(xscale)) {
-            var _this = this;
-            var _matrix = _this.getMatrix();
-            var matrix = _this.cloneArray(_matrix);
-            var adjustment = 1;
-            if (0 > matrix[0]) {
-                adjustment = -1;
-            }
-            var radianX = _atan2(matrix[1], matrix[0]);
-            xscale /= 100;
-            matrix[0] = xscale * _cos(radianX) * adjustment;
-            matrix[1] = xscale * _sin(radianX) * adjustment;
-            _this.setMatrix(matrix);
-        }
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getYScale = function ()
-    {
-        var matrix = this.getMatrix();
-        var yScale = _sqrt(matrix[2] * matrix[2] + matrix[3] * matrix[3]) * 100;
-        if (0 > matrix[3]) {
-            yScale *= -1;
-        }
-        return yScale;
-    };
-
-    /**
-     * @param yscale
-     */
-    DisplayObject.prototype.setYScale = function (yscale)
-    {
-        yscale = +yscale;
-        if (!_isNaN(yscale)) {
-            var _this = this;
-            var _matrix = _this.getMatrix();
-            var matrix = _this.cloneArray(_matrix);
-            var adjustment = 1;
-            if (0 > matrix[3]) {
-                adjustment = -1;
-            }
-            var radianY = _atan2(-matrix[2], matrix[3]);
-            yscale /= 100;
-            matrix[2] = -yscale * _sin(radianY) * adjustment;
-            matrix[3] = yscale * _cos(radianY) * adjustment;
-            _this.setMatrix(matrix);
-        }
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getAlpha = function ()
-    {
-        var colorTransform = this.getColorTransform();
-        var alpha = colorTransform[3] + (colorTransform[7] / 255);
-        return alpha * 100;
-    };
-
-    /**
-     * @param alpha
-     */
-    DisplayObject.prototype.setAlpha = function (alpha)
-    {
-        alpha = +alpha;
-        if (!_isNaN(alpha)) {
-            var _this = this;
-            var _colorTransform = _this.getColorTransform();
-            var colorTransform = _this.cloneArray(_colorTransform);
-            colorTransform[3] = alpha / 100;
-            colorTransform[7] = 0;
-            _this.setColorTransform(colorTransform);
-        }
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getVisible = function ()
-    {
-        var _this = this;
-        var stage = _this.getStage();
-        var version = stage.getVersion();
-        if (version > 4) {
-            return _this.__visible;
-        }
-        return (_this.__visible) ? 1 : 0;
-    };
-
-    /**
-     * @param visible
-     */
-    DisplayObject.prototype.setVisible = function (visible)
-    {
-        var _this = this;
-        if (typeof visible === "boolean") {
-            _this.__visible = visible;
-        } else {
-            visible = +visible;
-            if (!_isNaN(visible)) {
-                _this.__visible = (visible) ? true : false;
-            }
-        }
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getLevel = function ()
-    {
-        return this._level;
-    };
-
-    /**
-     * @param level
-     */
-    DisplayObject.prototype.setLevel = function (level)
-    {
-        this._level = level;
-    };
-
-    /**
-     * @returns {null}
-     */
-    DisplayObject.prototype.getName = function ()
-    {
-        return this.__name;
-    };
-
-    /**
-     * @param name
-     */
-    DisplayObject.prototype.setName = function (name)
-    {
-        this.__name = name;
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getRotation = function ()
-    {
-        var matrix = this.getMatrix();
-        var rotation = _atan2(matrix[1], matrix[0]) * 180 / _PI;
-        switch (rotation) {
-            case -90.00000000000001:
-                rotation = -90;
-                break;
-            case 90.00000000000001:
-                rotation = 90;
-                break;
-        }
-        return rotation;
-    };
-
-    /**
-     * @param rotation
-     */
-    DisplayObject.prototype.setRotation = function (rotation)
-    {
-        rotation = +rotation;
-        if (!_isNaN(rotation)) {
-            var _this = this;
-            var _matrix = _this.getMatrix();
-            var matrix = _this.cloneArray(_matrix);
-            var radianX = _atan2(matrix[1], matrix[0]);
-            var radianY = _atan2(-matrix[2], matrix[3]);
-            var ScaleX = _sqrt(matrix[0] * matrix[0] + matrix[1] * matrix[1]);
-            var ScaleY = _sqrt(matrix[2] * matrix[2] + matrix[3] * matrix[3]);
-            rotation *= _PI / 180;
-            radianY += rotation - radianX;
-            radianX = rotation;
-            matrix[0] = ScaleX * _cos(radianX);
-            matrix[1] = ScaleX * _sin(radianX);
-            matrix[2] = -ScaleY * _sin(radianY);
-            matrix[3] = ScaleY * _cos(radianY);
-            _this.setMatrix(matrix);
-        }
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getWidth = function ()
-    {
-        var _this = this;
-        var matrix = _this.getMatrix();
-        var bounds = _this.getBounds(matrix);
-        return _abs(bounds.xMax - bounds.xMin);
-    };
-
-    /**
-     * @param width
-     */
-    DisplayObject.prototype.setWidth = function (width)
-    {
-        width = +width;
-        if (!_isNaN(width)) {
-            var _this = this;
-            var _matrix = _this.getOriginMatrix();
-            var bounds = _this.getBounds(_matrix);
-            var _width = _abs(bounds.xMax - bounds.xMin);
-            var xScale = width * _matrix[0] / _width;
-            if (_isNaN(xScale)) {
-                xScale = 0;
-            }
-            _matrix = _this.getMatrix();
-            var matrix = _this.cloneArray(_matrix);
-            matrix[0] = xScale;
-            _this.setMatrix(matrix);
-        }
-    };
-
-    /**
-     * @returns {number}
-     */
-    DisplayObject.prototype.getHeight = function ()
-    {
-        var _this = this;
-        var matrix = _this.getMatrix();
-        var bounds = _this.getBounds(matrix);
-        return _abs(bounds.yMax - bounds.yMin);
-    };
-
-    /**
-     * @param height
-     */
-    DisplayObject.prototype.setHeight = function (height)
-    {
-        height = +height;
-        if (!_isNaN(height)) {
-            var _this = this;
-            var _matrix = _this.getOriginMatrix();
-            var bounds = _this.getBounds(_matrix);
-            var _height = _abs(bounds.yMax - bounds.yMin);
-            var yScale = height * _matrix[3] / _height;
-            if (_isNaN(yScale)) {
-                yScale = 0;
-            }
-            _matrix = _this.getMatrix();
-            var matrix = _this.cloneArray(_matrix);
-            matrix[3] = yScale;
-            _this.setMatrix(matrix);
-        }
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getXMouse = function ()
-    {
-        if (!_event) {
-            return null;
-        }
-        var _this = this;
-        var _root = _this.getDisplayObject("_root");
-        var stage = _root.getStage();
-        var div = _document.getElementById(stage.getName());
-        var bounds = div.getBoundingClientRect();
-        var docBody = _document.body;
-        var x = docBody.scrollLeft + bounds.left;
-        var touchX = 0;
-        if (isTouch) {
-            var changedTouche = _event.changedTouches[0];
-            touchX = changedTouche.pageX;
-        } else {
-            touchX = _event.pageX;
-        }
-
-        var mc = _this;
-        var matrix = _this.getMatrix();
-        while (true) {
-            var parent = mc.getParent();
-            if (!parent) {
-                break;
-            }
-            matrix = _this.multiplicationMatrix(parent.getMatrix(), matrix);
-            mc = parent;
-        }
-
-        var scale = stage.getScale();
-        touchX -= x;
-        touchX /= scale;
-        touchX -= matrix[4] / 20;
-        return touchX;
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getYMouse = function ()
-    {
-        if (!_event) {
-            return null;
-        }
-        var _this = this;
-        var _root = _this.getDisplayObject("_root");
-        var stage = _root.getStage();
-        var div = _document.getElementById(stage.getName());
-        var bounds = div.getBoundingClientRect();
-        var docBody = _document.body;
-        var y = docBody.scrollTop + bounds.top;
-        var touchY = 0;
-        if (isTouch) {
-            var changedTouche = _event.changedTouches[0];
-            touchY = changedTouche.pageY;
-        } else {
-            touchY = _event.pageY;
-        }
-
-        var mc = _this;
-        var matrix = _this.getMatrix();
-        while (true) {
-            var parent = mc.getParent();
-            if (!parent) {
-                break;
-            }
-            matrix = _this.multiplicationMatrix(parent.getMatrix(), matrix);
-            mc = parent;
-        }
-
-        var scale = stage.getScale();
-        touchY -= y;
-        touchY /= scale;
-        touchY -= matrix[5] / 20;
-        return touchY;
-    };
-
-    /**
-     * @param name
-     * @param parse
-     * @returns {*}
-     */
-    DisplayObject.prototype.getVariable = function (name, parse)
-    {
-        var _this = this;
-        if (name === undefined) {
-            return name;
-        }
-
-        var variables = _this.variables;
-        if (!variables) {
-            return undefined;
-        }
-
-        if (name in variables) {
-            return variables[name];
-        }
-
-        var stage = _this.getStage();
-        var version = stage.getVersion();
-        if (version < 7) {
-            for (var key in variables) {
-                if (!variables.hasOwnProperty(key)) {
-                    continue;
-                }
-                if (key.toLowerCase() === name.toLowerCase()) {
-                    return variables[key];
-                }
-            }
-        }
-
-        var value;
-        if (version > 4) {
-            var registerClass = variables.registerClass;
-            if (registerClass &&
-                typeof registerClass === "object" &&
-                name in registerClass
-            ) {
-                return registerClass[name];
-            }
-
-            if (_this instanceof MovieClip) {
-                value = (_this as any).getDisplayObject(name, parse);
-                if (value) {
-                    return value;
-                }
-            }
-
-            // avm2
-            var cId = _this.getCharacterId();
-            var symbol = stage.symbols[cId];
-            if (symbol) {
-                var symbols = symbol.split(".");
-                var classMethod = symbols.pop();
-                var sLen = symbols.length;
-                var classObj = stage.avm2;
-                for (var sIdx = 0; sIdx < sLen; sIdx++) {
-                    classObj = classObj[symbols[sIdx]];
-                }
-
-                var AVM2 = classObj[classMethod];
-                value = AVM2[name];
-                if (value) {
-                    return value;
-                }
-            }
-
-            var _global = stage.getGlobal();
-            value = _global.getVariable(name);
-            if (value) {
-                return value;
-            }
-            if (_this instanceof MovieClip && name === "flash") {
-                return (_this as any).flash;
-            }
-            if (name in window) {
-                return window[name];
-            }
-        }
-        return undefined;
-    };
-
-    /**
-     * @param name
-     * @param value
-     */
-    DisplayObject.prototype.setVariable = function (name, value)
-    {
-        var _this = this;
-        var variables = _this.variables;
-        var stage = _this.getStage();
-        if (typeof name !== "string") {
-            name += "";
-        }
-
-        if (stage.getVersion() < 7) {
-            for (var key in variables) {
-                if (!variables.hasOwnProperty(key)) {
-                    continue;
-                }
-                if (key.toLowerCase() !== name.toLowerCase()) {
-                    continue;
-                }
-                _this.variables[key] = value;
-                return 0;
-            }
-        }
-        _this.variables[name] = value;
-    };
-
-    /**
-     * @param path
-     * @returns {*}
-     */
-    DisplayObject.prototype.getGlobalVariable = function (path)
-    {
-        var _this = this;
-        var stage = _this.getStage();
-        var version = stage.getVersion();
-        if (version < 5) {
-            return undefined;
-        }
-
-        var splitData = null;
-        if (path.indexOf(".") !== -1) {
-            splitData = path.split(".");
-        }
-
-        var value;
-        if (splitData) {
-            var _global = stage.getGlobal();
-            var variables = _global.variables;
-            var length = splitData.length;
-            for (var i = 0; i < length; i++) {
-                var name = splitData[i];
-                if (version < 7) {
-                    for (var key in variables) {
-                        if (!variables.hasOwnProperty(key)) {
-                            continue;
-                        }
-                        if (key.toLowerCase() === name.toLowerCase()) {
-                            value = variables[key];
-                            break;
-                        }
-                    }
-                } else {
-                    value = variables[name];
-                }
-
-                if (!value) {
-                    break;
-                }
-                variables = value;
-            }
-        }
-
-        return value;
-    };
-
-    /**
-     * @param path
-     * @param parse
-     * @returns {*}
-     */
-    DisplayObject.prototype.getDisplayObject = function (path, parse)
-    {
-        var _this = this;
-        var mc = _this;
-        var _root = mc;
-        var tags, tag, stage, parent;
-
-        if (!_this._lockroot) {
-            while (true) {
-                parent = _root.getParent();
-                if (!parent) {
-                    break;
-                }
-                _root = parent;
-            }
-        } else {
-            stage = _this.getStage();
-            _root = stage.getParent();
-        }
-
-        if (typeof path !== "string") {
-            path += "";
-        }
-        if (path === "_root") {
-            return _root;
-        }
-        if (path === "this") {
-            return this;
-        }
-        stage = _root.getStage();
-        if (path === "_global") {
-            return stage.getGlobal();
-        }
-
-        parent = mc.getParent();
-        if (path === "_parent") {
-            return (parent !== null) ? parent : undefined;
-        }
-
-        var len = 1;
-        var splitData = [path];
-        if (parse !== false) {
-            if (path.indexOf("/") !== -1) {
-                splitData = path.split("/");
-                len = splitData.length;
-                if (splitData[0] === "") {
-                    mc = _root;
-                }
-            } else if (path.indexOf(".") !== -1) {
-                splitData = path.split(".");
-                len = splitData.length;
-                if (splitData[0] === "_root") {
-                    mc = _root;
-                }
-            } else if (path.substr(0, 6) === "_level") {
-                var level = path.substr(6);
-                level = +level;
-                if (level === 0) {
-                    return _root;
-                }
-                if (!parent) {
-                    parent = stage.getParent();
-                }
-                tags = parent.getTags();
-                if (level in tags) {
-                    var tId = tags[level];
-                    tag = stage.getInstance(tId);
-                    if (tag instanceof MovieClip) {
-                        return tag;
-                    }
-                }
-                return undefined;
-            }
-        }
-
-        var version = stage.getVersion();
-        for (var i = 0; i < len; i++) {
-            var name = splitData[i];
-            if (name === "") {
-                continue;
-            }
-            if (name === "_root") {
-                mc = _root;
-                continue;
-            }
-            if (name === "this") {
-                mc = _this;
-                continue;
-            }
-            if (name === "_parent") {
-                parent = mc.getParent();
-                if (!parent) {
-                    return undefined;
-                }
-                mc = parent;
-                continue;
-            }
-            if (name === "..") {
-                mc = mc.getParent();
-
-                if (!mc) {
-                    return undefined;
-                }
-                continue;
-            }
-
-            tags = mc.getTags();
-            if (tags === undefined) {
-                return undefined;
-            }
-
-            var tagLength = tags.length;
-            var setTarget = false;
-            if (tagLength > 0) {
-                for (var idx in tags) {
-                    if (!tags.hasOwnProperty(idx)) {
-                        continue;
-                    }
-
-                    var instanceId = tags[idx];
-                    var loadStage = mc.getStage();
-                    tag = loadStage.getInstance(instanceId);
-                    if (!tag || tag.removeFlag) {
-                        continue;
-                    }
-
-                    var tagName = tag.getName();
-                    if (!tagName) {
-                        continue;
-                    }
-
-                    if (version < 7) {
-                        if (tagName.toLowerCase() === name.toLowerCase()) {
-                            mc = tag;
-                            setTarget = true;
-                            break;
-                        }
-                    } else {
-                        if (tagName === name) {
-                            mc = tag;
-                            setTarget = true;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (!setTarget) {
-                return undefined;
-            }
-        }
-        return mc;
-    };
-
-    /**
-     * @param ctx
-     * @param matrix
-     * @param colorTransform
-     * @param stage
-     * @param visible
-     */
-    DisplayObject.prototype.preRender = function (ctx, matrix, colorTransform, stage, visible)
-    {
-        var _this = this;
-        _this.isLoad = true;
-
-        var cacheKey = "";
-        var preCtx = ctx;
-        var preMatrix = matrix;
-
-        var isFilter = false;
-        var isBlend = false;
-        var cache, rMatrix, xScale, yScale, xMin, yMin, xMax, yMax;
-
-        // mask
-        var maskObj = _this.getMask();
-        if (maskObj) {
-            _this.renderMask(ctx, stage);
-        }
-
-        // filter
-        if (visible && !stage.clipMc) {
-            var filters = _this.getFilters();
-            if (filters !== null && filters.length) {
-                isFilter = true;
-            }
-
-            // blend
-            var blendMode = _this.getBlendMode();
-            if (blendMode !== null && blendMode !== "normal") {
-                isBlend = true;
-            }
-        }
-
-        // filter or blend
-        if (isFilter || isBlend) {
-            rMatrix = _this.multiplicationMatrix(stage.getMatrix(), matrix);
-
-            var bounds;
-            var twips = 1;
-            if (_this instanceof Shape || _this instanceof StaticText) {
-                bounds = (_this as any).getBounds();
-                xScale = _sqrt(rMatrix[0] * rMatrix[0] + rMatrix[1] * rMatrix[1]);
-                yScale = _sqrt(rMatrix[2] * rMatrix[2] + rMatrix[3] * rMatrix[3]);
-            } else {
-                twips = 20;
-                bounds = _this.getBounds(matrix);
-                xScale = stage.getScale() * _devicePixelRatio;
-                yScale = stage.getScale() * _devicePixelRatio;
-            }
-
-            xMin = bounds.xMin;
-            yMin = bounds.yMin;
-            xMax = bounds.xMax;
-            yMax = bounds.yMax;
-
-            var width = _abs(_ceil((xMax - xMin) * xScale));
-            var height = _abs(_ceil((yMax - yMin) * yScale));
-
-            var canvas = cacheStore.getCanvas();
-            canvas.width = width || 1;
-            canvas.height = height || 1;
-            cache = canvas.getContext("2d");
-            cache._offsetX = 0;
-            cache._offsetY = 0;
-
-            var m2 = [1, 0, 0, 1, -xMin * twips, -yMin * twips];
-            var m3 = [matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]];
-            if (_this instanceof Shape) {
-                m3[4] = 0;
-                m3[5] = 0;
-            }
-            preCtx = cache;
-            preMatrix = _this.multiplicationMatrix(m2, m3);
-        }
-
-        // graphics
-        if (visible) {
-            cacheKey += _this.renderGraphics(preCtx, preMatrix, colorTransform, stage);
-        }
-
-        return {
-            preCtx: preCtx,
-            preMatrix: preMatrix,
-            isFilter: isFilter,
-            isBlend: isBlend,
-            rMatrix: rMatrix,
-            cacheKey: cacheKey,
-            xMin: xMin * xScale,
-            yMin: yMin * yScale
-        };
-    };
-
-    /**
-     * @param ctx
-     * @param matrix
-     * @param colorTransform
-     * @param stage
-     * @param obj
-     */
-    DisplayObject.prototype.postRender = function(ctx, matrix, colorTransform, stage, obj)
-    {
-        var _this = this;
-        var cache = obj.preCtx;
-        var isFilter = obj.isFilter;
-        var cacheKey = obj.cacheKey;
-        if (isFilter && cacheKey !== "") {
-            cache = _this.renderFilter(cache, matrix, colorTransform, stage, cacheKey);
-        }
-
-        var xMin = obj.xMin;
-        var yMin = obj.yMin;
-        if (_this instanceof Shape) {
-            xMin += obj.rMatrix[4];
-            yMin += obj.rMatrix[5];
-        }
-        if (cache) {
-            xMin -= cache._offsetX;
-            yMin -= cache._offsetY;
-        }
-
-        _this.renderBlend(ctx, cache, xMin, yMin, isFilter);
-    };
-
-
-        /**
-     * @param ctx
-     * @param matrix
-     * @param colorTransform
-     * @param stage
-     * @returns {string}
-     */
-    DisplayObject.prototype.renderGraphics = function (ctx, matrix, colorTransform, stage)
-    {
-        var graphics = this.graphics;
-        var cacheKey = "";
-        if (graphics && graphics.isDraw) {
-            cacheKey = graphics.render(ctx, matrix, colorTransform, stage);
-        }
-        return cacheKey;
-    };
-
-    /**
-     * @param ctx
-     * @param stage
-     */
-    DisplayObject.prototype.renderMask = function (ctx, stage)
-    {
-        var _this = this;
-        var maskObj = _this.getMask();
-        if (maskObj) {
-            ctx.save();
-            ctx.beginPath();
-            stage.clipMc = true;
-
-            var mc = maskObj;
-            var matrix = [1,0,0,1,0,0];
-            var _multiplicationMatrix = _this.multiplicationMatrix;
-            while (true) {
-                var parent = mc.getParent();
-                if (!parent.getParent()) {
-                    break;
-                }
-                matrix = _multiplicationMatrix(parent.getMatrix(), matrix);
-                mc = parent;
-            }
-            maskObj.render(ctx, matrix, [1,1,1,1,0,0,0,0], stage, true);
-            ctx.clip();
-            stage.clipMc = false;
-        }
-    };
-
-    /**
-     * @param filters
-     * @returns {string}
-     */
-    DisplayObject.prototype.getFilterKey = function (filters)
-    {
-        var keys = [];
-        var length = filters.length;
-        for (var i = 0; i < length; i++) {
-            var filter = filters[i];
-            for (var prop in filter) {
-                if (!filter.hasOwnProperty(prop)) {
-                    continue;
-                }
-                keys[keys.length] = filter[prop];
-            }
-        }
-        return keys.join("_");
-    };
-
-    /**
-     * @param ctx
-     * @param matrix
-     * @param colorTransform
-     * @param stage
-     * @param cacheKey
-     * @returns {*}
-     */
-    DisplayObject.prototype.renderFilter = function (ctx, matrix, colorTransform, stage, cacheKey)
-    {
-        var _this = this;
-        var filters = _this.getFilters();
-        if (stage.clipMc || !filters || !filters.length) {
-            return ctx;
-        }
-
-        cacheKey += "_" + _this.getFilterKey(filters);
-        var cacheStoreKey = "Filter_" + _this.instanceId;
-
-        var cache;
-        if (_this._filterCacheKey === cacheKey) {
-            cache = cacheStore.getCache(cacheStoreKey);
-        }
-
-        if (!cache) {
-            var fLength = filters.length;
-            for (var i = 0; i < fLength; i++) {
-                var filter = filters[i];
-                cache = filter.render(ctx, matrix, colorTransform, stage);
-            }
-            _this._filterCacheKey = cacheKey;
-            cacheStore.setCache(cacheStoreKey, cache);
-        }
-
-        cacheStore.destroy(ctx);
-
-        return cache;
-    };
-
-    /**
-     * @param ctx
-     * @param cache
-     * @param xMin
-     * @param yMin
-     * @param isFilter
-     */
-    DisplayObject.prototype.renderBlend = function (ctx, cache, xMin, yMin, isFilter)
-    {
-        var _this = this;
-        var mode = _this.getBlendMode();
-        var operation = "source-over";
-        var canvas = cache.canvas;
-        var width = canvas.width;
-        var height = canvas.height;
-        cache.setTransform(1, 0, 0, 1, 0, 0);
-
-        switch (mode) {
-            case "multiply":
-                operation = "multiply";
-                break;
-            case "screen":
-                operation = "screen";
-                break;
-            case "lighten":
-                operation = "lighten";
-                break;
-            case "darken":
-                operation = "darken";
-                break;
-            case "difference":
-                operation = "difference";
-                break;
-            case "add":
-                operation = "lighter";
-                break;
-            case "subtract":
-                cache.globalCompositeOperation = "difference";
-                cache.fillStyle = "rgb(255,255,255)";
-                cache.fillRect(0, 0, width, height);
-                cache.globalCompositeOperation = "darken";
-                cache.fillStyle = "rgb(255,255,255)";
-                cache.fillRect(0, 0, width, height);
-                operation = "color-burn";
-                break;
-            case "invert":
-                cache.globalCompositeOperation = "difference";
-                cache.fillStyle = "rgb(255,255,255)";
-                cache.fillRect(0, 0, width, height);
-                cache.globalCompositeOperation = "lighter";
-                cache.fillStyle = "rgb(255,255,255)";
-                cache.fillRect(0, 0, width, height);
-                operation = "difference";
-                break;
-            case "alpha":
-                operation = "source-over";
-                break;
-            case "erase":
-                operation = "destination-out";
-                break;
-            case "overlay":
-                operation = "overlay";
-                break;
-            case "hardlight":
-                operation = "hard-light";
-                break;
-        }
-
-        ctx.globalAlpha = 1;
-        ctx.globalCompositeOperation = operation;
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.drawImage(canvas, xMin, yMin, canvas.width, canvas.height);
-        ctx.globalCompositeOperation = "source-over";
-        if (!isFilter) {
-            cacheStore.destroy(cache);
-        }
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getOriginMatrix = function ()
-    {
-        var _this = this;
-        var controller = _this.getController();
-        return controller.getMatrix();
-    };
-
-    /**
-     * @returns []
-     */
-    DisplayObject.prototype.getMatrix = function ()
-    {
-        return this._matrix || this.getOriginMatrix();
-    };
-
-    /**
-     * @param matrix
-     */
-    DisplayObject.prototype.setMatrix = function (matrix)
-    {
-        var _this = this;
-        _this._matrix = matrix;
-        _this.setController(true, false, false, false);
-    };
-
-    /**
-     * @returns {*}
-     */
-    DisplayObject.prototype.getOriginColorTransform = function ()
-    {
-        var _this = this;
-        var controller = _this.getController();
-        return controller.getColorTransform();
-    };
-
-    /**
-     * @returns []
-     */
-    DisplayObject.prototype.getColorTransform = function ()
-    {
-        return this._colorTransform || this.getOriginColorTransform();
-    };
-
-    /**
-     * @param colorTransform
-     */
-    DisplayObject.prototype.setColorTransform = function (colorTransform)
-    {
-        var _this = this;
-        _this._colorTransform = colorTransform;
-        _this.setController(false, true, false, false);
-    };
-
-    /**
-     * @returns {string}
-     */
-    DisplayObject.prototype.getOriginBlendMode = function ()
-    {
-        var _this = this;
-        var controller = _this.getController();
-        return controller.getBlendMode();
-    };
-
-    /**
-     * @returns {string}
-     */
-    DisplayObject.prototype.getBlendMode = function ()
-    {
-        return this._blendMode || this.getOriginBlendMode();
-    };
-
-    /**
-     * @param blendMode
-     */
-    DisplayObject.prototype.setBlendMode = function (blendMode)
-    {
-        var _this = this;
-        var mode = _this.getBlendName(blendMode);
-        if (mode !== null) {
-            _this._blendMode = mode;
-            _this.setController(false, false, false, true);
-        }
-    };
-
-    /**
-     * @returns {Array}
-     */
-    DisplayObject.prototype.getOriginFilters = function ()
-    {
-        var _this = this;
-        var controller = _this.getController();
-        return controller.getFilters();
-    };
-
-    /**
-     * @returns {Array}
-     */
-    DisplayObject.prototype.getFilters = function ()
-    {
-        return this._filters || this.getOriginFilters();
-    };
-
-    /**
-     * @param filters
-     */
-    DisplayObject.prototype.setFilters = function (filters)
-    {
-        var _this = this;
-        _this._filterCacheKey = null;
-        _this._filters = filters;
-        _this.setController(false, false, true, false);
-    };
-
-    /**
-     * @param isMatrix
-     * @param isColorTransform
-     * @param isFilters
-     * @param isBlend
-     */
-    DisplayObject.prototype.setController = function (isMatrix, isColorTransform, isFilters, isBlend)
-    {
-        var _this = this;
-
-        if (!isMatrix) {
-            var _matrix = _this._matrix;
-            if (_matrix === null) {
-                _matrix = _this.getMatrix();
-                _this._matrix = _this.cloneArray(_matrix);
-            }
-        }
-
-        if (!isColorTransform) {
-            var _colorTransform = _this._colorTransform;
-            if (_colorTransform === null) {
-                _colorTransform = _this.getColorTransform();
-                _this._colorTransform = _this.cloneArray(_colorTransform);
-            }
-        }
-
-        if (!isFilters) {
-            var _filters = _this._filters;
-            if (_filters === null) {
-                _filters = _this.getFilters();
-                if (_filters === null) {
-                    _filters = [];
-                }
-                _this._filters = _filters;
-            }
-        }
-
-        if (!isBlend) {
-            var _blendMode = _this._blendMode;
-            if (_blendMode === null) {
-                _blendMode = _this.getBlendMode();
-                _this._blendMode = _blendMode;
-            }
-        }
-    };
-
-    /**
-     * @returns {PlaceObject}
-     */
-    DisplayObject.prototype.getController = function ()
-    {
-        var _this = this;
-        var frame = 0;
-        var depth = _this.getLevel();
-        var stage = _this.getParentStage();
-        if (!stage) {
-            return new PlaceObject();
-        }
-
-        var parent = _this.getParentSprite();
-        if (!parent) {
-            parent = _this.getParent();
-        }
-        if (!parent) {
-            return new PlaceObject();
-        }
-
-        if (parent instanceof MovieClip) {
-            frame = (parent as any).getCurrentFrame();
-        }
-        var placeObject = stage.getPlaceObject(parent.instanceId, depth, frame);
-        if (!placeObject) {
-            stage = _this.getLoadStage();
-            if (stage) {
-                placeObject = stage.getPlaceObject(parent.instanceId, depth, frame);
-            }
-        }
-
-        return placeObject || new PlaceObject();
-    };
-
-    /**
-     * reset
-     */
-    DisplayObject.prototype.reset = function ()
-    {
-        var _this = this;
-        _this.active = false;
-        _this.isMask = false;
-        _this._matrix = null;
-        _this._colorTransform = null;
-        _this._filters = null;
-        _this._blendMode = null;
-        _this._depth = null;
-        _this.setVisible(true);
-        _this.setEnabled(true);
-        _this.setButtonStatus("up");
-
-        if (_this instanceof TextField) {
-            _this = _this as any;
-            var input = _this.input;
-            if (_this.inputActive) {
-                _this.inputActive = false;
-                input.onchange = null;
-                var stage = _this.getStage();
-                var div = _document.getElementById(stage.getName());
-                if (div) {
-                    var el = _document.getElementById(_this.getTagName());
-                    if (el) {
-                        try {
-                            div.removeChild(el);
-                        } catch (e) {
-
-                        }
-                    }
-                }
-            }
-            _this.variables.text = _this.initialText;
-        }
-    };
-
-    /**
-     * trace
-     */
-    DisplayObject.prototype.trace = function ()
-    {
-        var params = ["[trace]"];
-        var length = arguments.length;
-        for (var i = 0; i < length; i++) {
-            params[params.length] = arguments[i];
-        }
-        console.log.apply(window, params);
-    };
-
-    /**
-     * @constructor
-     */
     var InteractiveObject = function ()
     {
         var _this = this;
@@ -13938,7 +11501,7 @@ if (!("swf2js" in window)){(function(window)
                 variables.onDragOver !== undefined ||
                 variables.onDragOut !== undefined
             ) {
-                var rMatrix = _this.multiplicationMatrix(matrix, _this.getMatrix());
+                var rMatrix = multiplicationMatrix(matrix, _this.getMatrix());
                 var bounds = _this.getBounds(rMatrix);
                 buttonHits[buttonHits.length] = {
                     xMax: bounds.xMax,
@@ -13946,7 +11509,7 @@ if (!("swf2js" in window)){(function(window)
                     yMax: bounds.yMax,
                     yMin: bounds.yMin,
                     parent: _this,
-                    matrix: _this.cloneArray(matrix)
+                    matrix: cloneArray(matrix)
                 };
             }
         }
@@ -14126,6 +11689,22 @@ if (!("swf2js" in window)){(function(window)
     Sprite.prototype.setHitArea = function (displayObject)
     {
         this._hitArea = displayObject;
+    };
+
+    /**
+     * @returns {boolean}
+     */
+    Sprite.prototype.getButtonMode = function ()
+    {
+        return this._buttonMode;
+    };
+
+    /**
+     * @param buttonMode
+     */
+    Sprite.prototype.setButtonMode = function (buttonMode)
+    {
+        this._buttonMode = buttonMode;
     };
 
     /**
@@ -14356,10 +11935,8 @@ if (!("swf2js" in window)){(function(window)
         }
 
         // matrix & colorTransform
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var rMatrix = _multiplicationMatrix(matrix, _this.getMatrix());
-        var _multiplicationColor = _this.multiplicationColor;
-        var rColorTransform = _multiplicationColor(colorTransform, _this.getColorTransform());
+        var rMatrix = multiplicationMatrix(matrix, _this.getMatrix());
+        var rColorTransform = multiplicationColor(colorTransform, _this.getColorTransform());
         var isVisible = _min(_this.getVisible(), visible);
 
         // pre render
@@ -14367,6 +11944,11 @@ if (!("swf2js" in window)){(function(window)
         var cacheKey = obj.cacheKey;
         var preCtx = obj.preCtx;
         var preMatrix = obj.preMatrix;
+
+        // graphics
+        if (visible && this.graphics && this.graphics.isDraw)
+            cacheKey += this.graphics.render(preCtx, preMatrix, rColorTransform, stage);
+
 
         // render
         var clips = [];
@@ -14514,7 +12096,7 @@ if (!("swf2js" in window)){(function(window)
         var tags = _this.getTags();
         var length = tags.length;
         var hit = false;
-        var rMatrix = _this.multiplicationMatrix(matrix, _this.getMatrix());
+        var rMatrix = multiplicationMatrix(matrix, _this.getMatrix());
 
         if (length) {
             for (var depth in tags) {
@@ -14561,73 +12143,6 @@ if (!("swf2js" in window)){(function(window)
         return {xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax};
     };
 
-    /**
-     * @param matrix
-     * @returns {{}}
-     */
-    Sprite.prototype.getBounds = function (matrix)
-    {
-        if (matrix instanceof MovieClip) {
-            matrix = matrix as any;
-            return matrix.getBounds(matrix.getOriginMatrix());
-        }
-
-        var _this = this;
-        var tags = _this.getTags();
-        var xMax = 0;
-        var yMax = 0;
-        var xMin = 0;
-        var yMin = 0;
-        var graphics = _this.graphics;
-        var isDraw = graphics.isDraw;
-        if (isDraw) {
-            var maxWidth = graphics.maxWidth;
-            var halfWidth = maxWidth / 2;
-            var gBounds = _this.boundsMatrix(graphics.bounds, matrix);
-            var twips = (matrix) ? 20 : 1;
-            xMin = (gBounds.xMin - halfWidth) / twips;
-            xMax = (gBounds.xMax + halfWidth) / twips;
-            yMin = (gBounds.yMin - halfWidth) / twips;
-            yMax = (gBounds.yMax + halfWidth) / twips;
-        }
-
-        var length = tags.length;
-        var stage = _this.getStage();
-        if (length) {
-            if (!isDraw) {
-                var no = _Number.MAX_VALUE;
-                xMax = -no;
-                yMax = -no;
-                xMin = no;
-                yMin = no;
-            }
-
-            var _multiplicationMatrix = _this.multiplicationMatrix;
-            for (var depth in tags) {
-                if (!tags.hasOwnProperty(depth)) {
-                    continue;
-                }
-                var instanceId = tags[depth];
-                var tag = stage.getInstance(instanceId);
-                if (!tag || tag.isClipDepth) {
-                    continue;
-                }
-
-                var matrix2 = (matrix) ? _multiplicationMatrix(matrix, tag.getMatrix()) : tag.getMatrix();
-                var bounds = tag.getBounds(matrix2);
-                if (!bounds) {
-                    continue;
-                }
-
-                xMin = _min(xMin, bounds.xMin);
-                xMax = _max(xMax, bounds.xMax);
-                yMin = _min(yMin, bounds.yMin);
-                yMax = _max(yMax, bounds.yMax);
-            }
-        }
-
-        return {xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax};
-    };
 
     /**
      * @param ctx
@@ -14651,7 +12166,7 @@ if (!("swf2js" in window)){(function(window)
         var hit = false;
         var tags = _this.getTags();
         var length = tags.length;
-        var matrix2 = _this.multiplicationMatrix(matrix, _this.getMatrix());
+        var matrix2 = multiplicationMatrix(matrix, _this.getMatrix());
         if (length) {
             var loadStage = _this.getStage();
             tags.reverse();
@@ -14794,9 +12309,9 @@ if (!("swf2js" in window)){(function(window)
         var isDraw = graphics.isDraw;
 
         if (matrix) {
-            bounds = _this.boundsMatrix(_this.bounds, matrix);
+            bounds = _this.bounds.transform(matrix);
             if (isDraw) {
-                gBounds = _this.boundsMatrix(graphics.getBounds(), matrix);
+                gBounds = graphics.getBounds().transform(matrix);
                 bounds.xMin = _min(gBounds.xMin, bounds.xMin);
                 bounds.xMax = _max(gBounds.xMax, bounds.xMax);
                 bounds.yMin = _min(gBounds.yMin, bounds.yMin);
@@ -14854,8 +12369,7 @@ if (!("swf2js" in window)){(function(window)
         stage.doneTags.unshift(_this);
 
         // colorTransform
-        var _multiplicationColor = _this.multiplicationColor;
-        var rColorTransform = _multiplicationColor(colorTransform, _this.getColorTransform());
+        var rColorTransform = multiplicationColor(colorTransform, _this.getColorTransform());
         var isVisible = _min(_this.getVisible(), visible);
         var alpha = rColorTransform[3] + (rColorTransform[7] / 255);
         var stageClip = stage.clipMc || stage.isClipDepth;
@@ -14864,8 +12378,7 @@ if (!("swf2js" in window)){(function(window)
         }
 
         // matrix
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var m2 = _multiplicationMatrix(matrix, _this.getMatrix());
+        var m2 = multiplicationMatrix(matrix, _this.getMatrix());
 
         // pre render
         var obj = _this.preRender(ctx, m2, rColorTransform, stage, isVisible);
@@ -14873,7 +12386,7 @@ if (!("swf2js" in window)){(function(window)
         var cache = null;
 
         // render
-        var m3 = _multiplicationMatrix(stage.getMatrix(), obj.preMatrix);
+        var m3 = multiplicationMatrix(stage.getMatrix(), obj.preMatrix);
         var isClipDepth = _this.isClipDepth || stageClip;
         if (isClipDepth) {
             if (m3[0]===0) {
@@ -14932,8 +12445,8 @@ if (!("swf2js" in window)){(function(window)
             var preCtx = obj.preCtx;
             if (cache) {
                 canvas = cache.canvas;
-                var sMatrix = [1 / xScale, 0, 0, 1 / yScale, xMin, yMin];
-                var m4 = _multiplicationMatrix(m3, sMatrix);
+                var sMatrix: Matrix = [1 / xScale, 0, 0, 1 / yScale, xMin, yMin];
+                var m4 = multiplicationMatrix(m3, sMatrix);
                 preCtx.setTransform(m4[0],m4[1],m4[2],m4[3],m4[4],m4[5]);
                 if (isAndroid4x && !isChrome) {
                     preCtx.fillStyle = stage.context.createPattern(cache.canvas, "no-repeat");
@@ -14968,8 +12481,7 @@ if (!("swf2js" in window)){(function(window)
     Shape.prototype.renderHitTest = function (ctx, matrix, stage, x, y)
     {
         var _this = this;
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var m2 = _multiplicationMatrix(matrix, _this.getMatrix());
+        var m2 = multiplicationMatrix(matrix, _this.getMatrix());
 
         var graphics = _this.graphics;
         if (graphics.isDraw) {
@@ -14980,7 +12492,7 @@ if (!("swf2js" in window)){(function(window)
             return false;
         }
 
-        var m3 = _multiplicationMatrix(stage.getMatrix(), m2);
+        var m3 = multiplicationMatrix(stage.getMatrix(), m2);
         ctx.setTransform(m3[0],m3[1],m3[2],m3[3],m3[4],m3[5]);
 
         var minScale = _min(m3[0], m3[3]);
@@ -15061,7 +12573,7 @@ if (!("swf2js" in window)){(function(window)
             switch (styleType) {
                 case 0x00:
                     color = styleObj.Color;
-                    color = _this.generateColorTransform(color, colorTransform);
+                    color = generateColorTransform(color, colorTransform);
                     css = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
                     if (isStroke) {
                         ctx.strokeStyle = css;
@@ -15101,7 +12613,7 @@ if (!("swf2js" in window)){(function(window)
                     for (var rIdx = 0; rIdx < rLength; rIdx++) {
                         var record = records[rIdx];
                         color = record.Color;
-                        color = _this.generateColorTransform(color, colorTransform);
+                        color = generateColorTransform(color, colorTransform);
                         var rgba = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
                         css.addColorStop(record.Ratio, rgba);
                     }
@@ -15381,7 +12893,7 @@ if (!("swf2js" in window)){(function(window)
     {
         var _this = this;
         if (matrix) {
-            var bounds = _this.boundsMatrix(_this.bounds, matrix);
+            var bounds = _this.bounds.transform(matrix);
             for (var name in bounds) {
                 if (!bounds.hasOwnProperty(name)) {
                     continue;
@@ -15432,8 +12944,7 @@ if (!("swf2js" in window)){(function(window)
         var _this = this;
 
         // colorTransform
-        var _multiplicationColor = _this.multiplicationColor;
-        var rColorTransform = _multiplicationColor(colorTransform, _this.getColorTransform());
+        var rColorTransform = multiplicationColor(colorTransform, _this.getColorTransform());
         var isVisible = _min(_this.getVisible(), visible);
         var alpha = rColorTransform[3] + (rColorTransform[7] / 255);
         var stageClip = stage.clipMc || stage.isClipDepth;
@@ -15442,12 +12953,11 @@ if (!("swf2js" in window)){(function(window)
         }
 
         // matrix
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var m2 = _multiplicationMatrix(matrix, _this.getMatrix());
+        var m2 = multiplicationMatrix(matrix, _this.getMatrix());
 
         // pre render
         var obj = _this.preRender(ctx, m2, rColorTransform, stage, visible);
-        var m3 = _multiplicationMatrix(stage.getMatrix(), obj.preMatrix);
+        var m3 = multiplicationMatrix(stage.getMatrix(), obj.preMatrix);
         var xScale = _sqrt(m3[0] * m3[0] + m3[1] * m3[1]);
         var yScale = _sqrt(m3[2] * m3[2] + m3[3] * m3[3]);
         xScale = _pow(_SQRT2, _ceil(_log(xScale) / _LN2_2 - _LOG1P));
@@ -15481,7 +12991,7 @@ if (!("swf2js" in window)){(function(window)
             }
             if (cache) {
                 canvas = cache.canvas;
-                var m4 = _multiplicationMatrix(m3, [1 / xScale, 0, 0, 1 / yScale, xMin, yMin]);
+                var m4 = multiplicationMatrix(m3, [1 / xScale, 0, 0, 1 / yScale, xMin, yMin]);
                 ctx.setTransform(m4[0],m4[1],m4[2],m4[3],m4[4],m4[5]);
                 if (isAndroid4x && !isChrome) {
                     ctx.fillStyle = stage.context.createPattern(cache.canvas, "no-repeat");
@@ -15523,8 +13033,6 @@ if (!("swf2js" in window)){(function(window)
             return ctx;
         }
 
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var _generateColorTransform = _this.generateColorTransform;
         for (var i = 0; i < length; i++) {
             var record = records[i];
             var shapes = record.getData();
@@ -15533,10 +13041,10 @@ if (!("swf2js" in window)){(function(window)
                 continue;
             }
 
-            var m2 = _multiplicationMatrix(matrix, record.getMatrix());
+            var m2 = multiplicationMatrix(matrix, record.getMatrix());
             ctx.setTransform(m2[0],m2[1],m2[2],m2[3],m2[4],m2[5]);
             var color = record.getColor();
-            color = _generateColorTransform(color, colorTransform);
+            color = generateColorTransform(color, colorTransform);
             ctx.fillStyle = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
             for (var idx = 0; idx < shapeLength; idx++) {
                 var styleObj = shapes[idx];
@@ -15577,9 +13085,8 @@ if (!("swf2js" in window)){(function(window)
         }
 
         var hit = false;
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var m2 = _multiplicationMatrix(matrix, _this.getMatrix());
-        var m3 = _multiplicationMatrix(stage.getMatrix(), m2);
+        var m2 = multiplicationMatrix(matrix, _this.getMatrix());
+        var m3 = multiplicationMatrix(stage.getMatrix(), m2);
         for (var i = 0; i < length; i++) {
             var record = records[i];
             var shapes = record.getData();
@@ -15588,7 +13095,7 @@ if (!("swf2js" in window)){(function(window)
                 continue;
             }
 
-            var m4 = _multiplicationMatrix(m3, record.getMatrix());
+            var m4 = multiplicationMatrix(m3, record.getMatrix());
             ctx.setTransform(m4[0],m4[1],m4[2],m4[3],m4[4],m4[5]);
             for (var idx = 0; idx < shapeLength; idx++) {
                 var styleObj = shapes[idx];
@@ -15765,7 +13272,7 @@ if (!("swf2js" in window)){(function(window)
                 if (typeof color === "string") {
                     color = this.colorStringToInt(color);
                 }
-                color = this.intToRGBA(color);
+                color = intToRGBA(color);
                 this.variables.borderColor = color;
             }
         },
@@ -15785,7 +13292,7 @@ if (!("swf2js" in window)){(function(window)
                 if (typeof color === "string") {
                     color = this.colorStringToInt(color);
                 }
-                color = this.intToRGBA(color);
+                color = intToRGBA(color);
                 this.variables.backgroundColor = color;
             }
         },
@@ -15797,7 +13304,7 @@ if (!("swf2js" in window)){(function(window)
                 if (typeof color === "string") {
                     color = this.colorStringToInt(color);
                 }
-                color = this.intToRGBA(color);
+                color = intToRGBA(color);
                 this.variables.textColor = color;
             }
         },
@@ -15827,21 +13334,29 @@ if (!("swf2js" in window)){(function(window)
         }
     });
 
-    /**
-     * @param int
-     * @param alpha
-     * @returns {{R: number, G: number, B: number, A: number}}
-     */
-    TextField.prototype.intToRGBA = function (int, alpha)
-    {
-        alpha = alpha || 100;
-        return {
-            R: (int & 0xff0000) >> 16,
-            G: (int & 0x00ff00) >> 8,
-            B: (int & 0x0000ff),
-            A: (alpha / 100)
-        };
-    };
+    TextField.prototype.reset = function () {
+        InteractiveObject.prototype.reset.call(this);
+
+        var _this = this;
+        var input = _this.input;
+        if (_this.inputActive) {
+            _this.inputActive = false;
+            input.onchange = null;
+            var stage = _this.getStage();
+            var div = _document.getElementById(stage.getName());
+            if (div) {
+                var el = _document.getElementById(_this.getTagName());
+                if (el) {
+                    try {
+                        div.removeChild(el);
+                    } catch (e) {
+
+                    }
+                }
+            }
+        }
+        _this.variables.text = _this.initialText;
+    }
 
     /**
      * @param str
@@ -15923,7 +13438,7 @@ if (!("swf2js" in window)){(function(window)
     {
         var _this = this;
         if (matrix) {
-            var bounds = _this.boundsMatrix(_this.bounds, matrix);
+            var bounds = _this.bounds.transform(matrix);
             for (var name in bounds) {
                 if (!bounds.hasOwnProperty(name)) {
                     continue;
@@ -16033,7 +13548,7 @@ if (!("swf2js" in window)){(function(window)
         var isVisible = _min(_this.getVisible(), visible);
         if (type === "input" && isVisible) {
             var buttonHits = stage.buttonHits;
-            var m2 = _this.multiplicationMatrix(matrix, _this.getMatrix());
+            var m2 = multiplicationMatrix(matrix, _this.getMatrix());
             var bounds = _this.getBounds(m2);
             buttonHits[buttonHits.length] = {
                 xMax: bounds.xMax,
@@ -16058,8 +13573,7 @@ if (!("swf2js" in window)){(function(window)
         stage.doneTags.unshift(_this);
 
         // colorTransform
-        var _multiplicationColor = _this.multiplicationColor;
-        var rColorTransform = _multiplicationColor(colorTransform, _this.getColorTransform());
+        var rColorTransform = multiplicationColor(colorTransform, _this.getColorTransform());
         var isVisible = _min(_this.getVisible(), visible);
         var stageClip = stage.clipMc || stage.isClipDepth;
         var alpha = rColorTransform[3] + (rColorTransform[7] / 255);
@@ -16068,14 +13582,13 @@ if (!("swf2js" in window)){(function(window)
         }
 
         // matrix
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var m2 = _multiplicationMatrix(matrix, _this.getMatrix());
+        var m2 = multiplicationMatrix(matrix, _this.getMatrix());
 
         // pre render
         var obj = _this.preRender(ctx, m2, rColorTransform, stage, visible);
         var preCtx = obj.preCtx;
         var preMatrix = obj.preMatrix;
-        var m3 = _multiplicationMatrix(stage.getMatrix(), preMatrix);
+        var m3 = multiplicationMatrix(stage.getMatrix(), preMatrix);
         preCtx.setTransform(m3[0],m3[1],m3[2],m3[3],m3[4],m3[5]);
 
         var textCacheKey = ["TextField"];
@@ -16235,8 +13748,8 @@ if (!("swf2js" in window)){(function(window)
             if (m) {
                 rx = -xMin;
                 ry = -yMin;
-                var m4 = _multiplicationMatrix(preMatrix, [1, 0, 0, 1, xMin, yMin]);
-                m3 = _multiplicationMatrix(stage.getMatrix(), m4);
+                var m4 = multiplicationMatrix(preMatrix, [1, 0, 0, 1, xMin, yMin]);
+                m3 = multiplicationMatrix(stage.getMatrix(), m4);
                 preCtx.setTransform(m3[0],m3[1],m3[2],m3[3],m3[4],m3[5]);
             }
 
@@ -16245,14 +13758,14 @@ if (!("swf2js" in window)){(function(window)
             if (border && !isClipDepth) {
                 preCtx.beginPath();
                 preCtx.rect(rx - offsetX, ry, W, H);
-                color = _this.generateColorTransform(variables.borderColor, rColorTransform);
+                color = generateColorTransform(variables.borderColor, rColorTransform);
                 textCacheKey[textCacheKey.length] = color;
                 preCtx.strokeStyle = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
                 preCtx.lineWidth = _min(20, 1 / _min(m3[0], m3[3]));
                 preCtx.globalAlpha = 1;
                 preCtx.fillStyle = "rgba(0,0,0,0)";
                 if (variables.background) {
-                    color = _this.generateColorTransform(variables.backgroundColor, rColorTransform);
+                    color = generateColorTransform(variables.backgroundColor, rColorTransform);
                     textCacheKey[textCacheKey.length] = color;
                     preCtx.fillStyle = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
                 }
@@ -16263,10 +13776,10 @@ if (!("swf2js" in window)){(function(window)
             var textColor = variables.textColor;
             var objRGBA = textColor;
             if (typeof  textColor === "number") {
-                objRGBA = _this.intToRGBA(textColor, 100);
+                objRGBA = intToRGBA(textColor, 100);
             }
 
-            color = _this.generateColorTransform(objRGBA, rColorTransform);
+            color = generateColorTransform(objRGBA, rColorTransform);
             var fillStyle = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
             textCacheKey[textCacheKey.length] = fillStyle;
             preCtx.fillStyle = fillStyle;
@@ -16369,7 +13882,6 @@ if (!("swf2js" in window)){(function(window)
         var idx;
         var index;
         var length = splitData.length;
-        var _multiplicationMatrix = _this.multiplicationMatrix;
         for (var i = 0; i < length; i++) {
             var XOffset = offset;
             var textWidth = 0;
@@ -16442,7 +13954,7 @@ if (!("swf2js" in window)){(function(window)
                         }
                     }
 
-                    var m2 = _multiplicationMatrix(matrix, [fontScale, 0, 0, fontScale, XOffset, YOffset]);
+                    var m2 = multiplicationMatrix(matrix, [fontScale, 0, 0, fontScale, XOffset, YOffset]);
                     ctx.setTransform(m2[0],m2[1],m2[2],m2[3],m2[4],m2[5]);
                     _this.renderGlyph(GlyphShapeTable[index], ctx);
                     XOffset += addXOffset;
@@ -16471,7 +13983,6 @@ if (!("swf2js" in window)){(function(window)
         var variables = _this.variables;
         var wordWrap = variables.wordWrap;
         var multiline = variables.multiline;
-        var _multiplicationMatrix = _this.multiplicationMatrix;
         var stage = _this.getStage();
         var fonts = stage.fonts;
         var face = child.face;
@@ -16536,8 +14047,8 @@ if (!("swf2js" in window)){(function(window)
                         }
                     }
 
-                    var m2 = [fontScale, 0, 0, fontScale, gridData.XOffset, gridData.YOffset];
-                    var m3 = _multiplicationMatrix(gridData.matrix, m2);
+                    var m2: Matrix = [fontScale, 0, 0, fontScale, gridData.XOffset, gridData.YOffset];
+                    var m3 = multiplicationMatrix(gridData.matrix, m2);
                     ctx.setTransform(m3[0], m3[1], m3[2], m3[3], m3[4], m3[5]);
                     ctx.fillStyle = color;
                     _this.renderGlyph(sTable[index], ctx);
@@ -17019,17 +14530,16 @@ if (!("swf2js" in window)){(function(window)
         var width = _ceil(xMax - xMin);
         var height = _ceil(yMax - yMin);
 
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var m2 = _multiplicationMatrix(matrix, _this.getMatrix());
-        var m3 = _multiplicationMatrix(stage.getMatrix(), m2);
+        var m2 = multiplicationMatrix(matrix, _this.getMatrix());
+        var m3 = multiplicationMatrix(stage.getMatrix(), m2);
         ctx.setTransform(m3[0],m3[1],m3[2],m3[3],m3[4],m3[5]);
 
         var m = _this._matrix;
         if (m) {
             xMin = -xMin;
             yMin = -yMin;
-            var m4 = _multiplicationMatrix(m2, [1, 0, 0, 1, xMin, yMin]);
-            var m5 = _multiplicationMatrix(stage.getMatrix(), m4);
+            var m4 = multiplicationMatrix(m2, [1, 0, 0, 1, xMin, yMin]);
+            var m5 = multiplicationMatrix(stage.getMatrix(), m4);
             ctx.setTransform(m5[0],m5[1],m5[2],m5[3],m5[4],m5[5]);
         }
 
@@ -17103,6 +14613,22 @@ if (!("swf2js" in window)){(function(window)
             }
         }
     });
+
+
+    SimpleButton.prototype.setStage = function (stage) {
+        var _this = this;
+
+        _this.stageId = stage.getId();
+        var upState = _this.getSprite("up");
+        upState.setStage(stage);
+        var downState = _this.getSprite("down");
+        downState.setStage(stage);
+        var hitState = _this.getSprite("hit");
+        hitState.setStage(stage);
+        var overState = _this.getSprite("over");
+        overState.setStage(stage);
+        stage.setInstance(_this);
+    }
 
     /**
      *
@@ -17215,7 +14741,6 @@ if (!("swf2js" in window)){(function(window)
             xMin = no;
             yMin = no;
 
-            var _multiplicationMatrix = _this.multiplicationMatrix;
             for (var depth in tags) {
                 if (!tags.hasOwnProperty(depth)) {
                     continue;
@@ -17227,7 +14752,7 @@ if (!("swf2js" in window)){(function(window)
                     continue;
                 }
 
-                var matrix2 = (matrix) ? _multiplicationMatrix(matrix, tag.getMatrix()) : tag.getMatrix();
+                var matrix2 = (matrix) ? multiplicationMatrix(matrix, tag.getMatrix()) : tag.getMatrix();
                 var bounds = tag.getBounds(matrix2, status);
                 if (!bounds) {
                     continue;
@@ -17313,7 +14838,7 @@ if (!("swf2js" in window)){(function(window)
             }
 
             if (hitTags.length) {
-                var m2 = _this.multiplicationMatrix(matrix, _this.getMatrix());
+                var m2 = multiplicationMatrix(matrix, _this.getMatrix());
                 var bounds = _this.getBounds(m2, status);
                 if (bounds) {
                     buttonHits[buttonHits.length] = {
@@ -17324,7 +14849,7 @@ if (!("swf2js" in window)){(function(window)
                         yMax: bounds.yMax,
                         CondKeyPress: 0,
                         parent: _this.getParent(),
-                        matrix: _this.cloneArray(matrix)
+                        matrix: cloneArray(matrix)
                     };
                 }
             }
@@ -17343,12 +14868,10 @@ if (!("swf2js" in window)){(function(window)
         var _this = this;
 
         // colorTransform
-        var _multiplicationColor = _this.multiplicationColor;
-        var rColorTransform = _multiplicationColor(colorTransform, _this.getColorTransform());
+        var rColorTransform = multiplicationColor(colorTransform, _this.getColorTransform());
 
         // matrix
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var m2 = _multiplicationMatrix(matrix, _this.getMatrix());
+        var m2 = multiplicationMatrix(matrix, _this.getMatrix());
 
         // pre render
         var isVisible = _min(_this.getVisible(), visible);
@@ -17356,8 +14879,8 @@ if (!("swf2js" in window)){(function(window)
 
         // render
         var sprite = _this.getSprite();
-        var rMatrix = _multiplicationMatrix(obj.preMatrix, sprite.getMatrix());
-        var rColorTransform2 = _multiplicationColor(rColorTransform, sprite.getColorTransform());
+        var rMatrix = multiplicationMatrix(obj.preMatrix, sprite.getMatrix());
+        var rColorTransform2 = multiplicationColor(rColorTransform, sprite.getColorTransform());
         isVisible = _min(sprite.getVisible(), visible);
         var cacheKey = obj.cacheKey;
         cacheKey += sprite.render(obj.preCtx, rMatrix, rColorTransform2, stage, isVisible);
@@ -17389,9 +14912,8 @@ if (!("swf2js" in window)){(function(window)
             return false;
         }
 
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var m2 = _multiplicationMatrix(matrix, _this.getMatrix());
-        var m3 = _multiplicationMatrix(m2, sprite.getMatrix());
+        var m2 = multiplicationMatrix(matrix, _this.getMatrix());
+        var m3 = multiplicationMatrix(m2, sprite.getMatrix());
 
         if (length) {
             var loadStage = _this.getStage();
@@ -17435,9 +14957,8 @@ if (!("swf2js" in window)){(function(window)
             return false;
         }
 
-        var _multiplicationMatrix = _this.multiplicationMatrix;
-        var m2 = _multiplicationMatrix(matrix, _this.getMatrix());
-        var m3 = _multiplicationMatrix(m2, sprite.getMatrix());
+        var m2 = multiplicationMatrix(matrix, _this.getMatrix());
+        var m3 = multiplicationMatrix(m2, sprite.getMatrix());
 
         var hitObj = false as any;
         var hit = false;
@@ -18055,15 +15576,14 @@ if (!("swf2js" in window)){(function(window)
         } else {
             if (x >= xMin && x <= xMax && y >= yMin && y <= yMax) {
                 if (bool) {
-                    var matrix = [1,0,0,1,0,0];
+                    var matrix: Matrix = [1,0,0,1,0,0];
                     var mc = _this;
-                    var _multiplicationMatrix = _this.multiplicationMatrix;
                     while (true) {
                         var parent = mc.getParent();
                         if (!parent.getParent()) {
                             break;
                         }
-                        matrix = _multiplicationMatrix(parent.getMatrix(), matrix);
+                        matrix = multiplicationMatrix(parent.getMatrix(), matrix);
                         mc = parent;
                     }
                     var _root = _this.getDisplayObject("_root");
@@ -18093,13 +15613,12 @@ if (!("swf2js" in window)){(function(window)
         var _this = this;
         var mc = _this;
         var matrix = _this.getMatrix();
-        var _multiplicationMatrix = _this.multiplicationMatrix;
         while (true) {
             var parent = mc.getParent();
             if (!parent.getParent()) {
                 break;
             }
-            matrix = _multiplicationMatrix(parent.getMatrix(), matrix);
+            matrix = multiplicationMatrix(parent.getMatrix(), matrix);
             mc = parent;
         }
         return _this.getBounds(matrix);
@@ -18155,7 +15674,7 @@ if (!("swf2js" in window)){(function(window)
                         _this.swapDepths(instance);
                     }
                 } else {
-                    _this.setDepth(depth, null, null);
+                    _this.setDepth(depth);
                 }
             }
         }
@@ -18361,8 +15880,8 @@ if (!("swf2js" in window)){(function(window)
             if (targetMc._matrix) {
                 cloneMc._blendMode = targetMc._blendMode;
                 cloneMc._filters = targetMc._filters;
-                cloneMc._matrix = _this.cloneArray(targetMc._matrix);
-                cloneMc._colorTransform = _this.cloneArray(targetMc._colorTransform);
+                cloneMc._matrix = cloneArray(targetMc._matrix);
+                cloneMc._colorTransform = cloneArray(targetMc._colorTransform);
             }
 
             var totalFrame = parent.getTotalFrames() + 1;
@@ -20182,44 +17701,6 @@ if (!("swf2js" in window)){(function(window)
     };
 
     /**
-     * @constructor
-     */
-    var SharedObject = function ()
-    {
-        var _this = this;
-        _this.data = null;
-        _this.name = null;
-    };
-
-    /**
-     * @param name
-     * @returns {SharedObject}
-     */
-    SharedObject.prototype.getLocal = function (name)
-    {
-        var _this = this;
-        _this.name = name;
-        var data = window.localStorage.getItem(name);
-        if (!data) {
-            data = {} as any;
-        } else {
-            data = JSON.parse(data);
-        }
-        _this.data = data;
-        return _this;
-    };
-
-    /**
-     * flush
-     */
-    SharedObject.prototype.flush = function ()
-    {
-        var _this = this;
-        window.localStorage.setItem(_this.name, JSON.stringify(_this.data));
-        return true;
-    };
-
-    /**
      * @param mc
      * @constructor
      */
@@ -20249,21 +17730,6 @@ if (!("swf2js" in window)){(function(window)
         this.variables[String(name)] = value;
     };
 
-    /**
-     * @param int
-     * @param alpha
-     * @returns {{R: number, G: number, B: number, A: number}}
-     */
-    Color.prototype.intToRGBA = function (int, alpha)
-    {
-        alpha = alpha || 100;
-        return {
-            R: (int & 0xff0000) >> 16,
-            G: (int & 0x00ff00) >> 8,
-            B: (int & 0x0000ff),
-            A: (alpha / 100)
-        };
-    };
 
     /**
      * @param offset
@@ -20276,12 +17742,11 @@ if (!("swf2js" in window)){(function(window)
             mc = mc as any;
 
             offset |= 0;
-            var obj = _this.intToRGBA(offset);
+            var obj = intToRGBA(offset);
             var colorTransform = mc.getOriginColorTransform();
             if (colorTransform) {
-                var transform = [obj.R, obj.G, obj.B, obj.A * 255, 0, 0, 0, 0];
-                var multiColor = mc.cloneArray(transform);
-                var color = mc.multiplicationColor(colorTransform, multiColor);
+                const multiColor: ColorTransform = [obj.R, obj.G, obj.B, obj.A * 255, 0, 0, 0, 0];
+                const color = multiplicationColor(colorTransform, multiColor);
                 mc.setColorTransform(color);
             }
         }
@@ -20311,12 +17776,11 @@ if (!("swf2js" in window)){(function(window)
         if (mc instanceof MovieClip) {
             mc = mc as any;
             var colorTransform = mc.getOriginColorTransform();
-            var transform = [
+            var multiColor: ColorTransform = [
                 obj.rb, obj.gb, obj.bb, obj.ab,
                 obj.ra, obj.ga, obj.ba, obj.aa
             ];
-            var multiColor = mc.cloneArray(transform);
-            var color = mc.multiplicationColor(colorTransform, multiColor);
+            var color = multiplicationColor(colorTransform, multiColor);
             mc.setColorTransform(color);
         }
     };
@@ -20388,158 +17852,11 @@ if (!("swf2js" in window)){(function(window)
     };
 
     /**
-     * @constructor
-     */
-    var Key = function ()
-    {
-        var _this = this;
-        _this.variables = {};
-        _this._listeners = [];
-    };
-
-    /**
-     * properties
-     */
-    Object.defineProperties(Key.prototype,
-    {
-        onKeyDown: {
-            get: function () {
-                return this.getProperty("onKeyDown");
-            },
-            set: function (onKeyDown) {
-                this.setProperty("onKeyDown", onKeyDown);
-            }
-        },
-        onKeyUp: {
-            get: function () {
-                return this.getProperty("onKeyUp");
-            },
-            set: function (onKeyUp) {
-                this.setProperty("onKeyUp", onKeyUp);
-            }
-        }
-    });
-
-    /**
-     * @type {number}
-     */
-    Key.prototype.BACKSPACE = 8;
-    Key.prototype.CAPSLOCK = 20;
-    Key.prototype.CONTROL = 17;
-    Key.prototype.DELETEKEY = 46;
-    Key.prototype.DOWN = 40;
-    Key.prototype.END = 35;
-    Key.prototype.ENTER = 13;
-    Key.prototype.ESCAPE = 27;
-    Key.prototype.HOME = 36;
-    Key.prototype.INSERT = 45;
-    Key.prototype.LEFT = 37;
-    Key.prototype.PGDN = 34;
-    Key.prototype.PGDN = 34;
-    Key.prototype.PGUP = 33;
-    Key.prototype.RIGHT = 39;
-    Key.prototype.SHIFT = 16;
-    Key.prototype.SPACE = 32;
-    Key.prototype.TAB = 9;
-    Key.prototype.UP = 38;
-
-    /**
-     * @param name
-     * @returns {*}
-     */
-    Key.prototype.getProperty = function (name)
-    {
-        return this.variables[name];
-    };
-
-    /**
-     * @param name
-     * @param value
-     */
-    Key.prototype.setProperty = function (name, value)
-    {
-        this.variables[String(name)] = value;
-    };
-
-    /**
-     *
-     * @param listener
-     * @returns {boolean}
-     */
-    Key.prototype.addListener = function (listener)
-    {
-        var _this = this;
-        var onKeyDown = listener.onKeyDown;
-        if (onKeyDown) {
-            _this.onKeyDown = onKeyDown;
-        }
-        var onKeyUp = listener.onKeyUp;
-        if (onKeyUp) {
-            _this.onKeyUp = onKeyUp;
-        }
-        return true;
-    };
-
-    /**
-     * @param code
-     * @returns {boolean}
-     */
-    Key.prototype.isDown = function (code)
-    {
-        return (this.getCode() === code);
-    };
-
-    /**
-     * @returns {*}
-     */
-    Key.prototype.getCode = function ()
-    {
-        var keyCode = (_keyEvent) ? _keyEvent.keyCode : null;
-        if (96 <= keyCode && keyCode <= 105) {
-            var n = keyCode - 96;
-            switch (n) {
-                case 0:
-                    keyCode = 48;
-                    break;
-                case 1:
-                    keyCode = 49;
-                    break;
-                case 2:
-                    keyCode = 50;
-                    break;
-                case 3:
-                    keyCode = 51;
-                    break;
-                case 4:
-                    keyCode = 52;
-                    break;
-                case 5:
-                    keyCode = 53;
-                    break;
-                case 6:
-                    keyCode = 54;
-                    break;
-                case 7:
-                    keyCode = 55;
-                    break;
-                case 8:
-                    keyCode = 56;
-                    break;
-                case 9:
-                    keyCode = 57;
-                    break;
-            }
-        }
-        return keyCode;
-    };
-    var keyClass = new Key();
-
-    /**
      * @param event
      */
     function keyUpAction(event)
     {
-        _keyEvent = event;
+        keyClass.setEvent(event);
         var onKeyUp = keyClass.onKeyUp;
         if (typeof onKeyUp === "function") {
             onKeyUp.apply(keyClass, [event]);
@@ -20551,7 +17868,7 @@ if (!("swf2js" in window)){(function(window)
      */
     function keyDownAction(event)
     {
-        _keyEvent = event;
+        keyClass.setEvent(event);
         var keyCode = keyClass.getCode();
         var i;
         var length;
@@ -20562,12 +17879,7 @@ if (!("swf2js" in window)){(function(window)
         }
 
         var idx;
-        length = stages.length;
-        for (var pIdx = 0; pIdx < length; pIdx++) {
-            if (!(pIdx in stages)) {
-                continue;
-            }
-
+        for (var pIdx in stages) {
             var stage = stages[pIdx];
             var keyDownEventHits = stage.keyDownEventHits;
             var kLen = keyDownEventHits.length;
@@ -21576,7 +18888,7 @@ if (!("swf2js" in window)){(function(window)
 
             var mc = _this.getParent();
             var mScale = scale * _devicePixelRatio / 20;
-            _this.setMatrix(mc.cloneArray([mScale, 0, 0, mScale, 0, 0]));
+            _this.setMatrix(cloneArray([mScale, 0, 0, mScale, 0, 0]));
         }
     };
 
@@ -21638,19 +18950,19 @@ if (!("swf2js" in window)){(function(window)
 
             canvas.addEventListener(startEvent, function (event)
             {
-                _event = event;
+                DisplayObject.event = event;
                 _this.touchStart(event);
             });
 
             canvas.addEventListener(moveEvent, function (event)
             {
-                _event = event;
+                DisplayObject.event = event;
                 _this.touchMove(event);
             });
 
             canvas.addEventListener(endEvent, function (event)
             {
-                _event = event;
+                DisplayObject.event = event;
                 _this.touchEnd(event);
             });
 
@@ -21993,7 +19305,7 @@ if (!("swf2js" in window)){(function(window)
         if (isAndroid) {
             canvas.addEventListener("touchcancel", function ()
             {
-                _this.touchEnd(_event);
+                _this.touchEnd(DisplayObject.event);
             });
         }
 
@@ -22002,7 +19314,7 @@ if (!("swf2js" in window)){(function(window)
             window.addEventListener("keyup", keyUpAction);
             window.addEventListener("keyup", function (event)
             {
-                _keyEvent = event;
+                keyClass.setEvent(event);
                 _this.touchEnd(event);
             });
         }
@@ -22988,7 +20300,7 @@ if (!("swf2js" in window)){(function(window)
             _this.touchRender();
         }
 
-        _keyEvent = null;
+        keyClass.setEvent(null);
     };
 
     /**

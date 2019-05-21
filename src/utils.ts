@@ -9,12 +9,17 @@
 
 import { cacheStore } from './CacheStore';
 
+
+export type Stage = any;
+
+
 const ua = window.navigator.userAgent;
 export const isAndroid = (ua.indexOf("Android") > 0);
 export const isAndroid4x = (ua.indexOf("Android 4.") > 0);
 export const isiOS = (ua.indexOf("iPhone") > 0 || ua.indexOf("iPod") > 0);
 export const isChrome = (ua.indexOf("Chrome") > 0);
 export const isTouch = (isAndroid || isiOS);
+export const devicePixelRatio = window.devicePixelRatio || 1;
 
 export function cloneArray<T>(src: T): T
 export function cloneArray<T>(src: T[]): T[]
@@ -27,30 +32,12 @@ export function cloneArray<T>(src: T[]): T[]
     return dst;
 }
 
-export type BlendMode = 'normal'
-                      | 'layer'
-                      | 'multiply'
-                      | 'screen'
-                      | 'lighten'
-                      | 'darken'
-                      | 'difference'
-                      | 'add'
-                      | 'subtract'
-                      | 'invert'
-                      | 'alpha'
-                      | 'erase'
-                      | 'overlay'
-                      | 'hardlight';
-
 export class Bounds {
-    public xMin: number;
-    public yMin: number;
-    public xMax: number;
-    public yMax: number;
-
-    constructor() {
-        this.clear();
-    }
+    constructor(public xMin: number = Number.MAX_VALUE,
+                public yMin: number = Number.MAX_VALUE,
+                public xMax: number = -Number.MAX_VALUE,
+                public yMax: number = -Number.MAX_VALUE)
+    { }
 
     clear(): void {
         this.xMin = Number.MAX_VALUE;
@@ -64,6 +51,24 @@ export class Bounds {
         this.xMax = Math.max(this.xMax, x);
         this.yMin = Math.min(this.yMin, y);
         this.yMax = Math.max(this.yMax, y);
+    }
+
+    transform(matrix: Matrix): Bounds {
+        const x0 = this.xMax * matrix[0] + this.yMax * matrix[2] + matrix[4];
+        const x1 = this.xMax * matrix[0] + this.yMin * matrix[2] + matrix[4];
+        const x2 = this.xMin * matrix[0] + this.yMax * matrix[2] + matrix[4];
+        const x3 = this.xMin * matrix[0] + this.yMin * matrix[2] + matrix[4];
+        const y0 = this.xMax * matrix[1] + this.yMax * matrix[3] + matrix[5];
+        const y1 = this.xMax * matrix[1] + this.yMin * matrix[3] + matrix[5];
+        const y2 = this.xMin * matrix[1] + this.yMax * matrix[3] + matrix[5];
+        const y3 = this.xMin * matrix[1] + this.yMin * matrix[3] + matrix[5];
+
+        const xMax = Math.max(-Number.MAX_VALUE, x0, x1, x2, x3);
+        const xMin = Math.min(Number.MAX_VALUE, x0, x1, x2, x3);
+        const yMax = Math.max(-Number.MAX_VALUE, y0, y1, y2, y3);
+        const yMin = Math.min(Number.MAX_VALUE, y0, y1, y2, y3);
+
+        return new Bounds(xMin, yMin, xMax, yMax);
     }
 }
 
@@ -79,8 +84,6 @@ export type ColorTransform = [
     number, number, number, number
 ];
 
-export type Filter = any;
-
 export type FilterOperation = 'source-over'
                      | 'source-in'
                      | 'source-out'
@@ -93,8 +96,6 @@ export type Matrix = [
     number, number, number,
     number, number, number
 ];
-
-export type Stage = any;
 
 export function generateColorTransform(color: Color, data: ColorTransform): Color {
     return {
@@ -125,6 +126,15 @@ export function multiplicationMatrix(a: Matrix, b: Matrix): Matrix {
     ];
 }
 
+export function multiplicationColor(a: ColorTransform, b: ColorTransform): ColorTransform {
+    return [
+        a[0] * b[0], a[1] * b[1],
+        a[2] * b[2], a[3] * b[3],
+        a[0] * b[4] + a[4], a[1] * b[5] + a[5],
+        a[2] * b[6] + a[6], a[3] * b[7] + a[7]
+    ];
+}
+
 export function toColorInt(rgb: string | number): number {
     if (typeof rgb === 'string') {
         const canvas = cacheStore.getCanvas();
@@ -140,14 +150,33 @@ export function toColorInt(rgb: string | number): number {
     return rgb | 0;
 }
 
+export type BlendMode = 'normal'
+                      | 'layer'
+                      | 'multiply'
+                      | 'screen'
+                      | 'lighten'
+                      | 'darken'
+                      | 'difference'
+                      | 'add'
+                      | 'subtract'
+                      | 'invert'
+                      | 'alpha'
+                      | 'erase'
+                      | 'overlay'
+                      | 'hardlight';
+
 const BLEND_MODES: BlendMode[] = [
     'normal', 'layer', 'multiply', 'screen', 'lighten', 'darken', 'difference',
     'add', 'subtract', 'invert', 'alpha', 'erase', 'overlay', 'hardlight'
 ];
 
-export function getBlendName(blendMode: BlendMode | number): BlendMode {
-    if (typeof blendMode === 'string')
-        return blendMode;
+export function getBlendName(blendMode: string | number): BlendMode {
+    if (typeof blendMode === 'string') {
+        if (BLEND_MODES.indexOf(blendMode as any) < 0)
+            throw new Error('No blendMode: ' + blendMode);
+
+        return blendMode as any;
+    }
 
     if (!BLEND_MODES[blendMode - 1])
         throw new Error('No blendMode: ' + blendMode);
