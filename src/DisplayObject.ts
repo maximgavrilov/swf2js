@@ -15,6 +15,8 @@ import { keyClass } from './Key';
 import { PlaceObject } from './PlaceObject';
 import { Shape } from './Shape';
 import { SharedObject } from './SharedObject';
+import { Sprite } from './Sprite';
+import { StaticText } from './StaticText';
 import {
     BlendMode, Bounds, ColorTransform, Matrix, Stage,
     isTouch, devicePixelRatio,
@@ -24,7 +26,6 @@ import {
 
 
 declare const MovieClip: any;
-declare const StaticText: any;
 declare const TextField: any;
 type SimpleButton = any;
 type AVM2 = any;
@@ -61,6 +62,7 @@ export const CLS = {
     DisplayObjectContainer: undefined as any,
     Shape: undefined as any,
     Sprite: undefined as any,
+    StaticText: undefined as any,
 
     isDisplayObjectContainer(d: DisplayObject): d is DisplayObjectContainer {
         return d instanceof CLS.DisplayObjectContainer;
@@ -68,10 +70,14 @@ export const CLS = {
 
     isShape(d: DisplayObject): d is Shape {
         return d instanceof CLS.Shape;
-    }
+    },
 
     isSprite(d: DisplayObject): d is Sprite {
         return d instanceof CLS.Sprite;
+    },
+
+    isStaticText(d: DisplayObject): d is StaticText {
+        return d instanceof CLS.StaticText;
     }
 };
 

@@ -72,7 +72,12 @@ export type Command = [ CMD.MOVE_TO, number, number ]
                     | [ CMD.MITER_LIMIT, number ]
                     | [ CMD.BEGIN_PATH ];
 
-export type CommandF = (ctx: CanvasRenderingContext2D, ct: ColorTransform, isClip: boolean) => void;
+export type CommandF = (ctx: CanvasRenderingContext2D, ct?: ColorTransform, isClip?: boolean) => void;
+
+export type StyleObj = {
+    obj: any,
+    cmd: CommandF
+};
 
 class VectorToCanvas {
     clone(src: any): any {
@@ -392,19 +397,17 @@ class VectorToCanvas {
         return fills1;
     }
 
-    setStack(stack: any[], array: any[]): any[] {
-        if (array.length) {
-            for (var i in array) {
-                if (!array.hasOwnProperty(i)) {
-                    continue;
-                }
-                var data = array[i];
-                stack[stack.length] = {
-                    obj: data.obj,
-                    cmd: this.buildCommand(data.cache)
-                };
-            }
+    setStack(stack: StyleObj[], array: any[]): StyleObj[] {
+        if (!array.length)
+            return;
+
+        for (const data of array) {
+            stack.push({
+                obj: data.obj,
+                cmd: this.buildCommand(data.cache)
+            });
         }
+
         return stack;
     }
 
