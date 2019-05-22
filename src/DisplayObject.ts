@@ -15,6 +15,7 @@ import { keyClass } from './Key';
 import { PlaceObject } from './PlaceObject';
 import { Shape } from './Shape';
 import { SharedObject } from './SharedObject';
+import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
 import { StaticText } from './StaticText';
 import {
@@ -27,7 +28,6 @@ import {
 
 declare const MovieClip: any;
 declare const TextField: any;
-type SimpleButton = any;
 type AVM2 = any;
 
 let instanceId = 1;
@@ -52,7 +52,7 @@ type PreRenderResult = {
     yMin: number;
 };
 
-type ButtonStatus = 'up' | 'down';
+export type ButtonStatus = 'up' | 'down' | 'over' | 'hit';
 
 function isTouchEvent(event: MouseEvent | TouchEvent): event is TouchEvent {
     return isTouch;
@@ -61,6 +61,7 @@ function isTouchEvent(event: MouseEvent | TouchEvent): event is TouchEvent {
 export const CLS = {
     DisplayObjectContainer: undefined as any,
     Shape: undefined as any,
+    SimpleButton: undefined as any,
     Sprite: undefined as any,
     StaticText: undefined as any,
 
@@ -70,6 +71,10 @@ export const CLS = {
 
     isShape(d: DisplayObject): d is Shape {
         return d instanceof CLS.Shape;
+    },
+
+    isSimpleButton(d: DisplayObject): d is SimpleButton {
+        return d instanceof CLS.SimpleButton;
     },
 
     isSprite(d: DisplayObject): d is Sprite {
@@ -336,19 +341,19 @@ export class DisplayObject extends EventDispatcher {
         this.setEnabled(v);
     }
 
-    get parent(): DisplayObjectContainer | null {
+    get parent(): DisplayObject | null {
         return this.getParent();
     }
 
-    set parent(v: DisplayObjectContainer | null) {
+    set parent(v: DisplayObject | null) {
         this.setParent(v);
     }
 
-    get _parent(): DisplayObjectContainer | null {
+    get _parent(): DisplayObject | null {
         return this.getParent();
     }
 
-    set _parent(v: DisplayObjectContainer | null) {
+    set _parent(v: DisplayObject | null) {
         this.setParent(v);
     }
 
@@ -416,8 +421,8 @@ export class DisplayObject extends EventDispatcher {
         this.ratio = v;
     }
 
-    getParent(): DisplayObjectContainer {
-        let parent: DisplayObjectContainer;
+    getParent(): DisplayObject {
+        let parent: DisplayObject;
 
         if (!parent) {
             const stage = this.getLoadStage();
@@ -432,7 +437,7 @@ export class DisplayObject extends EventDispatcher {
         return parent;
     }
 
-    setParent(parent: DisplayObjectContainer): void {
+    setParent(parent: DisplayObject): void {
         if (CLS.isDisplayObjectContainer(parent)) {
             (parent as DisplayObjectContainer).setInstance(this);
         }
@@ -1434,8 +1439,8 @@ export class DisplayObject extends EventDispatcher {
 
             var bounds;
             var twips = 1;
-            if (CLS.isShape(_this) || _this instanceof StaticText) {
-                bounds = (_this as any).getBounds();
+            if (CLS.isShape(_this) || CLS.isStaticText(_this)) {
+                bounds = _this.getBounds();
                 xScale = Math.sqrt(rMatrix[0] * rMatrix[0] + rMatrix[1] * rMatrix[1]);
                 yScale = Math.sqrt(rMatrix[2] * rMatrix[2] + rMatrix[3] * rMatrix[3]);
             } else {
@@ -1825,7 +1830,7 @@ export class DisplayObject extends EventDispatcher {
         console.log.apply(window, params);
     }
 
-    getBounds(matrix: Matrix): Bounds {
+    getBounds(matrix: Matrix, status?: ButtonStatus): Bounds {
         var _this = this;
         var tags = (_this as any).getTags();
         var xMax = 0;

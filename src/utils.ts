@@ -10,6 +10,7 @@
 import { cacheStore } from './CacheStore';
 
 
+export type ButtonAction = any;
 export type Stage = any;
 export type SoundInfo = any;
 

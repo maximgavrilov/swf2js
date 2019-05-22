@@ -11,6 +11,7 @@ import { CLS, DisplayObject } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
 import { PlaceObject } from './PlaceObject';
 import { Shape } from './Shape';
+import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
 import {
     Matrix, Stage, SoundInfo,
@@ -20,8 +21,6 @@ import {
 
 declare const MovieClip: any;
 type MovieClip = any;
-declare const SimpleButton: any;
-type SimpleButton = any;
 declare const TextField: any;
 type TextField = any;
 interface Tag {
@@ -396,7 +395,7 @@ export class DisplayObjectContainer extends InteractiveObject {
     }
 
     createButton(name?: string, depth: number = 0): SimpleButton {
-        const button = this.addChildAt(new SimpleButton(), depth);
+        const button = this.addChildAt(new CLS.SimpleButton(), depth);
         if (name)
             button.setName(name);
         return button;
