@@ -21,10 +21,11 @@ const LOG1P = 0.29756328478758615;
 type TriangleCulling = 'negative' | 'none' | 'positive';
 
 export class Graphics {
+    public isDraw: boolean;
+
     private bounds: Bounds = new Bounds();
-    private maxWidth: number;
+    public maxWidth: number;
     private cmd?: CommandF;
-    private isDraw: boolean;
     private isFillDraw: boolean;
     private isLineDraw: boolean;
     private cacheKey: string;

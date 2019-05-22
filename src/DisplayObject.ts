@@ -8,6 +8,7 @@
  */
 
 import { cacheStore } from './CacheStore';
+import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { EventDispatcher } from './EventDispatcher';
 import { BitmapFilter } from './BitmapFilter';
 import { keyClass } from './Key';
@@ -21,8 +22,6 @@ import {
 
 
 
-declare const DisplayObjectContainer: any;
-type DisplayObjectContainer = any;
 declare const MovieClip: any;
 declare const Shape: any;
 declare const StaticText: any;
@@ -88,7 +87,7 @@ export class DisplayObject extends EventDispatcher {
     private _soundbuftime: number | null = null;
     public _totalframes = 1;
     private _level = 0;
-    private _depth?: number;
+    protected _depth?: number;
     private _framesloaded = 0;
     private _target = "";
     public _lockroot?: DisplayObjectContainer = undefined;
@@ -786,50 +785,6 @@ export class DisplayObject extends EventDispatcher {
         return depth - 16384;
     }
 
-    setDepth(depth: number, swapDepth?: number, swapMc?: DisplayObject) {
-        var parent = this.getParent();
-        var _depth = this._depth;
-        var level = (_depth !== null) ? _depth : this.getLevel();
-        var totalFrame = parent.getTotalFrames() + 1;
-
-        if (!swapMc) {
-            this._depth = depth;
-        } else {
-            this._depth = swapDepth;
-            swapMc._depth = depth;
-        }
-
-        var container = parent.container;
-        var instanceId = this.instanceId;
-        for (var frame = 1; frame < totalFrame; frame++) {
-            if (!(frame in container)) {
-                container[frame] = [];
-            }
-
-            var tags = container[frame];
-            if (swapMc) {
-                if (level in tags && tags[level] === instanceId) {
-                    tags[depth] = swapMc.instanceId;
-                }
-
-                if (swapDepth in tags && tags[swapDepth] === swapMc.instanceId) {
-                    tags[swapDepth] = instanceId;
-                }
-            } else {
-                if (!(level in tags) || level in tags && tags[level] === instanceId) {
-                    delete tags[level];
-                    tags[depth] = instanceId;
-                }
-            }
-
-            container[frame] = tags;
-        }
-        this.setController(false, false, false, false);
-        if (swapMc) {
-            swapMc.setController(false, false, false, false);
-        }
-    }
-
     getX(): number {
         const matrix = this.getMatrix();
         return matrix[4] / 20;
@@ -1060,7 +1015,7 @@ export class DisplayObject extends EventDispatcher {
             touchX = _event.pageX;
         }
 
-        var mc = _this;
+        var mc: DisplayObject = _this;
         var matrix = _this.getMatrix();
         while (true) {
             var parent = mc.getParent();
@@ -1099,7 +1054,7 @@ export class DisplayObject extends EventDispatcher {
             touchY = _event.pageY;
         }
 
-        var mc = _this;
+        var mc: DisplayObject = _this;
         var matrix = _this.getMatrix();
         while (true) {
             var parent = mc.getParent();
@@ -1266,7 +1221,7 @@ export class DisplayObject extends EventDispatcher {
 
     getDisplayObject(path: string | number, parse: boolean = true): DisplayObject | undefined {
         var _this = this;
-        var mc = _this;
+        var mc: DisplayObject = _this;
         var _root = mc;
         var tags, tag, stage, parent;
 
@@ -1905,6 +1860,10 @@ export class DisplayObject extends EventDispatcher {
         }
 
         return new Bounds(xMin, yMin, xMax, yMax);
+    }
+
+    getTags(): any[] {
+        return [];
     }
 }
 

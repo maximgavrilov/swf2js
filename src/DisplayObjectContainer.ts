@@ -10,6 +10,7 @@
 import { DisplayObject } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
 import { PlaceObject } from './PlaceObject';
+import { Sprite } from './Sprite';
 import {
     Matrix, Stage, SoundInfo,
     multiplicationMatrix, cloneArray, startSound
@@ -22,8 +23,6 @@ declare const SimpleButton: any;
 type SimpleButton = any;
 declare const Shape: any;
 type Shape = any;
-declare const Sprite: any;
-type Sprite = any;
 declare const TextField: any;
 type TextField = any;
 interface Tag {
