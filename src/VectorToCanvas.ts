@@ -399,7 +399,7 @@ class VectorToCanvas {
 
     setStack(stack: StyleObj[], array: any[]): StyleObj[] {
         if (!array.length)
-            return;
+            return stack;
 
         for (const data of array) {
             stack.push({

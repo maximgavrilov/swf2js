@@ -13,6 +13,7 @@ import { PlaceObject } from './PlaceObject';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
+import { TextField } from './TextField';
 import {
     Matrix, Stage, SoundInfo,
     multiplicationMatrix, cloneArray, startSound
@@ -21,8 +22,6 @@ import {
 
 declare const MovieClip: any;
 type MovieClip = any;
-declare const TextField: any;
-type TextField = any;
 interface Tag {
     readonly instanceId: number;
 }
@@ -402,7 +401,7 @@ export class DisplayObjectContainer extends InteractiveObject {
     }
 
     createText(name: string, width: number, height: number, depth: number): TextField {
-        const textField = this.addChildAt(new TextField(name, depth, width, height), depth);
+        const textField = this.addChildAt(new CLS.TextField(name, depth, width, height), depth);
         textField.setInitParams();
         if (name)
             textField.setName(name);

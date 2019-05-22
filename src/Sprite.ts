@@ -15,6 +15,7 @@ import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { StaticText } from './StaticText';
 import { SoundTransform } from './SoundTransform';
+import { TextField } from './TextField';
 import {
     Bounds, ColorTransform, Matrix, Stage,
     multiplicationMatrix, multiplicationColor
@@ -22,8 +23,6 @@ import {
 
 declare const MovieClip: any;
 type MovieClip = any;
-declare const TextField: any;
-type TextField = any;
 
 export class Sprite extends DisplayObjectContainer {
     private _buttonMode = false;

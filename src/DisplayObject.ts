@@ -18,6 +18,7 @@ import { SharedObject } from './SharedObject';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
 import { StaticText } from './StaticText';
+import { TextField } from './TextField';
 import {
     BlendMode, Bounds, ColorTransform, Matrix, Stage,
     isTouch, devicePixelRatio,
@@ -27,7 +28,6 @@ import {
 
 
 declare const MovieClip: any;
-declare const TextField: any;
 type AVM2 = any;
 
 let instanceId = 1;
@@ -64,6 +64,7 @@ export const CLS = {
     SimpleButton: undefined as any,
     Sprite: undefined as any,
     StaticText: undefined as any,
+    TextField: undefined as any,
 
     isDisplayObjectContainer(d: DisplayObject): d is DisplayObjectContainer {
         return d instanceof CLS.DisplayObjectContainer;
@@ -83,6 +84,10 @@ export const CLS = {
 
     isStaticText(d: DisplayObject): d is StaticText {
         return d instanceof CLS.StaticText;
+    },
+
+    isTextField(d: DisplayObject): d is TextField {
+        return d instanceof TextField;
     }
 };
 
@@ -125,7 +130,7 @@ export class DisplayObject extends EventDispatcher {
     private _filters?: BitmapFilter[];
     private _filterCacheKey?: string;
     private _mask: DisplayObject | null = null;
-    private _matrix: Matrix | null = null;
+    protected _matrix: Matrix | null = null;
     private _colorTransform: ColorTransform | null = null;
     private _extend = false;
     private _sprite: number = 0;
@@ -639,7 +644,7 @@ export class DisplayObject extends EventDispatcher {
                 break;
             case "text":
             case "htmltext":
-                if (_this instanceof TextField) {
+                if (CLS.isTextField(_this)) {
                     _this = _this as any;
                     var variable = _this.getVariable("variable");
                     if (variable) {
@@ -773,7 +778,7 @@ export class DisplayObject extends EventDispatcher {
                 break;
             case "text":
             case "htmltext":
-                if (_this instanceof TextField) {
+                if (CLS.isTextField(_this)) {
                     _this = _this as any;
                     var variable = _this.getVariable("variable");
                     if (variable) {
@@ -1887,8 +1892,8 @@ export class DisplayObject extends EventDispatcher {
         return new Bounds(xMin, yMin, xMax, yMax);
     }
 
-    getTags(): any[] {
-        return [];
+    getTags(): any {
+        return undefined;
     }
 }
 

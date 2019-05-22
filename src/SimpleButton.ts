@@ -17,10 +17,6 @@ import {
     cloneArray, multiplicationColor, multiplicationMatrix
 } from './utils';
 
-
-declare const TextField: any;
-
-
 export class SimpleButton extends InteractiveObject {
     private actions: ButtonAction[] = [];
     private _downState = new Sprite();
@@ -381,7 +377,7 @@ export class SimpleButton extends InteractiveObject {
                 var instance = loadStage.getInstance(tagId);
                 if (CLS.isShape(instance) ||
                     CLS.isStaticText(instance) ||
-                    instance instanceof TextField
+                    CLS.isTextField(instance)
                 ) {
                     hit = (instance as any).renderHitTest(ctx, m3, stage, x, y);
                 } else {
@@ -438,7 +434,7 @@ export class SimpleButton extends InteractiveObject {
         }
     }
 
-    getTags(): any[] {
+    getTags(): any {
         return undefined;
     }
 
