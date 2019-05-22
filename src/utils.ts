@@ -13,6 +13,9 @@ import { cacheStore } from './CacheStore';
 export type Stage = any;
 export type SoundInfo = any;
 
+export const LN2_2 = Math.LN2 / 2;
+export const LOG1P = 0.29756328478758615;
+
 
 const ua = window.navigator.userAgent;
 export const isAndroid = (ua.indexOf("Android") > 0);
@@ -21,6 +24,11 @@ export const isiOS = (ua.indexOf("iPhone") > 0 || ua.indexOf("iPod") > 0);
 export const isChrome = (ua.indexOf("Chrome") > 0);
 export const isTouch = (isAndroid || isiOS);
 export const devicePixelRatio = window.devicePixelRatio || 1;
+
+const chkCanvas = document.createElement("canvas");
+chkCanvas.width = 1;
+chkCanvas.height = 1;
+export const tmpContext = chkCanvas.getContext("2d");
 
 export function cloneArray<T>(src: T): T
 export function cloneArray<T>(src: T[]): T[]
@@ -40,6 +48,10 @@ export class Bounds {
                 public yMax: number = -Number.MAX_VALUE)
     { }
 
+    clone(): Bounds {
+        return new Bounds(this.xMin, this.yMin, this.xMax, this.yMax);
+    }
+
     clear(): void {
         this.xMin = Number.MAX_VALUE;
         this.yMin = Number.MAX_VALUE;
@@ -52,6 +64,20 @@ export class Bounds {
         this.xMax = Math.max(this.xMax, x);
         this.yMin = Math.min(this.yMin, y);
         this.yMax = Math.max(this.yMax, y);
+    }
+
+    divide(d: number): void {
+        this.xMin /= d;
+        this.yMin /= d;
+        this.xMax /= d;
+        this.yMax /= d;
+    }
+
+    update(bounds: Bounds): void {
+        this.xMin = Math.min(this.xMin, bounds.xMin);
+        this.xMax = Math.max(this.xMax, bounds.xMax);
+        this.yMin = Math.min(this.yMin, bounds.yMin);
+        this.yMax = Math.max(this.yMax, bounds.yMax);
     }
 
     transform(matrix: Matrix): Bounds {

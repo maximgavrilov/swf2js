@@ -13,6 +13,7 @@ import { EventDispatcher } from './EventDispatcher';
 import { BitmapFilter } from './BitmapFilter';
 import { keyClass } from './Key';
 import { PlaceObject } from './PlaceObject';
+import { Shape } from './Shape';
 import { SharedObject } from './SharedObject';
 import {
     BlendMode, Bounds, ColorTransform, Matrix, Stage,
@@ -23,7 +24,6 @@ import {
 
 
 declare const MovieClip: any;
-declare const Shape: any;
 declare const StaticText: any;
 declare const TextField: any;
 type SimpleButton = any;

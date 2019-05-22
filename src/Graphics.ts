@@ -12,11 +12,9 @@ import { CAP, CMD, JOIN, Command, CommandF, vtc } from './VectorToCanvas';
 import {
     Bounds, Matrix, ColorTransform, Stage,
     isAndroid4x, isChrome,
+    LN2_2, LOG1P,
     intToRGBA, multiplicationMatrix, toColorInt
 } from './utils';
-
-const LN2_2 = Math.LN2 / 2;
-const LOG1P = 0.29756328478758615;
 
 type TriangleCulling = 'negative' | 'none' | 'positive';
 

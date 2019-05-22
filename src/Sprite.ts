@@ -11,6 +11,7 @@ import { DisplayObject } from './DisplayObject';
 import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { ClipEvent } from './EventDispatcher';
 import { Graphics } from './Graphics';
+import { Shape } from './Shape';
 import { SoundTransform } from './SoundTransform';
 import {
     Bounds, ColorTransform, Matrix, Stage,
@@ -21,8 +22,6 @@ declare const MovieClip: any;
 type MovieClip = any;
 declare const SimpleButton: any;
 type SimpleButton = any;
-declare const Shape: any;
-type Shape = any;
 declare const TextField: any;
 type TextField = any;
 declare const StaticText: any;

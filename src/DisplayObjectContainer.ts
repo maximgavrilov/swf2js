@@ -10,6 +10,7 @@
 import { DisplayObject } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
 import { PlaceObject } from './PlaceObject';
+import { Shape } from './Shape';
 import { Sprite } from './Sprite';
 import {
     Matrix, Stage, SoundInfo,
@@ -21,8 +22,6 @@ declare const MovieClip: any;
 type MovieClip = any;
 declare const SimpleButton: any;
 type SimpleButton = any;
-declare const Shape: any;
-type Shape = any;
 declare const TextField: any;
 type TextField = any;
 interface Tag {
