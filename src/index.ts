@@ -6601,9 +6601,7 @@ if (!("swf2js" in window)){(function(window)
                 if (builder instanceof MovieClip) {
                     if (prop in _this.methods) {
                         obj = builder;
-                    }
-
-                    if ((builder as any).getProperty(prop) !== undefined) {
+                    } else if ((builder as any).getProperty(prop) !== undefined) {
                         obj = builder;
                     }
                 }
