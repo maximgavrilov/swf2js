@@ -9,7 +9,7 @@
 
 import { cacheStore } from './CacheStore';
 import { ClipEvent } from './EventDispatcher';
-import { DisplayObject } from './DisplayObject';
+import { CLS, DisplayObject } from './DisplayObject';
 import { Graphics } from './Graphics';
 import {
     Bounds, ColorTransform, Matrix, Stage,
@@ -511,3 +511,5 @@ export class Shape extends DisplayObject {
         return [x0 + r2 * vx2, y0 + r2 * vy2, x1, y1];
     }
 }
+
+CLS.Shape = Shape;

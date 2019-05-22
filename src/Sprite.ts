@@ -7,7 +7,7 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
-import { DisplayObject } from './DisplayObject';
+import { CLS, DisplayObject } from './DisplayObject';
 import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { ClipEvent } from './EventDispatcher';
 import { Graphics } from './Graphics';
@@ -532,3 +532,4 @@ export class Sprite extends DisplayObjectContainer {
     }
 }
 
+CLS.Sprite = Sprite;

@@ -1245,12 +1245,11 @@ if (!("swf2js" in window)){(function(window)
         bitio.byteAlign();
 
         var nBits = bitio.getUIBits(5);
-        return {
-            xMin: bitio.getSIBits(nBits),
-            xMax: bitio.getSIBits(nBits),
-            yMin: bitio.getSIBits(nBits),
-            yMax: bitio.getSIBits(nBits)
-        };
+        const xMin = bitio.getSIBits(nBits);
+        const xMax = bitio.getSIBits(nBits);
+        const yMin = bitio.getSIBits(nBits);
+        const yMax = bitio.getSIBits(nBits);
+        return new Bounds(xMin, yMin, xMax, yMax);
     };
 
     /**
@@ -2927,16 +2926,14 @@ if (!("swf2js" in window)){(function(window)
 
         var EndBounds = char.EndBounds;
         var StartBounds = char.StartBounds;
-        var bounds = {
-            xMax: StartBounds.xMax * startPer + EndBounds.xMax * per,
-            xMin: StartBounds.xMin * startPer + EndBounds.xMin * per,
-            yMax: StartBounds.yMax * startPer + EndBounds.yMax * per,
-            yMin: StartBounds.yMin * startPer + EndBounds.yMin * per
-        };
+        var xMax = StartBounds.xMax * startPer + EndBounds.xMax * per;
+        var xMin = StartBounds.xMin * startPer + EndBounds.xMin * per;
+        var yMax = StartBounds.yMax * startPer + EndBounds.yMax * per;
+        var yMin = StartBounds.yMin * startPer + EndBounds.yMin * per;
 
         return {
             data: vtc.convert(shapes, true),
-            bounds: bounds
+            bounds: new Bounds(xMin, yMin, xMax, yMax)
         };
     };
 
@@ -6606,7 +6603,7 @@ if (!("swf2js" in window)){(function(window)
                         obj = builder;
                     }
 
-                    if ((builder as any).getProperty() !== undefined) {
+                    if ((builder as any).getProperty(prop) !== undefined) {
                         obj = builder;
                     }
                 }
@@ -11067,7 +11064,7 @@ if (!("swf2js" in window)){(function(window)
         height *= 20;
 
         _this.fontId = 0;
-        _this.bounds = {xMin: 0, xMax: width, yMin: 0, yMax: height};
+        _this.bounds = new Bounds(0, 0, width, height);
         _this.input = null;
         _this.inputActive = false;
         _this.span = null;
@@ -12660,7 +12657,7 @@ if (!("swf2js" in window)){(function(window)
                 yMax = _max(yMax, bounds.yMax);
             }
         }
-        return {xMin: xMin, xMax: xMax, yMin: yMin, yMax: yMax};
+        return new Bounds(xMin, yMin, xMax, yMax);
     };
 
     /**

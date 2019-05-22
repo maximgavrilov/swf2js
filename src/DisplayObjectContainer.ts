@@ -7,7 +7,7 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
-import { DisplayObject } from './DisplayObject';
+import { CLS, DisplayObject } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
 import { PlaceObject } from './PlaceObject';
 import { Shape } from './Shape';
@@ -389,7 +389,7 @@ export class DisplayObjectContainer extends InteractiveObject {
     }
 
     createSprite(name?: string, depth: number = 0): Sprite {
-        const sprite = this.addChildAt(new Sprite(), depth);
+        const sprite = this.addChildAt(new CLS.Sprite(), depth);
         if (name)
             sprite.setName(name);
         return sprite;
@@ -412,8 +412,10 @@ export class DisplayObjectContainer extends InteractiveObject {
     }
 
     createShape(depth: number): Shape {
-        const shape = new Shape();
+        const shape = new CLS.Shape();
         this.addChildAt(shape, depth);
         return shape;
     }
 }
+
+CLS.DisplayObjectContainer = DisplayObjectContainer;

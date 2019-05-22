@@ -57,6 +57,24 @@ function isTouchEvent(event: MouseEvent | TouchEvent): event is TouchEvent {
     return isTouch;
 }
 
+export const CLS = {
+    DisplayObjectContainer: undefined as any,
+    Shape: undefined as any,
+    Sprite: undefined as any,
+
+    isDisplayObjectContainer(d: DisplayObject): d is DisplayObjectContainer {
+        return d instanceof CLS.DisplayObjectContainer;
+    },
+
+    isShape(d: DisplayObject): d is Shape {
+        return d instanceof CLS.Shape;
+    }
+
+    isSprite(d: DisplayObject): d is Sprite {
+        return d instanceof CLS.Sprite;
+    }
+};
+
 export class DisplayObject extends EventDispatcher {
     public static stages: { [stageId: number]: Stage };
     public static loadStages: { [stageId: number]: Stage };
@@ -342,11 +360,7 @@ export class DisplayObject extends EventDispatcher {
     }
 
     getStage(): Stage {
-        const stage = this.getLoadStage() | this.getParentStage();
-
-        if (!stage)
-            throw new Error('No stage');
-
+        const stage = this.getLoadStage() || this.getParentStage();
         return stage;
     }
 
@@ -354,14 +368,14 @@ export class DisplayObject extends EventDispatcher {
         if (!this.stageId)
             return undefined;
 
-        return DisplayObject.stages[this.stageId] | DisplayObject.loadStages[this.stageId];
+        return DisplayObject.stages[this.stageId] || DisplayObject.loadStages[this.stageId];
     }
 
     getLoadStage(): Stage | undefined {
         if (!this.loadStageId)
             return undefined;
 
-        return DisplayObject.stages[this.loadStageId] | DisplayObject.loadStages[this.loadStageId];
+        return DisplayObject.stages[this.loadStageId] || DisplayObject.loadStages[this.loadStageId];
     }
 
     setLoadStage(stage?: Stage): void {
@@ -413,8 +427,8 @@ export class DisplayObject extends EventDispatcher {
     }
 
     setParent(parent: DisplayObjectContainer): void {
-        if (parent instanceof DisplayObjectContainer) {
-            parent.setInstance(this);
+        if (CLS.isDisplayObjectContainer(parent)) {
+            (parent as DisplayObjectContainer).setInstance(this);
         }
         this.parentId = parent.instanceId;
     }
@@ -1414,7 +1428,7 @@ export class DisplayObject extends EventDispatcher {
 
             var bounds;
             var twips = 1;
-            if (_this instanceof Shape || _this instanceof StaticText) {
+            if (CLS.isShape(_this) || _this instanceof StaticText) {
                 bounds = (_this as any).getBounds();
                 xScale = Math.sqrt(rMatrix[0] * rMatrix[0] + rMatrix[1] * rMatrix[1]);
                 yScale = Math.sqrt(rMatrix[2] * rMatrix[2] + rMatrix[3] * rMatrix[3]);
@@ -1442,7 +1456,7 @@ export class DisplayObject extends EventDispatcher {
 
             var m2: Matrix = [1, 0, 0, 1, -xMin * twips, -yMin * twips];
             var m3: Matrix = [matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]];
-            if (_this instanceof Shape) {
+            if (CLS.isShape(_this)) {
                 m3[4] = 0;
                 m3[5] = 0;
             }
@@ -1487,7 +1501,7 @@ export class DisplayObject extends EventDispatcher {
 
         var xMin = obj.xMin;
         var yMin = obj.yMin;
-        if (_this instanceof Shape) {
+        if (CLS.isShape(_this)) {
             xMin += obj.rMatrix[4];
             yMin += obj.rMatrix[5];
         }
