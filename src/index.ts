@@ -15,11 +15,12 @@ import {
     GradientGlowFilter, GlowFilter
 } from './BitmapFilter';
 import { cacheStore } from './CacheStore';
-import { ClipEvent, EventDispatcher } from './EventDispatcher';
+import { clipEvent, ClipEvent, EventDispatcher } from './EventDispatcher';
 import { DisplayObject } from './DisplayObject';
 import { Graphics } from './Graphics';
 import { PlaceObject } from './PlaceObject';
 import { keyClass } from './Key';
+import { SoundTransform } from './SoundTransform';
 import { vtc } from './VectorToCanvas';
 import {
     ColorTransform, Matrix,
@@ -10736,184 +10737,6 @@ if (!("swf2js" in window)){(function(window)
         var value = stack.pop();
         throw value.message;
     };
-
-    /**
-     * @constructor
-     */
-    var SoundTransform = function ()
-    {
-        var _this = this;
-        _this._leftToLeft = 0;
-        _this._leftToRight = 1;
-        _this._pan = 0;
-        _this._rightToLeft = 0;
-        _this._rightToRight = 1;
-        _this._volume = 1;
-    };
-
-    /**
-     * properties
-     */
-    Object.defineProperties(SoundTransform.prototype,
-    {
-        leftToLeft: {
-            get: function () {
-                return this.getLeftToLeft();
-            },
-            set: function (leftToLeft) {
-                this.setLeftToLeft(leftToLeft);
-            }
-        },
-        leftToRight: {
-            get: function () {
-                return this.getLeftToRight();
-            },
-            set: function (leftToRight) {
-                this.setLeftToRight(leftToRight);
-            }
-        },
-        pan: {
-            get: function () {
-                return this.getPan();
-            },
-            set: function (pan) {
-                this.setPan(pan);
-            }
-        },
-        rightToLeft: {
-            get: function () {
-                return this.getRightToLeft();
-            },
-            set: function (rightToLeft) {
-                this.setRightToLeft(rightToLeft);
-            }
-        },
-        rightToRight: {
-            get: function () {
-                return this.getRightToRight();
-            },
-            set: function (rightToRight) {
-                this.setRightToRight(rightToRight);
-            }
-        },
-        volume: {
-            get: function () {
-                return this.getVolume();
-            },
-            set: function (volume) {
-                this.setVolume(volume);
-            }
-        }
-    });
-
-    /**
-     * @returns {number}
-     */
-    SoundTransform.prototype.getLeftToLeft = function ()
-    {
-        return this._leftToLeft;
-    };
-
-    /**
-     * @param leftToLeft
-     */
-    SoundTransform.prototype.setLeftToLeft = function (leftToLeft)
-    {
-        this._leftToLeft = leftToLeft | 0;
-    };
-
-    /**
-     * @returns {number}
-     */
-    SoundTransform.prototype.getLeftToRight = function ()
-    {
-        return this._leftToRight;
-    };
-
-    /**
-     * @param leftToRight
-     */
-    SoundTransform.prototype.setLeftToRight = function (leftToRight)
-    {
-        this._leftToRight = leftToRight | 0;
-    };
-
-    /**
-     * @returns {number}
-     */
-    SoundTransform.prototype.getPan = function ()
-    {
-        return this._pan;
-    };
-
-    /**
-     * @param pan
-     */
-    SoundTransform.prototype.setPan = function (pan)
-    {
-        this._pan = pan | 0;
-    };
-
-    /**
-     * @returns {number}
-     */
-    SoundTransform.prototype.getRightToLeft = function ()
-    {
-        return this._rightToLeft;
-    };
-
-    /**
-     * @param rightToLeft
-     */
-    SoundTransform.prototype.setRightToLeft = function (rightToLeft)
-    {
-        this._rightToLeft = rightToLeft | 0;
-    };
-
-    /**
-     * @returns {number}
-     */
-    SoundTransform.prototype.getRightToRight = function ()
-    {
-        return this._rightToRight;
-    };
-
-    /**
-     * @param rightToRight
-     */
-    SoundTransform.prototype.setRightToRight = function (rightToRight)
-    {
-        this._rightToRight = rightToRight | 0;
-    };
-
-    /**
-     * @returns {number}
-     */
-    SoundTransform.prototype.getVolume = function ()
-    {
-        return this._volume;
-    };
-
-    /**
-     * @param volume
-     */
-    SoundTransform.prototype.setVolume = function (volume)
-    {
-        this._volume = volume | 0;
-    };
-
-    /**
-     * @param vol
-     * @param panning
-     */
-    SoundTransform.prototype.SoundTransform = function (vol, panning)
-    {
-        var _this = this;
-        _this.volume = vol | 0;
-        _this.pan = panning | 0;
-    };
-
-    var clipEvent = new ClipEvent();
 
     /**
      * @constructor

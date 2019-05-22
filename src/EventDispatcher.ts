@@ -45,6 +45,8 @@ export class ClipEvent {
     get ROLL_OVER(): string { return "rollOver"; }
 }
 
+export const clipEvent = new ClipEvent();
+
 type EventListener = (event: ClipEvent) => void;
 type EventListenerU = EventListener | undefined;
 
