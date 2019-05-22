@@ -219,7 +219,7 @@ export class EventDispatcher {
     }
 
     hasEventListener(type: string): boolean {
-        return (type in this.events);
+        return this.events[type] && this.events[type].length > 0;
     }
 
     removeEventListener(type: string, listener: EventListener, useCapture: boolean = false): void {

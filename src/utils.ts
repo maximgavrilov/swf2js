@@ -11,6 +11,7 @@ import { cacheStore } from './CacheStore';
 
 
 export type Stage = any;
+export type SoundInfo = any;
 
 
 const ua = window.navigator.userAgent;
@@ -183,3 +184,37 @@ export function getBlendName(blendMode: string | number): BlendMode {
 
     return BLEND_MODES[blendMode - 1];
 }
+
+export function startSound(audio: HTMLMediaElement, soundInfo: SoundInfo): void {
+    if (soundInfo.SyncStop) {
+        audio.pause();
+    } else {
+        if (soundInfo.HasLoops) {
+            audio.loopCount = soundInfo.LoopCount;
+            var loopSound = function ()
+            {
+                audio.loopCount--;
+                if (!this.loopCount) {
+                    audio.removeEventListener("ended", loopSound);
+                } else {
+                    audio.currentTime = 0;
+                    if (soundInfo.HasInPoint) {
+                        audio.currentTime = soundInfo.InPoint;
+                    }
+                    audio.play();
+                }
+            };
+            audio.addEventListener("ended", loopSound);
+        }
+
+        if (soundInfo.HasInPoint) {
+            audio.addEventListener("canplay", function ()
+            {
+                this.currentTime = soundInfo.InPoint;
+            });
+        }
+
+        audio.play();
+    }
+}
+
