@@ -240,7 +240,11 @@ export class EventDispatcher {
         return this.hasEventListener(type);
     }
 
-    protected setActionQueue(as: EventListener[], stage: Stage, args: any[]): void {
+    protected getEvents(): { [type: string]: EventListener[] } {
+        return this.events;
+    }
+
+    protected setActionQueue(as: EventListener | EventListener[], stage: Stage, args?: any[]): void {
         stage.actions.push({ as, mc: this, args });
     }
 }

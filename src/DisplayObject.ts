@@ -12,6 +12,7 @@ import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { EventDispatcher } from './EventDispatcher';
 import { BitmapFilter } from './BitmapFilter';
 import { keyClass } from './Key';
+import { MovieClip } from './MovieClip';
 import { PlaceObject } from './PlaceObject';
 import { Shape } from './Shape';
 import { SharedObject } from './SharedObject';
@@ -20,15 +21,12 @@ import { Sprite } from './Sprite';
 import { StaticText } from './StaticText';
 import { TextField } from './TextField';
 import {
-    BlendMode, Bounds, ColorTransform, Matrix, Stage,
+    AVM2, BlendMode, Bounds, ColorTransform, Matrix, Stage,
     isTouch, devicePixelRatio,
     cloneArray, getBlendName, multiplicationMatrix
 } from './utils';
 
 
-
-declare const MovieClip: any;
-type AVM2 = any;
 
 let instanceId = 1;
 
@@ -59,15 +57,20 @@ function isTouchEvent(event: MouseEvent | TouchEvent): event is TouchEvent {
 }
 
 export const CLS = {
-    DisplayObjectContainer: undefined as any,
-    Shape: undefined as any,
-    SimpleButton: undefined as any,
-    Sprite: undefined as any,
-    StaticText: undefined as any,
-    TextField: undefined as any,
+    DisplayObjectContainer: 0 as any,
+    MovieClip: 0 as any,
+    Shape: 0 as any,
+    SimpleButton: 0 as any,
+    Sprite: 0 as any,
+    StaticText: 0 as any,
+    TextField: 0 as any,
 
     isDisplayObjectContainer(d: DisplayObject): d is DisplayObjectContainer {
         return d instanceof CLS.DisplayObjectContainer;
+    },
+
+    isMovieClip(d: DisplayObject): d is MovieClip {
+        return d instanceof CLS.MovieClip;
     },
 
     isShape(d: DisplayObject): d is Shape {
@@ -126,17 +129,14 @@ export class DisplayObject extends EventDispatcher {
     private _target = "";
     public _lockroot?: DisplayObjectContainer = undefined;
     private _enabled = true;
-    private _blendMode: BlendMode | null = null;
-    private _filters?: BitmapFilter[];
+    protected _blendMode: BlendMode | null = null;
+    protected _filters?: BitmapFilter[];
     private _filterCacheKey?: string;
     private _mask: DisplayObject | null = null;
     protected _matrix: Matrix | null = null;
-    private _colorTransform: ColorTransform | null = null;
+    protected _colorTransform: ColorTransform | null = null;
     private _extend = false;
     private _sprite: number = 0;
-
-    // avm2
-    protected avm2: AVM2 | null = null;
 
     get alpha(): number {
         return this.getAlpha() / 100;
@@ -566,13 +566,13 @@ export class DisplayObject extends EventDispatcher {
                 break;
             case 4:
             case "_currentframe":
-                if (_this instanceof MovieClip) {
+                if (CLS.isMovieClip(_this)) {
                     value = (_this as any).getCurrentFrame();
                 }
                 break;
             case 5:
             case "_totalframes":
-                if (_this instanceof MovieClip) {
+                if (CLS.isMovieClip(_this)) {
                     value = (_this as any).getTotalFrames();
                 }
                 break;
@@ -610,7 +610,7 @@ export class DisplayObject extends EventDispatcher {
                 break;
             case 14:
             case "_droptarget":
-                if (_this instanceof MovieClip) {
+                if (CLS.isMovieClip(_this)) {
                     value = (_this as any).getDropTarget();
                 }
                 break;
@@ -1140,7 +1140,7 @@ export class DisplayObject extends EventDispatcher {
                 return registerClass[name];
             }
 
-            if (_this instanceof MovieClip) {
+            if (CLS.isMovieClip(_this)) {
                 value = (_this as any).getDisplayObject(name, parse);
                 if (value) {
                     return value;
@@ -1171,7 +1171,7 @@ export class DisplayObject extends EventDispatcher {
             if (value) {
                 return value;
             }
-            if (_this instanceof MovieClip && name === "flash") {
+            if (CLS.isMovieClip(_this) && name === "flash") {
                 return (_this as any).flash;
             }
             if (name in window) {
@@ -1249,7 +1249,7 @@ export class DisplayObject extends EventDispatcher {
         return value;
     }
 
-    getDisplayObject(path: string | number, parse: boolean = true): DisplayObject | undefined {
+    getDisplayObject(path: string | number = '', parse: boolean = true): DisplayObject | undefined {
         var _this = this;
         var mc: DisplayObject = _this;
         var _root = mc;
@@ -1314,7 +1314,7 @@ export class DisplayObject extends EventDispatcher {
                 if (level in tags) {
                     var tId = tags[level];
                     tag = stage.getInstance(tId);
-                    if (tag instanceof MovieClip) {
+                    if (CLS.isMovieClip(tag)) {
                         return tag;
                     }
                 }
@@ -1798,7 +1798,7 @@ export class DisplayObject extends EventDispatcher {
             return new PlaceObject();
         }
 
-        if (parent instanceof MovieClip) {
+        if (CLS.isMovieClip(parent)) {
             frame = (parent as any).getCurrentFrame();
         }
         var placeObject = stage.getPlaceObject(parent.instanceId, depth, frame);

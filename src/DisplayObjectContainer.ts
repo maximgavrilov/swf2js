@@ -10,21 +10,15 @@
 import { CLS, DisplayObject } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
 import { PlaceObject } from './PlaceObject';
+import { MovieClip } from './MovieClip';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
 import { TextField } from './TextField';
 import {
-    Matrix, Stage, SoundInfo,
+    Matrix, Stage, SoundInfo, Tag,
     multiplicationMatrix, cloneArray, startSound
 } from './utils';
-
-
-declare const MovieClip: any;
-type MovieClip = any;
-interface Tag {
-    readonly instanceId: number;
-}
 
 
 class TextSnapshot {
@@ -74,7 +68,7 @@ export class DisplayObjectContainer extends InteractiveObject {
     private _tabChildren = true;
     private _textSnapshot = new TextSnapshot();
     private _numChildren = 0;
-    private container: Container = {};
+    protected container: Container = {};
     private instances: Instances = {};
 
 
@@ -156,8 +150,8 @@ export class DisplayObjectContainer extends InteractiveObject {
         var frame = 1;
         var placeObject = new PlaceObject();
         var instanceId = this.instanceId;
-        if (this instanceof MovieClip) {
-            const _this = this as any;
+        var _this = this;
+        if (CLS.isMovieClip(_this)) {
             var totalFrames = _this.getTotalFrames() + 1;
             for (; frame < totalFrames; frame++) {
                 if (!(frame in container)) {
@@ -185,8 +179,8 @@ export class DisplayObjectContainer extends InteractiveObject {
             depth += 16384;
         }
 
-        if (_this instanceof MovieClip) {
-            var frame = (_this as any).getCurrentFrame();
+        if (CLS.isMovieClip(_this)) {
+            var frame = _this.getCurrentFrame();
             children = container[frame];
         }
         return children[depth];
@@ -196,8 +190,8 @@ export class DisplayObjectContainer extends InteractiveObject {
         var _this = this;
         var container = _this.getContainer();
         var children = container;
-        if (_this instanceof MovieClip) {
-            var frame = (_this as any).getCurrentFrame();
+        if (CLS.isMovieClip(_this)) {
+            var frame = _this.getCurrentFrame();
             children = container[frame];
         }
 
@@ -218,19 +212,15 @@ export class DisplayObjectContainer extends InteractiveObject {
     }
 
     getChildIndex(child: DisplayObject): number {
-        var index;
-        if (child instanceof DisplayObject) {
-            index = (child as any).getLevel() - 16384;
-        }
-        return index;
+        return child.getLevel() - 16384;
     }
 
     removeChild(child: DisplayObject): DisplayObject {
         var _this = this;
         var container = _this.getContainer();
         var depth, obj;
-        if (_this instanceof MovieClip) {
-            var totalFrames = (_this as any).getTotalFrames() + 1;
+        if (CLS.isMovieClip(_this)) {
+            var totalFrames = _this.getTotalFrames() + 1;
             for (var frame = 1; frame < totalFrames; frame++) {
                 if (!(frame in container)) {
                     continue;
@@ -280,8 +270,8 @@ export class DisplayObjectContainer extends InteractiveObject {
         }
 
         var child;
-        if (_this instanceof MovieClip) {
-            var totalFrames = (_this as any).getTotalFrames();
+        if (CLS.isMovieClip(_this)) {
+            var totalFrames = _this.getTotalFrames();
             for (var frame = 1; frame < totalFrames; frame++) {
                 if (!(frame in container)) {
                     continue;

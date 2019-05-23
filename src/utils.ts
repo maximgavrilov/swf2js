@@ -10,6 +10,15 @@
 import { cacheStore } from './CacheStore';
 
 
+export type DefineSoundTag = any;
+export type RemoveObjectTag = any;
+export interface Tag {
+    readonly instanceId: number;
+}
+
+
+
+export type AVM2 = any;
 export type ButtonAction = any;
 export type FontData = any;
 export type Stage = any;
@@ -19,6 +28,8 @@ export const LN2_2 = Math.LN2 / 2;
 export const LOG1P = 0.29756328478758615;
 
 
+const xmlHttpRequest = new XMLHttpRequest();
+export const isXHR2 = (typeof xmlHttpRequest.responseType !== "undefined");
 const ua = window.navigator.userAgent;
 export const isAndroid = (ua.indexOf("Android") > 0);
 export const isAndroid4x = (ua.indexOf("Android 4.") > 0);

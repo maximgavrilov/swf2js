@@ -11,6 +11,7 @@ import { CLS, DisplayObject } from './DisplayObject';
 import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { ClipEvent } from './EventDispatcher';
 import { Graphics } from './Graphics';
+import { MovieClip } from './MovieClip';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { StaticText } from './StaticText';
@@ -20,9 +21,6 @@ import {
     Bounds, ColorTransform, Matrix, Stage,
     multiplicationMatrix, multiplicationColor
 } from './utils';
-
-declare const MovieClip: any;
-type MovieClip = any;
 
 export class Sprite extends DisplayObjectContainer {
     private _buttonMode = false;
@@ -221,7 +219,7 @@ export class Sprite extends DisplayObjectContainer {
             }
 
             var instance = stage.getInstance(id);
-            if (!(instance instanceof MovieClip)) {
+            if (!CLS.isMovieClip(instance)) {
                 continue;
             }
 
@@ -252,9 +250,8 @@ export class Sprite extends DisplayObjectContainer {
         stage.doneTags.unshift(_this);
 
         // sound
-        if (_this instanceof MovieClip && !(_this as any).soundStopFlag) {
-            const mc: MovieClip = _this as any;
-
+        if (CLS.isMovieClip(_this) && !_this.soundStopFlag) {
+            const mc = _this;
             var sounds = mc.getSounds();
             if (sounds !== undefined) {
                 var sLen = sounds.length;
@@ -263,7 +260,7 @@ export class Sprite extends DisplayObjectContainer {
                         continue;
                     }
                     var sound = sounds[idx];
-                    mc.startSound(sound);
+                    mc.startSound_mc(sound);
                 }
             }
         }
@@ -319,7 +316,7 @@ export class Sprite extends DisplayObjectContainer {
                     ctx.save();
                     ctx.beginPath();
                     clips[clips.length] = instance.clipDepth;
-                    if (instance instanceof MovieClip) {
+                    if (CLS.isMovieClip(instance)) {
                         stage.isClipDepth = true;
                     }
                 }
@@ -439,7 +436,7 @@ export class Sprite extends DisplayObjectContainer {
         return hit;
     };
 
-    getRect(mc: MovieClip): Bounds {
+    getRect(mc: DisplayObject): Bounds {
         var _this = this;
         if (!mc) {
             mc = _this;
