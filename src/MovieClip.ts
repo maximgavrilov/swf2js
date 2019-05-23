@@ -7,6 +7,7 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
+import { ActionScript } from './ActionScript';
 import { clipEvent, ClipEvent } from './EventDispatcher';
 import { CLS, DisplayObject } from './DisplayObject';
 import { DisplayObjectContainer } from './DisplayObjectContainer';
@@ -21,7 +22,6 @@ import {
     cloneArray, multiplicationMatrix, startSound
 } from './utils';
 
-declare const ActionScript: any;
 declare const Stage: any;
 declare const SwfTag: any;
 

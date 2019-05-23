@@ -16,8 +16,6 @@ export interface Tag {
     readonly instanceId: number;
 }
 
-
-
 export type AVM2 = any;
 export type ButtonAction = any;
 export type FontData = any;
