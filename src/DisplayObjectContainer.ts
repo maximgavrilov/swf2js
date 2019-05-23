@@ -370,7 +370,7 @@ export class DisplayObjectContainer extends InteractiveObject {
     }
 
     createMovieClip(name?: string, depth: number = 0): MovieClip {
-        const movieClip = this.addChildAt(new MovieClip(), depth);
+        const movieClip = this.addChildAt(new CLS.MovieClip(), depth);
         if (name)
             movieClip.setName(name);
         return movieClip;

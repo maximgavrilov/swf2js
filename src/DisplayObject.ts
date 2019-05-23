@@ -90,7 +90,7 @@ export const CLS = {
     },
 
     isTextField(d: DisplayObject): d is TextField {
-        return d instanceof TextField;
+        return d instanceof CLS.TextField;
     }
 };
 
