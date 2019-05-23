@@ -35,7 +35,6 @@ export class Graphics {
     }
 
     clear(): this {
-        const no = Number.MAX_VALUE;
         this.bounds.clear();
         this.maxWidth = 0;
         this.cmd = null;

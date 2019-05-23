@@ -22,7 +22,6 @@ import {
 } from './utils';
 
 declare const ActionScript: any;
-declare const DoABC: any;
 declare const Stage: any;
 declare const SwfTag: any;
 

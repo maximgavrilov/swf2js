@@ -57,7 +57,6 @@ export class TextField extends InteractiveObject {
 
     private bounds = new Bounds(0, 0, 0, 0);
     private input?: HTMLTextAreaElement;
-    private span?: HTMLSpanElement;
 
     get text(): string {
         return this.variables.text;

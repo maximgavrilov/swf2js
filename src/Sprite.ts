@@ -11,7 +11,6 @@ import { CLS, DisplayObject } from './DisplayObject';
 import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { ClipEvent } from './EventDispatcher';
 import { Graphics } from './Graphics';
-import { MovieClip } from './MovieClip';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { StaticText } from './StaticText';

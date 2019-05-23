@@ -155,10 +155,6 @@ export class SimpleButton extends InteractiveObject {
 
     getBounds(matrix: Matrix, status: ButtonStatus): Bounds {
         var _this = this;
-        var xMax = 0;
-        var yMax = 0;
-        var xMin = 0;
-        var yMin = 0;
 
         var sprite = _this.getSprite(status);
         var tags = sprite.getContainer();

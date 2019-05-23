@@ -402,6 +402,9 @@ class VectorToCanvas {
             return stack;
 
         for (const data of array) {
+            if (!data)
+                continue;
+
             stack.push({
                 obj: data.obj,
                 cmd: this.buildCommand(data.cache)

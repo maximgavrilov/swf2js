@@ -21,7 +21,7 @@ import { Sprite } from './Sprite';
 import { StaticText } from './StaticText';
 import { TextField } from './TextField';
 import {
-    AVM2, BlendMode, Bounds, ColorTransform, Matrix, Stage,
+    BlendMode, Bounds, ColorTransform, Matrix, Stage,
     isTouch, devicePixelRatio,
     cloneArray, getBlendName, multiplicationMatrix
 } from './utils';
@@ -105,7 +105,7 @@ export class DisplayObject extends EventDispatcher {
     public characterId = 0;
     public tagType = 0;
     public ratio = 0;
-    private isMask = false;
+    public isMask = false;
     public clipDepth = 0;
     public isClipDepth = false;
     protected stageId: number = 0
@@ -135,7 +135,6 @@ export class DisplayObject extends EventDispatcher {
     private _mask: DisplayObject | null = null;
     protected _matrix: Matrix | null = null;
     protected _colorTransform: ColorTransform | null = null;
-    private _extend = false;
     private _sprite: number = 0;
 
     get alpha(): number {

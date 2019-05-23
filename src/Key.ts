@@ -7,6 +7,9 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
+import { DisplayObject } from './DisplayObject';
+import { isTouch } from './utils';
+
 /**
  * @constructor
  */
@@ -157,6 +160,144 @@ Key.prototype.getCode = function ()
     }
     return keyCode;
 };
+
+/**
+ * @param event
+ */
+function keyUpAction(event)
+{
+    keyClass.setEvent(event);
+    var onKeyUp = keyClass.onKeyUp;
+    if (typeof onKeyUp === "function") {
+        onKeyUp.apply(keyClass, [event]);
+    }
+}
+
+/**
+ * @param event
+ */
+function keyDownAction(event)
+{
+    keyClass.setEvent(event);
+    var keyCode = keyClass.getCode();
+    var i;
+    var obj;
+    var onKeyDown = keyClass.onKeyDown;
+    if (typeof onKeyDown === "function") {
+        onKeyDown.apply(keyClass, [event]);
+    }
+
+    var idx;
+    for (var pIdx in DisplayObject.stages) {
+        var stage = DisplayObject.stages[pIdx];
+        var keyDownEventHits = stage.keyDownEventHits;
+        var kLen = keyDownEventHits.length;
+        if (kLen) {
+            for (idx = 0; idx < kLen; idx++) {
+                obj = keyDownEventHits[idx];
+                stage.executeEventAction(obj.as, obj.mc);
+            }
+        }
+
+        var buttonHits = stage.buttonHits;
+        var len = buttonHits.length;
+        var isEnd = false;
+        for (i = len; i--;) {
+            if (!(i in buttonHits)) {
+                continue;
+            }
+
+            var hitObj = buttonHits[i];
+            if (!hitObj) {
+                continue;
+            }
+
+            var button = hitObj.button;
+            if (!button) {
+                continue;
+            }
+
+            var actions = button.getActions();
+            if (!actions) {
+                continue;
+            }
+
+            var aLen = actions.length;
+            for (idx = 0; idx < aLen; idx++) {
+                if (!(idx in actions)) {
+                    continue;
+                }
+
+                var cond = actions[idx];
+                var CondKeyPress = cond.CondKeyPress;
+                switch (CondKeyPress) {
+                    case 1: // left arrow
+                        CondKeyPress = 37;
+                        break;
+                    case 2: // right arrow
+                        CondKeyPress = 39;
+                        break;
+                    case 3: // home
+                        CondKeyPress = 36;
+                        break;
+                    case 4: // end
+                        CondKeyPress = 35;
+                        break;
+                    case 5: // insert
+                        CondKeyPress = 45;
+                        break;
+                    case 6: // delete
+                        CondKeyPress = 46;
+                        break;
+                    case 14: // up arrow
+                        CondKeyPress = 38;
+                        break;
+                    case 15: // down arrow
+                        CondKeyPress = 40;
+                        break;
+                    case 16: // page up
+                        CondKeyPress = 33;
+                        break;
+                    case 17: // page down
+                        CondKeyPress = 34;
+                        break;
+                    case 18: // tab
+                        CondKeyPress = 9;
+                        break;
+                    case 19: // escape
+                        CondKeyPress = 27;
+                        break;
+                }
+
+                if (CondKeyPress !== keyCode) {
+                    continue;
+                }
+
+                stage.buttonAction(hitObj.parent, cond.ActionScript);
+                stage.touchRender();
+                isEnd = true;
+                break;
+            }
+
+            if (isEnd) {
+                break;
+            }
+        }
+    }
+}
+
+if (!isTouch) {
+    window.addEventListener("keydown", keyDownAction);
+    window.addEventListener("keyup", keyUpAction);
+    window.addEventListener("keyup", (event) => {
+        keyClass.setEvent(event);
+
+        for (var pIdx in DisplayObject.stages) {
+            var stage = DisplayObject.stages[pIdx];
+            stage.touchEnd(event);
+        }
+    });
+}
 
 export const keyClass = new Key();
 

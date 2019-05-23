@@ -16,24 +16,30 @@ import {
 } from './BitmapFilter';
 import { cacheStore } from './CacheStore';
 import { clipEvent, ClipEvent, EventDispatcher } from './EventDispatcher';
+import { Color } from './Color';
 import { DisplayObject } from './DisplayObject';
 import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { InteractiveObject } from './InteractiveObject';
+import { Global } from './Global';
 import { Graphics } from './Graphics';
 import { PlaceObject } from './PlaceObject';
 import { keyClass } from './Key';
+import { LoadVars } from './LoadVars';
+import { Mouse } from './Mouse';
 import { MovieClip } from './MovieClip';
+import { MovieClipLoader } from './MovieClipLoader';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
-import { SoundTransform } from './SoundTransform';
+import { Sound } from './Sound';
+import { Sprite } from './Sprite';
 import { TextRecord, StaticText } from './StaticText';
 import { TextField, TextFormat } from './TextField';
-import { Sprite } from './Sprite';
 import { vtc } from './VectorToCanvas';
+import { Xml } from './Xml';
 import {
-    ColorTransform, Bounds, Matrix,
+    Bounds, Matrix,
     tmpContext,
-    cloneArray, generateColorTransform, multiplicationColor, multiplicationMatrix, intToRGBA, startSound
+    cloneArray
 } from './utils';
 
 if (!("swf2js" in window)){(function(window)
@@ -44,20 +50,8 @@ if (!("swf2js" in window)){(function(window)
     var _max = _Math.max;
     var _floor = _Math.floor;
     var _ceil = _Math.ceil;
-    var _pow = _Math.pow;
     var _random = _Math.random;
-    var _atan2 = _Math.atan2;
-    var _sqrt = _Math.sqrt;
-    var _cos = _Math.cos;
-    var _sin = _Math.sin;
-    var _log = _Math.log;
-    var _abs = _Math.abs;
-    var _SQRT2 = _Math.SQRT2;
-    var _LN2 = _Math.LN2;
-    var _LN2_2 = _LN2 / 2;
-    var _LOG1P = 0.29756328478758615;
     var _PI = _Math.PI;
-    var _Number = Number;
     var _fromCharCode = String.fromCharCode;
     var _isNaN = isNaN;
     var _setTimeout = setTimeout;
@@ -88,7 +82,6 @@ if (!("swf2js" in window)){(function(window)
     var _navigator = window.navigator;
     var ua = _navigator.userAgent;
     var isAndroid = (ua.indexOf("Android") > 0);
-    var isAndroid4x = (ua.indexOf("Android 4.") > 0);
     var isiOS = (ua.indexOf("iPhone") > 0 || ua.indexOf("iPod") > 0);
     var isChrome = (ua.indexOf("Chrome") > 0);
     var isTouch = (isAndroid || isiOS);
@@ -5012,10 +5005,9 @@ if (!("swf2js" in window)){(function(window)
         var StreamData = stage.getCharacter(obj.StreamID);
         var sub = bitio.byte_offset - startOffset;
         var dataLength = length - sub;
-        var VideoData;
         switch (StreamData.CodecID) {
             case 4:
-                VideoData = _this.parseVp6SwfVideoPacket(dataLength);
+                _this.parseVp6SwfVideoPacket(dataLength);
                 break;
         }
 
@@ -5414,7 +5406,6 @@ if (!("swf2js" in window)){(function(window)
 
         var i = 0;
         var codes = _this.codes;
-        var length = codes.length;
 
         _this.setOptions();
 
@@ -6139,9 +6130,9 @@ if (!("swf2js" in window)){(function(window)
         for (var i = argCount; i--;) {
             params[params.length] = stack.pop();
         }
-        var receiver = stack.pop();
-        var value;
-        stack[stack.length] = value;
+        // var receiver = stack.pop();
+        // var value;
+        // stack[stack.length] = value;
     };
 
     /**
@@ -6155,9 +6146,8 @@ if (!("swf2js" in window)){(function(window)
         for (var i = argCount; i--;) {
             params[params.length] = stack.pop();
         }
-        var porp = this.names[index];
-        var receiver = stack.pop();
-
+        // var _porp = this.names[index];
+        stack.pop(); // receiver
     };
 
     /**
@@ -6171,8 +6161,8 @@ if (!("swf2js" in window)){(function(window)
         for (var i = argCount; i--;) {
             params[params.length] = stack.pop();
         }
-        var porp = this.names[index];
-        var receiver = stack.pop();
+        // var porp = this.names[index];
+        stack.pop(); // receiver
     };
 
     /**
@@ -6190,7 +6180,7 @@ if (!("swf2js" in window)){(function(window)
      */
     ActionScript3.prototype.ActionCoerce = function (stack, index)
     {
-        var value = stack.pop();
+        stack.pop(); // value
         var str = this.names[index];
         stack[stack.length] = str;
     };
@@ -6498,7 +6488,7 @@ if (!("swf2js" in window)){(function(window)
      */
     ActionScript3.prototype.ActionDxnsLate = function (stack)
     {
-        var value = stack.pop();
+        stack.pop(); // value
     };
 
     /**
@@ -6544,7 +6534,7 @@ if (!("swf2js" in window)){(function(window)
      */
     ActionScript3.prototype.ActionFindProperty = function (stack, index)
     {
-        var prop = this.names[index];
+        // var prop = this.names[index];
         var obj;
         stack[stack.length] = obj;
     };
@@ -6626,7 +6616,7 @@ if (!("swf2js" in window)){(function(window)
     ActionScript3.prototype.ActionGetDescendAnts = function (stack, index)
     {
         console.log("ActionGetDescendAnts");
-        var porp = this.names[index];
+        // var porp = this.names[index];
         var obj;
         stack[stack.length] = obj;
     };
@@ -6791,8 +6781,8 @@ if (!("swf2js" in window)){(function(window)
      */
     ActionScript3.prototype.ActionGetSuper = function (stack, index)
     {
-        var prop = this.prop;
-        var obj = stack.pop();
+        // var prop = this.prop;
+        stack.pop(); // obj
         var value;
         stack[stack.length] = value;
     };
@@ -7180,7 +7170,7 @@ if (!("swf2js" in window)){(function(window)
      */
     ActionScript3.prototype.ActionLookupSwitch = function (stack, offset, count, array)
     {
-        var index = stack.pop();
+        stack.pop(); // index
     };
 
     /**
@@ -7294,9 +7284,9 @@ if (!("swf2js" in window)){(function(window)
     ActionScript3.prototype.ActionNewClass = function (stack, index)
     {
         var basetype = stack.pop();
-        var data = this.data;
-        var classInfo = data.class[index];
-        var id = classInfo.cinit;
+        // var data = this.data;
+        // var classInfo = data.class[index];
+        // var id = classInfo.cinit;
 
         stack[stack.length] = basetype;
     };
@@ -7366,8 +7356,8 @@ if (!("swf2js" in window)){(function(window)
      */
     ActionScript3.prototype.ActionNextValue = function (stack)
     {
-        var index = stack.pop();
-        var obj = stack.pop();
+        stack.pop(); // var index = stack.pop();
+        stack.pop(); // var obj = stack.pop();
         var value;
         stack[stack.length] = value;
     };
@@ -7539,7 +7529,7 @@ if (!("swf2js" in window)){(function(window)
      */
     ActionScript3.prototype.ActionPushWith = function (stack)
     {
-        var obj = stack.pop();
+        stack.pop(); // var obj = stack.pop();
     };
 
     /**
@@ -7600,7 +7590,7 @@ if (!("swf2js" in window)){(function(window)
      */
     ActionScript3.prototype.ActionSetGlobalSlot = function (stack, index)
     {
-        var value = stack.pop();
+        stack.pop(); // var value = stack.pop();
     };
 
     /**
@@ -7659,9 +7649,9 @@ if (!("swf2js" in window)){(function(window)
      */
     ActionScript3.prototype.ActionSetSuper = function (stack, index)
     {
-        var value = stack.pop();
-        var prop = this.names[index];
-        var obj = stack.pop();
+        stack.pop(); // var value = stack.pop();
+        // var prop = this.names[index];
+        stack.pop(); // var obj = stack.pop();
 
     };
 
@@ -10701,1132 +10691,6 @@ if (!("swf2js" in window)){(function(window)
 
     /**
      * @constructor
-     */
-    var MovieClipLoader = function ()
-    {
-        var _this = this;
-        _this.events = {
-            onLoadStart: undefined,
-            onLoadProgress: undefined,
-            onLoadComplete: undefined,
-            onLoadInit: undefined,
-            onLoadError: undefined
-        };
-    };
-
-    /**
-     * @param url
-     * @param target
-     * @returns {boolean}
-     */
-    MovieClipLoader.prototype.loadClip = function (url, target)
-    {
-        if (!url || !target) {
-            return false;
-        }
-
-        var _this = this;
-        var events = _this.events;
-
-        var xmlHttpRequest = new XMLHttpRequest();
-        xmlHttpRequest.open("GET", url, true);
-
-        if (isXHR2) {
-            xmlHttpRequest.responseType = "arraybuffer";
-        } else {
-            xmlHttpRequest.overrideMimeType("text/plain; charset=x-user-defined");
-        }
-
-        var onLoadProgress = events.onLoadProgress;
-        if (!onLoadProgress) {
-            onLoadProgress = _this.onLoadProgress;
-        }
-        if (typeof onLoadProgress === "function") {
-            xmlHttpRequest.onprogress = function (e) {
-                onLoadProgress.apply(_this, [target, e.loaded, e.total]);
-            };
-        }
-
-        var onLoadComplete = events.onLoadComplete;
-        if (!onLoadComplete) {
-            onLoadComplete = _this.onLoadComplete;
-        }
-        if (typeof onLoadComplete === "function") {
-            xmlHttpRequest.onloadend = function (e) {
-                var eventStatus = (e.currentTarget as any).status;
-                if (eventStatus === 200) {
-                    onLoadComplete.apply(_this, [target, eventStatus]);
-                }
-            };
-        }
-
-        xmlHttpRequest.onreadystatechange = function ()
-        {
-            var readyState = xmlHttpRequest.readyState;
-            if (readyState === 4) {
-                var status = xmlHttpRequest.status;
-
-                var onLoadStart = events.onLoadStart;
-                if (!onLoadStart) {
-                    onLoadStart = _this.onLoadStart;
-                }
-                if (typeof onLoadStart === "function") {
-                    xmlHttpRequest.onloadstart = function ()
-                    {
-                        onLoadStart.apply(_this, [target]);
-                    };
-                }
-
-                switch (status) {
-                    case 200:
-                    case 304:
-                        var _root = target.getDisplayObject("_root");
-                        var rootStage = _root.getStage();
-                        var data = isXHR2 ? xmlHttpRequest.response : xmlHttpRequest.responseText;
-
-                        var loadStage = new Stage();
-                        loadStages[loadStage.getId()] = loadStage;
-                        target._url = url;
-                        target.reset();
-                        target.setLoadStage(loadStage);
-
-                        loadStage.setParent(target);
-                        loadStage.parse(data, url);
-                        loadStage.stop();
-
-                        // onLoadInit
-                        var onLoadInit = events.onLoadInit;
-                        if (!onLoadInit) {
-                            onLoadInit = _this.onLoadInit;
-                        }
-                        if (typeof onLoadInit === "function") {
-                            var queue = (function (as, loader, mc) {
-                                return function () {
-                                    return as.apply(loader, [mc]);
-                                };
-                            })(onLoadInit, _this, target);
-                            target.events.load = [queue];
-                        }
-
-                        target.addActions(rootStage);
-
-                        break;
-                    default:
-                        var onLoadError = events.onLoadError;
-                        if (!onLoadError) {
-                            onLoadError = _this.onLoadError;
-                        }
-                        if (typeof onLoadError === "function") {
-                            onLoadError.apply(_this, [target, "error", status]);
-                        }
-                        break;
-                }
-            }
-        };
-        xmlHttpRequest.send(null);
-
-        return true;
-    };
-
-    /**
-     * @param listener
-     * @returns {boolean}
-     */
-    MovieClipLoader.prototype.addListener = function (listener)
-    {
-        var _this = this;
-        if (listener && typeof listener === "object") {
-            var events = ["onLoadStart", "onLoadProgress", "onLoadComplete", "onLoadInit", "onLoadError"];
-            var variables = listener.variables;
-            for (var i = 0; i < 5; i++) {
-                var event = events[i];
-                if (typeof listener[event] === "function") {
-                    _this.events[event] = listener[event];
-                } else if (variables && typeof variables[event] === "function") {
-                    _this.events[event] = variables[event];
-                }
-            }
-        }
-        return true;
-    };
-
-    /**
-     * @param listener
-     * @returns {boolean}
-     */
-    MovieClipLoader.prototype.removeListener = function (listener)
-    {
-        var _this = this;
-        if (listener && typeof listener === "object") {
-            var events = ["onLoadStart", "onLoadProgress", "onLoadComplete", "onLoadInit", "onLoadError"];
-            for (var i = 0; i < 5; i++) {
-                var event = events[i];
-                var variables = listener.variables;
-                if (typeof listener[event] === "function" ||
-                    (variables && typeof variables[event] === "function")
-                ) {
-                    _this.events[event] = undefined;
-                }
-            }
-        }
-        return true;
-    };
-
-    /**
-     * @param target
-     * @returns {{bytesLoaded: number, bytesTotal: number}}
-     */
-    MovieClipLoader.prototype.getProgress = function (target)
-    {
-        return {
-            bytesLoaded: 0,
-            bytesTotal: 0
-        };
-    };
-
-    /**
-     * @constructor
-     */
-    var LoadVars = function ()
-    {
-        var _this = this;
-        _this.xmlHttpRequest = new XMLHttpRequest();
-        _this.variables = {};
-        _this.target = _this;
-        _this.events = {
-            onData: undefined,
-            onLoad: undefined
-        };
-    };
-
-    /**
-     * properties
-     */
-    Object.defineProperties(LoadVars.prototype,
-    {
-        onData: {
-            get: function () {
-                return this.getProperty("onData");
-            },
-            set: function (onData) {
-                this.setProperty("onData", onData);
-            }
-        },
-        onLoad: {
-            get: function () {
-                return this.getProperty("onLoad");
-            },
-            set: function (onLoad) {
-                this.setProperty("onLoad", onLoad);
-            }
-        }
-    });
-
-    /**
-     * @param name
-     * @returns {*}
-     */
-    LoadVars.prototype.getProperty = function (name)
-    {
-        return this.variables[name];
-    };
-
-    /**
-     * @param name
-     * @param value
-     */
-    LoadVars.prototype.setProperty = function (name, value)
-    {
-        this.variables[String(name)] = value;
-    };
-
-    /**
-     * @param url
-     * @returns {boolean}
-     */
-    LoadVars.prototype.load = function (url)
-    {
-        var _this = this;
-        var xmlHttpRequest = _this.xmlHttpRequest;
-        xmlHttpRequest.open("GET", url, true);
-        xmlHttpRequest.onreadystatechange = function ()
-        {
-            var readyState = xmlHttpRequest.readyState;
-            if (readyState === 4) {
-                var src = decodeURIComponent(xmlHttpRequest.responseText);
-                _this.decode(src);
-                var onData = _this.onData;
-                if (typeof onData === "function") {
-                    onData.apply(src, [src]);
-                }
-
-                var onLoad;
-                var status = xmlHttpRequest.status;
-                switch (status) {
-                    case 200:
-                    case 304:
-                        onLoad = _this.onLoad;
-                        if (typeof onLoad === "function") {
-                            onLoad.apply(src, [true]);
-                        }
-                        return true;
-                    default:
-                        onLoad = _this.onLoad;
-                        if (typeof onLoad === "function") {
-                            onLoad.apply(src, [false]);
-                        }
-                        return false;
-                }
-            }
-        };
-        xmlHttpRequest.send(null);
-    };
-
-    /**
-     * @param url
-     * @param target
-     * @param method
-     * @returns {boolean}
-     */
-    LoadVars.prototype.send = function (url, target, method)
-    {
-        var _this = this;
-        var xmlHttpRequest = _this.xmlHttpRequest;
-        var sendMethod = method ? method.toUpperCase() : "GET";
-        xmlHttpRequest.open(sendMethod, url, true);
-        if (sendMethod === "POST") {
-            xmlHttpRequest.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        }
-        if (target instanceof LoadVars) {
-            _this.target = target;
-        }
-        xmlHttpRequest.send(_this.toString());
-        return true;
-    };
-
-    /**
-     * @param url
-     * @param target
-     * @param method
-     * @returns {boolean}
-     */
-    LoadVars.prototype.sendAndLoad = function (url, target, method)
-    {
-        var _this = this;
-        _this.send(url, target, method);
-        return _this.load(url);
-    };
-
-    /**
-     * @param header
-     * @param headerValue
-     */
-    LoadVars.prototype.addRequestHeader = function (header, headerValue)
-    {
-        var xmlHttpRequest = this.xmlHttpRequest;
-        if (header instanceof Array) {
-            var length = header.length;
-            for (var i = 0; i < length;) {
-                xmlHttpRequest.setRequestHeader(header[i++], headerValue[i++]);
-            }
-        } else {
-            xmlHttpRequest.setRequestHeader(header, headerValue);
-        }
-    };
-
-    /**
-     * @param queryString
-     */
-    LoadVars.prototype.decode = function (queryString)
-    {
-        var variables = this.variables;
-        var array = queryString.split("&");
-        var length = array.length;
-        for (var i = 0; i < length; i++) {
-            var values = array[i];
-            var splitData = values.split("=");
-            if (splitData.length < 1) {
-                continue;
-            }
-            variables[String(splitData[0])] = splitData[1];
-        }
-    };
-
-    /**
-     * @returns {number}
-     */
-    LoadVars.prototype.getBytesLoaded = function ()
-    {
-        return 1;
-    };
-
-    /**
-     * @returns {number}
-     */
-    LoadVars.prototype.getBytesTotal = function ()
-    {
-        return 1;
-    };
-
-    /**
-     * @returns {string}
-     */
-    LoadVars.prototype.toString = function ()
-    {
-        var variables = this.variables;
-        var array = [];
-        for (var prop in variables) {
-            if (!variables.hasOwnProperty(prop)) {
-                continue;
-            }
-            array[array.length] = prop + "=" + variables[prop];
-        }
-        return array.join("&");
-    };
-
-    /**
-     * @constructor
-     */
-    var Xml = function ()
-    {
-        var _this = this;
-        _this.ignoreWhite = false;
-        _this.loaded = false;
-        _this.status = 0;
-        _this.variables = {};
-    };
-
-    /**
-     * properties
-     */
-    Object.defineProperties(Xml.prototype,
-    {
-        onData: {
-            get: function () {
-                return this.getProperty("onData");
-            },
-            set: function (onData) {
-                this.setProperty("onData", onData);
-            }
-        },
-        onLoad: {
-            get: function () {
-                return this.getProperty("onLoad");
-            },
-            set: function (onLoad) {
-                this.setProperty("onLoad", onLoad);
-            }
-        }
-    });
-
-    /**
-     * @param name
-     * @returns {*}
-     */
-    Xml.prototype.getProperty = function (name)
-    {
-        return this.variables[name];
-    };
-
-    /**
-     * @param name
-     * @param value
-     */
-    Xml.prototype.setProperty = function (name, value)
-    {
-        this.variables[String(name)] = value;
-    };
-
-
-    /**
-     * @param url
-     */
-    Xml.prototype.load = function (url)
-    {
-        var _this = this;
-        url = "" + url;
-        var xmlHttpRequest = new XMLHttpRequest();
-        xmlHttpRequest.open("GET", url, true);
-        xmlHttpRequest.onreadystatechange = function ()
-        {
-            var readyState = xmlHttpRequest.readyState;
-            if (readyState === 4) {
-                var src = xmlHttpRequest.responseXML;
-                var onData = _this.onData;
-                if (typeof onData === "function") {
-                    onData.apply(src, [src]);
-                }
-
-                var onLoad;
-                var status = xmlHttpRequest.status;
-                switch (status) {
-                    case 200:
-                    case 304:
-                        onLoad = _this.onLoad;
-                        if (typeof onLoad === "function") {
-                            onLoad.apply(src, [true]);
-                        }
-                        return true;
-                    default:
-                        onLoad = _this.onLoad;
-                        if (typeof onLoad === "function") {
-                            onLoad.apply(src, [false]);
-                        }
-                        return false;
-                }
-            }
-        };
-        xmlHttpRequest.send(null);
-    };
-
-    /**
-     * @param url
-     * @param target
-     * @param method
-     */
-    Xml.prototype.send = function (url, target, method)
-    {
-        var sendMethod = method ? method.toUpperCase() : "GET";
-        if (target) {
-            console.log(target);
-        }
-        var xmlHttpRequest = new XMLHttpRequest();
-        xmlHttpRequest.open(sendMethod, url, true);
-        xmlHttpRequest.send(null);
-        return true;
-    };
-
-    /**
-     * @param url
-     * @param resultXML
-     */
-    Xml.prototype.sendAndLoad = function (url, resultXML)
-    {
-        var _this = this;
-        _this.send(url);
-        return _this.load(resultXML);
-    };
-
-
-    /**
-     * @constructor
-     */
-    var Sound = function (...args) // any
-    {
-        var _this = this;
-        _this.variables = {};
-        _this.sounds = [];
-        _this.volume = 100;
-        _this.pan = 0;
-        _this.transform = {ll: 100, lr: 100, rl: 100, rr: 100};
-        _this.isStreamin = false;
-        _this.movieClip = null;
-    };
-
-    /**
-     * properties
-     */
-    Object.defineProperties(Sound.prototype,
-    {
-        onLoad: {
-            get: function () {
-                return this.getProperty("onLoad");
-            },
-            set: function (onLoad) {
-                this.setProperty("onLoad", onLoad);
-            }
-        },
-        onSoundComplete: {
-            get: function () {
-                return this.getProperty("onSoundComplete");
-            },
-            set: function (onSoundComplete) {
-                this.setProperty("onSoundComplete", onSoundComplete);
-            }
-        }
-    });
-
-    /**
-     * @param name
-     * @returns {*}
-     */
-    Sound.prototype.getProperty = function (name)
-    {
-        return this.variables[name];
-    };
-
-    /**
-     * @param name
-     * @param value
-     */
-    Sound.prototype.setProperty = function (name, value)
-    {
-        this.variables[String(name)] = value;
-    };
-
-    /**
-     * @param currentTime
-     * @param loopCount
-     */
-    Sound.prototype.start = function (currentTime, loopCount)
-    {
-        var _this = this;
-        var sounds = _this.sounds;
-
-        var init = function (audio, time)
-        {
-            return function ()
-            {
-                audio.currentTime = time;
-            };
-        };
-
-        var end = function (audio, sound)
-        {
-            return function ()
-            {
-                var volume = sound.volume;
-                audio.loopCount--;
-                if (audio.loopCount > 0) {
-                    audio.volume = volume / 100;
-                    audio.currentTime = 0;
-                    audio.play();
-                }
-
-                var onSoundComplete = sound.onSoundComplete;
-                if (onSoundComplete) {
-                    onSoundComplete.apply(sound, [true]);
-                }
-            };
-        };
-
-        var audio;
-        for (var id in sounds) {
-            if (!sounds.hasOwnProperty(id)) {
-                continue;
-            }
-            audio = sounds[id];
-            audio.load();
-
-            if (currentTime) {
-                audio.addEventListener("canplay", init(audio, currentTime));
-            }
-            if (typeof loopCount === "number" && loopCount > 0) {
-                audio.loopCount = loopCount;
-                audio.addEventListener("ended", end(audio, _this));
-            }
-
-            audio.play();
-        }
-    };
-
-    /**
-     * stop
-     */
-    Sound.prototype.stop = function (id)
-    {
-        var sounds = this.sounds;
-        var audio;
-        if (id) {
-            audio = sounds[id];
-            if (audio) {
-                audio.pause();
-            }
-        } else {
-            for (var key in sounds) {
-                if (!sounds.hasOwnProperty(key)) {
-                    continue;
-                }
-                audio = sounds[key];
-                audio.pause();
-            }
-        }
-    };
-
-    /**
-     * @param url
-     * @param bool
-     */
-    Sound.prototype.loadSound = function (url, bool)
-    {
-        var _this = this;
-        _this.isStreamin = bool;
-
-        var sounds = _this.sounds;
-        var audio = _document.createElement("audio");
-        audio.src = url;
-        sounds[0] = audio;
-
-        var onLoad = (function (audio, sound)
-        {
-            return function() {
-                audio.load();
-                audio.preload = "auto";
-                audio.autoplay = false;
-                audio.loop = false;
-                var onLoad = sound.onLoad;
-                if (typeof onLoad === "function") {
-                    onLoad.apply(sound, [true]);
-                }
-            };
-        })(audio, _this);
-        audio.addEventListener("canplaythrough", onLoad);
-
-        var onError = (function (audio, sound)
-        {
-            return function() {
-                var onLoad = sound.onLoad;
-                if (typeof onLoad === "function") {
-                    onLoad.apply(sound, [false]);
-                }
-            };
-        })(audio, _this);
-        audio.addEventListener("error", onError);
-    };
-
-    /**
-     * @param id
-     */
-    Sound.prototype.attachSound = function (id)
-    {
-        var _this = this;
-        var sounds = _this.sounds;
-        if (!(id in sounds)) {
-            var movieClip = _this.movieClip;
-            var stage = movieClip.getStage();
-            var exportAssets = stage.exportAssets;
-            if (id in exportAssets) {
-                var characterId = exportAssets[id];
-                var tag = stage.sounds[characterId];
-                if (tag) {
-                    var audio = _document.createElement("audio");
-                    audio.onload = function ()
-                    {
-                        audio.load();
-                        audio.preload = "auto";
-                        audio.autoplay = false;
-                        audio.loop = false;
-                    };
-                    audio.src = tag.base64;
-                    sounds[id] = audio;
-                }
-            }
-        }
-    };
-
-    /**
-     *
-     * @returns {number}
-     */
-    Sound.prototype.getVolume = function ()
-    {
-        return this.volume;
-    };
-
-    /**
-     *
-     * @param volume
-     */
-    Sound.prototype.setVolume = function (volume)
-    {
-        var _this = this;
-        var sounds = _this.sounds;
-        _this.volume = volume;
-        for (var id in sounds) {
-            if (!sounds.hasOwnProperty(id)) {
-                continue;
-            }
-            var audio = sounds[id];
-            audio.volume = volume / 100;
-        }
-    };
-
-    /**
-     * @returns {number|*}
-     */
-    Sound.prototype.getPan = function ()
-    {
-        return this.pan;
-    };
-
-    /**
-     * @param pan
-     */
-    Sound.prototype.setPan = function (pan)
-    {
-        this.pan = pan;
-    };
-
-    /**
-     * @param object
-     */
-    Sound.prototype.setTransform = function (object)
-    {
-        var transform = this.transform;
-        for (var name in object) {
-            if (!object.hasOwnProperty(name)) {
-                continue;
-            }
-            switch (name) {
-                case "ll":
-                case "lr":
-                case "rl":
-                case "rr":
-                    transform[name] = object[name];
-                    break;
-            }
-        }
-    };
-
-    /**
-     * @returns {{ll: number, lr: number, rl: number, rr: number}|*}
-     */
-    Sound.prototype.getTransform = function ()
-    {
-        return this.transform;
-    };
-
-    /**
-     * @returns {number}
-     */
-    Sound.prototype.getBytesLoaded = function ()
-    {
-        return 1;
-    };
-
-    /**
-     * @returns {number}
-     */
-    Sound.prototype.getBytesTotal = function ()
-    {
-        return 1;
-    };
-
-    /**
-     * @param mc
-     * @constructor
-     */
-    var Color = function (mc)
-    {
-        var _this = this;
-        _this.movieClip = mc;
-        _this.variables = {};
-    };
-
-    /**
-     *
-     * @param name
-     * @returns {*}
-     */
-    Color.prototype.getProperty = function (name)
-    {
-        return this.variables[name];
-    };
-
-    /**
-     * @param name
-     * @param value
-     */
-    Color.prototype.setProperty = function (name, value)
-    {
-        this.variables[String(name)] = value;
-    };
-
-
-    /**
-     * @param offset
-     */
-    Color.prototype.setRGB = function (offset)
-    {
-        var _this = this;
-        var mc = _this.movieClip;
-        if (mc instanceof MovieClip) {
-            mc = mc as any;
-
-            offset |= 0;
-            var obj = intToRGBA(offset);
-            var colorTransform = mc.getOriginColorTransform();
-            if (colorTransform) {
-                const multiColor: ColorTransform = [obj.R, obj.G, obj.B, obj.A * 255, 0, 0, 0, 0];
-                const color = multiplicationColor(colorTransform, multiColor);
-                mc.setColorTransform(color);
-            }
-        }
-    };
-
-    /**
-     * @returns {*[]|*}
-     */
-    Color.prototype.getTransform = function ()
-    {
-        var _this = this;
-        var mc = _this.movieClip;
-        if (mc instanceof MovieClip) {
-            mc = mc as any;
-            return mc.getColorTransform();
-        }
-        return undefined;
-    };
-
-    /**
-     * @param obj
-     */
-    Color.prototype.setTransform = function (obj)
-    {
-        var _this = this;
-        var mc = _this.movieClip;
-        if (mc instanceof MovieClip) {
-            mc = mc as any;
-            var colorTransform = mc.getOriginColorTransform();
-            var multiColor: ColorTransform = [
-                obj.rb, obj.gb, obj.bb, obj.ab,
-                obj.ra, obj.ga, obj.ba, obj.aa
-            ];
-            var color = multiplicationColor(colorTransform, multiColor);
-            mc.setColorTransform(color);
-        }
-    };
-
-    /**
-     * @constructor
-     */
-    var Mouse = function ()
-    {
-        this.events = {};
-    };
-
-    /**
-     * @returns {undefined}
-     */
-    Mouse.prototype.show = function ()
-    {
-        return undefined;
-    };
-
-    /**
-     * @returns {undefined}
-     */
-    Mouse.prototype.hide = function ()
-    {
-        return undefined;
-    };
-
-    /**
-     * @param listener
-     */
-    Mouse.prototype.addListener = function (listener)
-    {
-        var _this = this;
-        if (listener && typeof listener === "object") {
-            var events = ["onMouseDown", "onMouseMove", "onMouseUp"];
-            var variables = listener.variables;
-            for (var i = 0; i < 5; i++) {
-                var event = events[i];
-                if (typeof listener[event] === "function") {
-                    _this.events[event] = listener[event];
-                } else if (variables && typeof variables[event] === "function") {
-                    _this.events[event] = variables[event];
-                }
-            }
-        }
-        return true;
-    };
-
-    /**
-     * @param listener
-     */
-    Mouse.prototype.removeListener = function (listener)
-    {
-        var _this = this;
-        if (listener && typeof listener === "object") {
-            var events = ["onMouseDown", "onMouseMove", "onMouseUp"];
-            for (var i = 0; i < 5; i++) {
-                var event = events[i];
-                var variables = listener.variables;
-                if (typeof listener[event] === "function" ||
-                    (variables && typeof variables[event] === "function")
-                ) {
-                    _this.events[event] = undefined;
-                }
-            }
-        }
-        return true;
-    };
-
-    /**
-     * @param event
-     */
-    function keyUpAction(event)
-    {
-        keyClass.setEvent(event);
-        var onKeyUp = keyClass.onKeyUp;
-        if (typeof onKeyUp === "function") {
-            onKeyUp.apply(keyClass, [event]);
-        }
-    }
-
-    /**
-     * @param event
-     */
-    function keyDownAction(event)
-    {
-        keyClass.setEvent(event);
-        var keyCode = keyClass.getCode();
-        var i;
-        var length;
-        var obj;
-        var onKeyDown = keyClass.onKeyDown;
-        if (typeof onKeyDown === "function") {
-            onKeyDown.apply(keyClass, [event]);
-        }
-
-        var idx;
-        for (var pIdx in stages) {
-            var stage = stages[pIdx];
-            var keyDownEventHits = stage.keyDownEventHits;
-            var kLen = keyDownEventHits.length;
-            if (kLen) {
-                for (idx = 0; idx < kLen; idx++) {
-                    obj = keyDownEventHits[idx];
-                    stage.executeEventAction(obj.as, obj.mc);
-                }
-            }
-
-            var buttonHits = stage.buttonHits;
-            var len = buttonHits.length;
-            var isEnd = false;
-            for (i = len; i--;) {
-                if (!(i in buttonHits)) {
-                    continue;
-                }
-
-                var hitObj = buttonHits[i];
-                if (!hitObj) {
-                    continue;
-                }
-
-                var button = hitObj.button;
-                if (!button) {
-                    continue;
-                }
-
-                var actions = button.getActions();
-                if (!actions) {
-                    continue;
-                }
-
-                var aLen = actions.length;
-                for (idx = 0; idx < aLen; idx++) {
-                    if (!(idx in actions)) {
-                        continue;
-                    }
-
-                    var cond = actions[idx];
-                    var CondKeyPress = cond.CondKeyPress;
-                    switch (CondKeyPress) {
-                        case 1: // left arrow
-                            CondKeyPress = 37;
-                            break;
-                        case 2: // right arrow
-                            CondKeyPress = 39;
-                            break;
-                        case 3: // home
-                            CondKeyPress = 36;
-                            break;
-                        case 4: // end
-                            CondKeyPress = 35;
-                            break;
-                        case 5: // insert
-                            CondKeyPress = 45;
-                            break;
-                        case 6: // delete
-                            CondKeyPress = 46;
-                            break;
-                        case 14: // up arrow
-                            CondKeyPress = 38;
-                            break;
-                        case 15: // down arrow
-                            CondKeyPress = 40;
-                            break;
-                        case 16: // page up
-                            CondKeyPress = 33;
-                            break;
-                        case 17: // page down
-                            CondKeyPress = 34;
-                            break;
-                        case 18: // tab
-                            CondKeyPress = 9;
-                            break;
-                        case 19: // escape
-                            CondKeyPress = 27;
-                            break;
-                    }
-
-                    if (CondKeyPress !== keyCode) {
-                        continue;
-                    }
-
-                    stage.buttonAction(hitObj.parent, cond.ActionScript);
-                    stage.touchRender();
-                    isEnd = true;
-                    break;
-                }
-
-                if (isEnd) {
-                    break;
-                }
-            }
-        }
-    }
-
-    /**
-     * @constructor
-     */
-    var Global = function ()
-    {
-        this.variables = {};
-    };
-
-    /**
-     *
-     * @param name
-     * @returns {*}
-     */
-    Global.prototype.getVariable = function (name)
-    {
-        return this.variables[name];
-    };
-
-    /**
-     * @param name
-     * @param value
-     * @returns {*}
-     */
-    Global.prototype.setVariable = function (name, value)
-    {
-        this.variables[name] = value;
-    };
-
-    /**
-     * @param name
-     * @returns {*}
-     */
-    Global.prototype.getProperty = function (name)
-    {
-        return this.variables[name];
-    };
-
-    /**
-     * @param name
-     * @param value
-     */
-    Global.prototype.setProperty = function (name, value)
-    {
-        this.variables[name] = value;
-    };
-
-    /**
-     * @constructor
      * @param stage
      */
     var packages = function (stage)
@@ -12605,12 +11469,6 @@ if (!("swf2js" in window)){(function(window)
         });
 
 
-        var length = data.length;
-        var src = "";
-        for (var i = 0; i < length; i++) {
-            src += _fromCharCode(data[i]);
-        }
-
         var jpegData = swftag.parseJpegData(data);
         image.src = "data:image/jpeg;base64," + swftag.base64encode(jpegData);
     };
@@ -12683,7 +11541,6 @@ if (!("swf2js" in window)){(function(window)
                 tmpCanvas.height = height;
             }
 
-            var mc = _this.getParent();
             var mScale = scale * _devicePixelRatio / 20;
             _this.setMatrix(cloneArray([mScale, 0, 0, mScale, 0, 0]));
         }
@@ -13103,16 +11960,6 @@ if (!("swf2js" in window)){(function(window)
             canvas.addEventListener("touchcancel", function ()
             {
                 _this.touchEnd(DisplayObject.event);
-            });
-        }
-
-        if (!isTouch) {
-            window.addEventListener("keydown", keyDownAction);
-            window.addEventListener("keyup", keyUpAction);
-            window.addEventListener("keyup", function (event)
-            {
-                keyClass.setEvent(event);
-                _this.touchEnd(event);
             });
         }
 

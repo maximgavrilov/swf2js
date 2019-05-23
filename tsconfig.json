@@ -3,6 +3,7 @@
         "forceConsistentCasingInFileNames": true,
         "importHelpers": true,
         "module": "commonjs",
+        "noUnusedLocals": true,
         "outDir": "../dist/",
         "target": "es5"
     }
