@@ -19,16 +19,13 @@ import { StaticText } from './StaticText';
 import { Stage } from './utils';
 
 export class Packages {
-    readonly flash: any;
+    readonly flash = FLASH;
 
     constructor(readonly stage: Stage) {
     }
 }
 
-/**
- * @type {*}
- */
-(Packages.prototype as any).flash = {
+const FLASH = {
     "display": {
         "MovieClip": MovieClip,
         "Sprite": Sprite,
