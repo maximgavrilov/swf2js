@@ -18,6 +18,7 @@ import { Mouse } from './Mouse';
 import { MovieClip } from './MovieClip';
 import { Packages } from './Packages';
 import { Shape } from './Shape';
+import { SwfTag } from './SwfTag';
 import { TextField } from './TextField';
 import { vtc } from './VectorToCanvas';
 import {
@@ -27,16 +28,13 @@ import {
     cloneArray
 } from './utils';
 
-declare const SwfTag: any;
-
-
 const requestAnimationFrame =
     window.requestAnimationFrame ||
     window.webkitRequestAnimationFrame ||
     (window as any).mozRequestAnimationFrame ||
     ((cb) => window.setTimeout(cb, 0));
 
-export let stageId = 0;
+export let stageId = 1;
 export const stages = {};
 DisplayObject.stages = stages; // any
 
