@@ -36,6 +36,24 @@ export const isChrome = (ua.indexOf("Chrome") > 0);
 export const isTouch = (isAndroid || isiOS);
 export const devicePixelRatio = window.devicePixelRatio || 1;
 
+    // Alpha Bug
+export const isAlphaBug = (() => {
+    if (!isAndroid)
+        return false;
+
+    var imageData = tmpContext.createImageData(1, 1);
+    var pixelArray = imageData.data;
+    pixelArray[0] = 128;
+    pixelArray[3] = 128;
+    tmpContext.putImageData(imageData, 0, 0);
+    imageData = tmpContext.getImageData(0, 0, 1, 1);
+    pixelArray = imageData.data;
+    const result = (pixelArray[0] === 255);
+    imageData = null;
+    pixelArray = null;
+    return result;
+})();
+
 const chkCanvas = document.createElement("canvas");
 chkCanvas.width = 1;
 chkCanvas.height = 1;
