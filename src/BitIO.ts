@@ -8,6 +8,7 @@
  */
 
 import { JCT11280 } from './JCT11280';
+import { isXHR2 } from './utils';
 
 const isArrayBuffer: boolean = (window as any).ArrayBuffer;
 
@@ -20,12 +21,28 @@ function createArray(length: number): Data {
     return isArrayBuffer ? new Uint8Array(length) : [];
 }
 
+export type DataIO = Data | string;
+
+function isData(d: DataIO): d is Data {
+    return isXHR2;
+}
+
 export class BitIO {
     byte_offset = 0;
+    data?: Data;
 
-    private data?: Data;
     private bit_offset = 0;
     private bit_buffer?: number;
+
+    constructor(data?: DataIO) {
+        if (!data)
+            return;
+
+        if (isData(data))
+            this.setData(new Uint8Array(data));
+        else
+            this.init(data);
+    }
 
     init(data: string): void {
         const array = createArray(length);

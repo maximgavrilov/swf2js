@@ -7,7 +7,7 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
-import { Stage } from './utils';
+import { Stage } from './Stage';
 
 const enum EventPhase {
     CAPTURING_PHASE = 1,
@@ -53,7 +53,7 @@ type EventListenerU = EventListener | undefined;
 export class EventDispatcher {
     private events: { [type: string]: EventListener[] } = {};
     protected isLoad = false;
-    protected active = false;
+    active = false;
     protected variables: { [type: string]: EventListenerU } = {};
 
     get onEnterFrame(): EventListenerU {

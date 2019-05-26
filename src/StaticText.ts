@@ -10,8 +10,9 @@
 import { cacheStore } from './CacheStore';
 import { CLS, DisplayObject } from './DisplayObject';
 import { StyleObj } from './VectorToCanvas';
+import { Stage } from './Stage';
 import {
-    Bounds, Color, ColorTransform, Matrix, Stage,
+    Bounds, Color, ColorTransform, Matrix,
     isAndroid4x, isChrome,
     LN2_2, LOG1P,
     generateColorTransform, multiplicationColor, multiplicationMatrix
@@ -50,12 +51,6 @@ export class TextRecord {
 export class StaticText extends DisplayObject {
     private records: TextRecord[] = [];
     private bounds!: Bounds;
-
-    initFrame(): void {
-    }
-
-    addActions(): void {
-    }
 
     getBounds(matrix?: Matrix): Bounds {
         if (matrix) {

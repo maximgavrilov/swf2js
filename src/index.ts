@@ -16,7 +16,7 @@ import {
 import { cacheStore } from './CacheStore';
 import { DisplayObject } from './DisplayObject';
 import { LoadVars } from './LoadVars';
-import { stages, stageId, Stage } from './Stage';
+import { stages, Stage } from './Stage';
 import { isXHR2 } from './utils';
 
 if (!("swf2js" in window)){(function(window)
@@ -217,7 +217,7 @@ if (!("swf2js" in window)){(function(window)
      */
     Swf2js.prototype.reload = function(url, options)
     {
-        if (!stageId) {
+        if (!Stage.stageId) {
             return this.load(url, options);
         }
         var stage = stages[0];
@@ -233,7 +233,7 @@ if (!("swf2js" in window)){(function(window)
             }
         }
 
-        // stageId = 1; // ANY
+        Stage.stageId = 1;
         // stages = []; // ANY
         loadStages = [];
         stages[0] = stage;

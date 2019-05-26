@@ -7,17 +7,17 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
-import { CLS, DisplayObject } from './DisplayObject';
+import { CLS, DisplayObject, HitObject } from './DisplayObject';
 import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { ClipEvent } from './EventDispatcher';
 import { Graphics } from './Graphics';
 import { Shape } from './Shape';
-import { SimpleButton } from './SimpleButton';
 import { StaticText } from './StaticText';
 import { SoundTransform } from './SoundTransform';
+import { Stage } from './Stage';
 import { TextField } from './TextField';
 import {
-    Bounds, ColorTransform, Matrix, Stage,
+    Bounds, ColorTransform, Matrix,
     multiplicationMatrix, multiplicationColor
 } from './utils';
 
@@ -320,21 +320,8 @@ export class Sprite extends DisplayObjectContainer {
                     }
                 }
 
-                if (isVisible) {
-                    switch (true) {
-                        case instance instanceof TextField:
-                        case instance instanceof DisplayObjectContainer:
-                            instance.setHitRange(rMatrix, stage, visible, cLen);
-                            break;
-                        case instance instanceof SimpleButton:
-                            if (!instance.clipDepth) {
-                                instance.setHitRange(rMatrix, stage, visible, cLen);
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                }
+                if (isVisible)
+                    instance.setHitRange(rMatrix, stage, visible);
 
                 // mask
                 if (instance.isMask) {
@@ -369,9 +356,6 @@ export class Sprite extends DisplayObjectContainer {
         }
 
         return cacheKey;
-    }
-
-    initFrame(): void {
     }
 
     putFrame(stage: Stage, clipEvent: ClipEvent): void {
@@ -456,18 +440,18 @@ export class Sprite extends DisplayObjectContainer {
              matrix: Matrix,
              stage: Stage,
              x: number,
-             y: number): boolean
+             y: number): HitObject | undefined
     {
         var _this = this;
         if (!_this.getEnabled() ||
             !_this.getVisible() ||
             !_this.getMouseEnabled()
         ) {
-            return false;
+            return undefined;
         }
 
         var hitObj;
-        var hit = false;
+        var hit = undefined;
         var tags = _this.getTags();
         var length = tags.length;
         var matrix2 = multiplicationMatrix(matrix, _this.getMatrix());

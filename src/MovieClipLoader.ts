@@ -9,9 +9,8 @@
 
 import { DisplayObject } from './DisplayObject';
 import { MovieClip } from './MovieClip';
-import { Stage, isXHR2 } from './utils';
-
-declare const Stage: any;
+import { Stage } from './Stage';
+import { isXHR2 } from './utils';
 
 export class MovieClipLoader {
     private events = {

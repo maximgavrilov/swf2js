@@ -18,12 +18,13 @@ import { Shape } from './Shape';
 import { SharedObject } from './SharedObject';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
+import { Stage } from './Stage';
 import { StaticText } from './StaticText';
 import { TextField } from './TextField';
 import {
-    BlendMode, Bounds, ColorTransform, Matrix, Stage,
-    isTouch, devicePixelRatio,
-    cloneArray, getBlendName, multiplicationMatrix
+    BlendMode, Bounds, ColorTransform, HitEvent, Matrix,
+    devicePixelRatio,
+    cloneArray, getBlendName, isTouchEvent, multiplicationMatrix
 } from './utils';
 
 
@@ -52,9 +53,10 @@ type PreRenderResult = {
 
 export type ButtonStatus = 'up' | 'down' | 'over' | 'hit';
 
-function isTouchEvent(event: MouseEvent | TouchEvent): event is TouchEvent {
-    return isTouch;
-}
+export type HitObject = {
+    parent: DisplayObject;
+    button?: SimpleButton;
+};
 
 export const CLS = {
     DisplayObjectContainer: 0 as any,
@@ -97,7 +99,7 @@ export const CLS = {
 export class DisplayObject extends EventDispatcher {
     public static stages: { [stageId: number]: Stage };
     public static loadStages: { [stageId: number]: Stage };
-    public static event?: MouseEvent | TouchEvent;
+    public static event?: HitEvent;
 
     readonly accessibilityProperties = new AccessibilityProperties();
     readonly instanceId = instanceId++;
@@ -124,7 +126,7 @@ export class DisplayObject extends EventDispatcher {
     private _soundbuftime: number | null = null;
     public _totalframes = 1;
     private _level = 0;
-    protected _depth?: number;
+    public _depth?: number;
     private _framesloaded = 0;
     private _target = "";
     public _lockroot?: DisplayObjectContainer = undefined;
@@ -1891,7 +1893,35 @@ export class DisplayObject extends EventDispatcher {
         return new Bounds(xMin, yMin, xMax, yMax);
     }
 
+
+    initFrame(): void {
+    }
+
+    addActions(stage: Stage): void {
+    }
+
     getTags(): any {
+        return undefined;
+    }
+
+    setHitRange(matrix: Matrix, stage: Stage, visible: boolean): void {
+    }
+
+    renderHitTest(ctx: CanvasRenderingContext2D,
+                  matrix: Matrix,
+                  stage: Stage,
+                  x: number,
+                  y: number): boolean
+    {
+        return false;
+    }
+
+    hitCheck(ctx: CanvasRenderingContext2D,
+             matrix: Matrix,
+             stage: Stage,
+             x: number,
+             y: number): HitObject | undefined
+    {
         return undefined;
     }
 }

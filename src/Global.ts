@@ -8,7 +8,7 @@
  */
 
 export class Global {
-    private variables = {};
+    readonly variables = {};
 
     getVariable(name: string): any {
         return this.variables[name];

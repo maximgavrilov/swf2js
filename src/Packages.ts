@@ -15,8 +15,8 @@ import { Graphics } from './Graphics';
 import { MovieClip } from './MovieClip';
 import { Sprite } from './Sprite';
 import { Sound } from './Sound';
+import { Stage } from './Stage';
 import { StaticText } from './StaticText';
-import { Stage } from './utils';
 
 export class Packages {
     readonly flash = FLASH;

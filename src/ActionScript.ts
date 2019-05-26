@@ -31,6 +31,7 @@ const StartDate = new Date();
  * @param initAction
  * @constructor
  */
+export type ActionScript = any;
 export var ActionScript = function (data, constantPool?, register?, initAction?)
 {
     var _this = this;

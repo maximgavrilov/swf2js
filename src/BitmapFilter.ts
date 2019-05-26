@@ -8,8 +8,9 @@
  */
 
 import { cacheStore } from './CacheStore';
+import { Stage } from './Stage';
 import {
-    Color, ColorTransform, FilterOperation, Matrix, Stage,
+    Color, ColorTransform, FilterOperation, Matrix,
     generateColorTransform, intToRGBA, toColorInt
 } from './utils';
 

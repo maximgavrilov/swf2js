@@ -11,8 +11,9 @@ import { cacheStore } from './CacheStore';
 import { ClipEvent } from './EventDispatcher';
 import { CLS, DisplayObject } from './DisplayObject';
 import { Graphics } from './Graphics';
+import { Stage } from './Stage';
 import {
-    Bounds, ColorTransform, Matrix, Stage,
+    Bounds, ColorTransform, Matrix,
     tmpContext,
     isAndroid, isAndroid4x, isChrome,
     LN2_2, LOG1P,
@@ -31,9 +32,6 @@ export class Shape extends DisplayObject {
     }
 
     addActions(): void {
-    }
-
-    initFrame(): void {
     }
 
     putFrame(stage: Stage, clipEvent: ClipEvent): void {
@@ -372,7 +370,7 @@ export class Shape extends DisplayObject {
 
                     var image = cacheStore.getCache(bitmapCacheKey);
                     if (image === undefined) {
-                        image = loadStage.getCharacter(bitmapId);
+                        image = loadStage.getCharacter<CanvasRenderingContext2D>(bitmapId);
                         if (!image) {
                             break;
                         }

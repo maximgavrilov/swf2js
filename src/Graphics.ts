@@ -8,9 +8,10 @@
  */
 
 import { cacheStore } from './CacheStore';
+import { Stage } from './Stage';
 import { CAP, CMD, JOIN, Command, CommandF, vtc } from './VectorToCanvas';
 import {
-    Bounds, Matrix, ColorTransform, Stage,
+    Bounds, Matrix, ColorTransform,
     isAndroid4x, isChrome,
     LN2_2, LOG1P,
     intToRGBA, multiplicationMatrix, toColorInt

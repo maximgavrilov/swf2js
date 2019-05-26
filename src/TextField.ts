@@ -11,9 +11,11 @@ import { cacheStore } from './CacheStore';
 import { ClipEvent } from './EventDispatcher';
 import { CLS } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
+import { Stage } from './Stage';
 import { vtc } from './VectorToCanvas';
 import {
-    Bounds, ColorTransform, FontData, Color, Matrix, Stage,
+    Bounds, ColorTransform, FontData, Color, Matrix,
+    DefineFontTag,
     generateColorTransform, intToRGBA, multiplicationColor, multiplicationMatrix
 } from './utils';
 
@@ -53,10 +55,11 @@ export class TextField extends InteractiveObject {
     public inputActive = false;
     public initialText: string = '';
 
+    public input?: HTMLTextAreaElement;
+
     protected variables: { [type: string]: any } = {};
 
     private bounds = new Bounds(0, 0, 0, 0);
-    private input?: HTMLTextAreaElement;
 
     get text(): string {
         return this.variables.text;
@@ -466,7 +469,7 @@ export class TextField extends InteractiveObject {
                 break;
         }
 
-        var fontData = _this.getStage().getCharacter(_this.fontId);
+        var fontData = _this.getStage().getCharacter(_this.fontId) as DefineFontTag;
         if (isAutoSize) {
             if (variables.embedFonts) {
                 var CodeTable = fontData.CodeTable;
@@ -1285,17 +1288,6 @@ export class TextField extends InteractiveObject {
         ctx.beginPath();
         ctx.rect(xMin, yMin, width, height);
         return ctx.isPointInPath(x, y);
-    }
-
-    // dummy
-    initFrame(): void {
-    }
-
-    addActions(): void {
-    }
-
-    getTags(): any {
-        return undefined;
     }
 }
 

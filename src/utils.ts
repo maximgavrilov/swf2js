@@ -10,17 +10,23 @@
 import { cacheStore } from './CacheStore';
 
 
+export type DefineFontTag = any;
 export type DefineSoundTag = any;
 export type RemoveObjectTag = any;
-export interface Tag {
+export type StartSoundTag = any;
+export type VideoFrameTag = any;
+export type Tag = {
     readonly instanceId: number;
-}
+};
 
 export type AVM2 = any;
 export type ButtonAction = any;
 export type FontData = any;
-export type Stage = any;
+export type Script = any;
 export type SoundInfo = any;
+export type StageOptions = any;
+
+export type Writeable<T> = { -readonly [P in keyof T]-?: T[P] };
 
 export const LN2_2 = Math.LN2 / 2;
 export const LOG1P = 0.29756328478758615;
@@ -36,7 +42,12 @@ export const isChrome = (ua.indexOf("Chrome") > 0);
 export const isTouch = (isAndroid || isiOS);
 export const devicePixelRatio = window.devicePixelRatio || 1;
 
-    // Alpha Bug
+export type HitEvent = MouseEvent | TouchEvent;
+export function isTouchEvent(event: HitEvent): event is TouchEvent {
+    return isTouch;
+}
+
+// Alpha Bug
 export const isAlphaBug = (() => {
     if (!isAndroid)
         return false;

@@ -13,25 +13,24 @@ import { CLS, DisplayObject } from './DisplayObject';
 import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { PlaceObject } from './PlaceObject';
 import { Sprite } from './Sprite';
+import { Stage } from './Stage';
+import { SwfTag } from './SwfTag';
 import { TextField } from './TextField';
 import { CAP, JOIN } from './VectorToCanvas';
 import {
-    AVM2, Bounds, Matrix, Stage,
-    DefineSoundTag, RemoveObjectTag,
+    AVM2, Bounds, Matrix, Script,
+    DefineSoundTag, RemoveObjectTag, StartSoundTag,
     devicePixelRatio, isTouch, isXHR2,
     cloneArray, multiplicationMatrix, startSound
 } from './utils';
 
-declare const Stage: any;
-declare const SwfTag: any;
 
-type Action = (this: MovieClip) => void;
-type Script = any;
+export type MCAction = (this: MovieClip) => void;
 
 export class MovieClip extends Sprite {
     private _currentframe = 1;
     private removeTags: { [frame: number]: { [depth: number]: 1 } } = {};
-    private actions: { [frame: number]: Action[] } = {};
+    private actions: { [frame: number]: MCAction[] } = {};
     private labels: { [label: string]: number } = {};
 
     // flag
@@ -542,7 +541,7 @@ export class MovieClip extends Sprite {
                     _this.setDepth(depth, swapDepth, mc);
                 }
             } else {
-                let depth = mcOrDepth
+                let depth = mcOrDepth;
                 if (isNaN(depth) && parent instanceof MovieClip) {
                     depth = parent.getNextHighestDepth();
                 }
@@ -554,6 +553,8 @@ export class MovieClip extends Sprite {
                     if (id !== _this.instanceId) {
                         var stage = _this.getStage();
                         var instance = stage.getInstance(id);
+                        if (!(instance instanceof MovieClip))
+                            throw new Error('Not a MovieClip: ' + instance);
                         _this.swapDepths(instance);
                     }
                 } else {
@@ -704,9 +705,7 @@ export class MovieClip extends Sprite {
     }
 
     getBytesLoaded(): number {
-        var stage = this.getStage();
-        var bitio = stage.bitio;
-        return (!bitio) ? stage.fileSize : bitio.byte_offset;
+        return this.getBytesTotal();
     }
 
     getBytesTotal(): number {
@@ -1119,7 +1118,7 @@ export class MovieClip extends Sprite {
         var _this = this;
         var stage = _this.getStage();
         var soundId = sound.SoundId;
-        var tag = stage.getCharacter(soundId);
+        var tag = stage.getCharacter(soundId) as StartSoundTag;
         if (!tag)
             return;
 
@@ -1190,7 +1189,7 @@ export class MovieClip extends Sprite {
                 continue;
             }
 
-            var instance = stage.getInstance(id);
+            var instance = stage.getInstance(+id);
             if (!instance || (!instance.getRatio() && !instance.removeFlag)) {
                 continue;
             }
@@ -1258,9 +1257,8 @@ export class MovieClip extends Sprite {
             if (!instances.hasOwnProperty(id)) {
                 continue;
             }
-            var instance = stage.getInstance(id);
-            if (instance instanceof MovieClip && (instance as any).getDepth() >= 0) {
-                instance = instance as any;
+            var instance = stage.getInstance(+id);
+            if (instance instanceof MovieClip && instance.getDepth() >= 0) {
                 instance.removeMovieClip();
                 if (instance.getDepth() < 0) {
                     instance.removeFlag = false;
@@ -1359,7 +1357,7 @@ export class MovieClip extends Sprite {
         }
     }
 
-    createActionScript(script: Script): Action {
+    createActionScript(script: Script): MCAction {
         return ((clip, origin) => {
             var as = new ActionScript([], origin.constantPool, origin.register, origin.initAction);
             as.cache = origin.cache;
@@ -1372,7 +1370,7 @@ export class MovieClip extends Sprite {
         })(this, script);
     }
 
-    createActionScript2(script: Script, parent): Action {
+    createActionScript2(script: Script, parent): MCAction {
         return ((clip, origin, chain) => {
             return function () {
                 var as = new ActionScript([], origin.constantPool, origin.register, origin.initAction);
@@ -1471,7 +1469,7 @@ export class MovieClip extends Sprite {
         }
     }
 
-    getActions(frame: number): Action[] {
+    getActions(frame: number): MCAction[] {
         return this.actions[frame];
     }
 
@@ -1484,7 +1482,7 @@ export class MovieClip extends Sprite {
         actions[frame].push(_this.createActionScript(actionScript));
     }
 
-    overWriteAction(frame: number | string, action: Action): void {
+    overWriteAction(frame: number | string, action: MCAction): void {
         var _this = this;
         if (typeof frame === "string") {
             frame = _this.getLabel(frame);
@@ -1495,7 +1493,7 @@ export class MovieClip extends Sprite {
         }
     }
 
-    addAction(frame: number | string, action: Action): void {
+    addAction(frame: number | string, action: MCAction): void {
         var _this = this;
         if (typeof frame === "string") {
             frame = _this.getLabel(frame);

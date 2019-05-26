@@ -14,9 +14,10 @@ import { MovieClip } from './MovieClip';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
+import { Stage } from './Stage';
 import { TextField } from './TextField';
 import {
-    Matrix, Stage, SoundInfo, Tag,
+    Matrix, SoundInfo, Tag,
     multiplicationMatrix, cloneArray, startSound
 } from './utils';
 
@@ -64,12 +65,13 @@ export class DisplayObjectContainer extends InteractiveObject {
     soundInfo?: SoundInfo;
     isSwap = false;
 
+    container: Container = {};
+    instances: Instances = {};
+
     private _mouseChildren = true;
     private _tabChildren = true;
     private _textSnapshot = new TextSnapshot();
     private _numChildren = 0;
-    protected container: Container = {};
-    private instances: Instances = {};
 
 
     get mouseChildren(): boolean {

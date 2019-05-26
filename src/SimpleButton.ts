@@ -7,12 +7,13 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
-import { CLS, ButtonStatus } from './DisplayObject';
+import { CLS, ButtonStatus, HitObject } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
 import { PlaceObject } from './PlaceObject';
 import { Sprite } from './Sprite';
+import { Stage } from './Stage';
 import {
-    Bounds, ButtonAction, ColorTransform, Matrix, Stage,
+    Bounds, ButtonAction, ColorTransform, Matrix,
     isTouch,
     cloneArray, multiplicationColor, multiplicationMatrix
 } from './utils';
@@ -211,6 +212,9 @@ export class SimpleButton extends InteractiveObject {
     }
 
     setHitRange(matrix: Matrix, stage: Stage, visible: boolean): void {
+        if (this.clipDepth)
+            return;
+
         var _this = this;
         var isVisible = _this.getVisible() && visible;
         if (_this.getEnabled() && isVisible) {
@@ -224,7 +228,7 @@ export class SimpleButton extends InteractiveObject {
                     for (var idx = 0; idx < aLen; idx++) {
                         var cond = actions[idx];
                         if (cond.CondKeyPress === 13) {
-                            buttonHits[buttonHits.length] = {
+                            buttonHits.push({
                                 button: _this,
                                 xMin: 0,
                                 xMax: stage.getWidth(),
@@ -232,7 +236,7 @@ export class SimpleButton extends InteractiveObject {
                                 yMax: stage.getHeight(),
                                 CondKeyPress: cond.CondKeyPress,
                                 parent: _this.getParent()
-                            };
+                            });
                         }
                     }
                 }
@@ -251,7 +255,7 @@ export class SimpleButton extends InteractiveObject {
                 var m2 = multiplicationMatrix(matrix, _this.getMatrix());
                 var bounds = _this.getBounds(m2, status);
                 if (bounds) {
-                    buttonHits[buttonHits.length] = {
+                    buttonHits.push({
                         button: _this,
                         xMin: bounds.xMin,
                         xMax: bounds.xMax,
@@ -260,7 +264,7 @@ export class SimpleButton extends InteractiveObject {
                         CondKeyPress: 0,
                         parent: _this.getParent(),
                         matrix: cloneArray(matrix)
-                    };
+                    });
                 }
             }
         }
@@ -345,7 +349,7 @@ export class SimpleButton extends InteractiveObject {
              matrix: Matrix,
              stage: Stage,
              x: number,
-             y: number): boolean
+             y: number): HitObject | undefined
     {
         var _this = this;
 
@@ -353,14 +357,14 @@ export class SimpleButton extends InteractiveObject {
         var tags = sprite.getContainer();
         var length = tags.length;
         if (!length) {
-            return false;
+            return undefined;
         }
 
         var m2 = multiplicationMatrix(matrix, _this.getMatrix());
         var m3 = multiplicationMatrix(m2, sprite.getMatrix());
 
         var hitObj = false as any;
-        var hit = false;
+        var hit: HitObject | undefined = undefined;
         if (length) {
             var loadStage = _this.getStage();
             tags.reverse();
@@ -406,7 +410,7 @@ export class SimpleButton extends InteractiveObject {
             tags.reverse();
         }
 
-        return false;
+        return undefined;
     }
 
     addActions(stage: Stage): void {
@@ -428,13 +432,6 @@ export class SimpleButton extends InteractiveObject {
                 tag.addActions(stage);
             }
         }
-    }
-
-    getTags(): any {
-        return undefined;
-    }
-
-    initFrame(): void {
     }
 }
 
