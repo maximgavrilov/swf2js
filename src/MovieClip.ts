@@ -1370,7 +1370,7 @@ export class MovieClip extends Sprite {
         })(this, script);
     }
 
-    createActionScript2(script: Script, parent): MCAction {
+    createActionScript2(script: Script, parent?: DisplayObject): MCAction {
         return ((clip, origin, chain) => {
             return function () {
                 var as = new ActionScript([], origin.constantPool, origin.register, origin.initAction);

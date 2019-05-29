@@ -29,9 +29,9 @@ function isData(d: DataIO): d is Data {
 
 export class BitIO {
     byte_offset = 0;
+    bit_offset = 0;
     data?: Data;
 
-    private bit_offset = 0;
     private bit_buffer?: number;
 
     constructor(data?: DataIO) {

@@ -9,8 +9,6 @@
 
 import { cacheStore } from './CacheStore';
 
-
-export type DefineFontTag = any;
 export type DefineSoundTag = any;
 export type RemoveObjectTag = any;
 export type StartSoundTag = any;
@@ -282,5 +280,45 @@ export function startSound(audio: HTMLMediaElement, soundInfo: SoundInfo): void 
 
         audio.play();
     }
+}
+
+export function base64Encode(data: string): string
+{
+    const isBtoa = ('btoa' in window);
+
+    if (isBtoa)
+        return window.btoa(data);
+
+    const base64EncodeChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    var out = [];
+    var i = 0;
+    var len = data.length;
+
+    while (i < len) {
+        var c1 = data.charCodeAt(i++) & 0xff;
+        if (i === len) {
+            out[out.length] = base64EncodeChars.charAt(c1 >> 2);
+            out[out.length] = base64EncodeChars.charAt((c1 & 0x3) << 4);
+            out[out.length] = "==";
+            break;
+        }
+
+        var c2 = data.charCodeAt(i++);
+        if (i === len) {
+            out[out.length] = base64EncodeChars.charAt(c1 >> 2);
+            out[out.length] = base64EncodeChars.charAt(((c1 & 0x3) << 4) | ((c2 & 0xF0) >> 4));
+            out[out.length] = base64EncodeChars.charAt((c2 & 0xF) << 2);
+            out[out.length] = "=";
+            break;
+        }
+
+        var c3 = data.charCodeAt(i++);
+        out[out.length] = base64EncodeChars.charAt(c1 >> 2);
+        out[out.length] = base64EncodeChars.charAt(((c1 & 0x3) << 4) | ((c2 & 0xF0) >> 4));
+        out[out.length] = base64EncodeChars.charAt(((c2 & 0xF) << 2) | ((c3 & 0xC0) >> 6));
+        out[out.length] = base64EncodeChars.charAt(c3 & 0x3F);
+    }
+
+    return out.join("");
 }
 

@@ -8,6 +8,7 @@
  */
 
 import { ColorTransform } from './utils';
+import { ShapeWithStyle } from './SwfTag';
 
 function cloneDeep(src: any, obj: any): void {
     for (const prop in src) {
@@ -86,7 +87,7 @@ class VectorToCanvas {
         return obj;
     }
 
-    convert(shapes: any, isMorph: boolean = false): any[] {
+    convert(shapes: ShapeWithStyle, isMorph: boolean = false): StyleObj[] {
         var lineStyles = shapes.lineStyles.lineStyles;
         var fillStyles = shapes.fillStyles.fillStyles;
         var records = shapes.ShapeRecords;

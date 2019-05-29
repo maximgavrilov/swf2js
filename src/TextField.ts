@@ -12,10 +12,10 @@ import { ClipEvent } from './EventDispatcher';
 import { CLS } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
 import { Stage } from './Stage';
+import { DefineFont } from './SwfTag';
 import { vtc } from './VectorToCanvas';
 import {
     Bounds, ColorTransform, FontData, Color, Matrix,
-    DefineFontTag,
     generateColorTransform, intToRGBA, multiplicationColor, multiplicationMatrix
 } from './utils';
 
@@ -469,7 +469,7 @@ export class TextField extends InteractiveObject {
                 break;
         }
 
-        var fontData = _this.getStage().getCharacter(_this.fontId) as DefineFontTag;
+        var fontData = _this.getStage().getCharacter(_this.fontId) as DefineFont;
         if (isAutoSize) {
             if (variables.embedFonts) {
                 var CodeTable = fontData.CodeTable;

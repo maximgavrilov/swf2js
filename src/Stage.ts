@@ -21,20 +21,16 @@ import { Packages } from './Packages';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
-import { SwfTag } from './SwfTag';
+import { DefineFont, ShapeWithStyle, SwfTag } from './SwfTag';
 import { TextField } from './TextField';
 import { vtc } from './VectorToCanvas';
 import {
-    DefineFontTag, DefineSoundTag, Tag, VideoFrameTag,
+    DefineSoundTag, Tag, VideoFrameTag,
     Bounds, ColorTransform, HitEvent, Matrix, StageOptions,
     tmpContext,
     devicePixelRatio, isAndroid, isChrome, isTouch,
-    cloneArray, isTouchEvent, Writeable
+    base64Encode, cloneArray, isTouchEvent, Writeable
 } from './utils';
-
-
-type SwfTag = any;
-
 
 
 export type Action = {
@@ -103,6 +99,10 @@ export class Stage {
     dragMc: Sprite = null;
     dragRules: DragRules = null;
 
+    bgcolor = null;
+    imgUnLoadCount = 0;
+    abcFlag = false;
+
     private intervalId = 0;
     private frameRate = 0;
     private stopFlag = true;
@@ -115,7 +115,6 @@ export class Stage {
     private tagId = null;
     private FlashVars = {};
     private quality = "medium"; // low = 0.25, medium = 0.8, high = 1.0
-    private bgcolor = null;
 
     // event
     readonly mouse = new Mouse();
@@ -148,14 +147,13 @@ export class Stage {
             }
         }
     } = {};
-    readonly fonts: { [face: string]: DefineFontTag } = {};
+    readonly fonts: { [face: string]: DefineFont } = {};
     private isAction = true;
     private _global = new Global();
     private touchObj = null;
     private touchStatus = "up";
     private overObj = null;
     private touchEndAction = null;
-    private imgUnLoadCount = 0;
     private scale = 1;
     private baseWidth = 0;
     private baseHeight = 0;
@@ -167,7 +165,6 @@ export class Stage {
     readonly avm2 = new Packages(this);
     readonly abc = new Packages(this);
     readonly symbols: { [characterId: number]: string } = {};
-    private abcFlag = false;
     private parent: MovieClip;
 
     // render
@@ -326,11 +323,11 @@ export class Stage {
         this.matrix = matrix;
     }
 
-    getCharacter<T = Tag>(id: number): T {
+    getCharacter<T = any>(id: number): T {
         return this.characters[id];
     }
 
-    setCharacter<T = Tag>(id: number, obj: T): void {
+    setCharacter(id: number, obj: any): void {
         this.characters[id] = obj;
     }
 
@@ -525,7 +522,7 @@ export class Stage {
             _this.setBaseWidth(width);
             _this.setBaseHeight(height);
 
-            var shape = {
+            var shape: ShapeWithStyle = {
                 ShapeRecords: [
                     {
                         FillStyle1: 1,
@@ -614,7 +611,7 @@ export class Stage {
 
 
         var jpegData = swftag.parseJpegData(data);
-        image.src = "data:image/jpeg;base64," + swftag.base64encode(jpegData);
+        image.src = "data:image/jpeg;base64," + base64Encode(jpegData);
     }
 
     resize(): void {
