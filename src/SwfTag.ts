@@ -39,7 +39,54 @@ type DefineButton = any;
     type ButtonCondAction = any;
     type ButtonRecord = any;
 type DefineEditText = any;
-export type DefineFont = any;
+
+type DefineFont_123 = {
+    FontId: number;
+    GlyphShapeTable: ShapeWithStyle[];
+};
+type DefineFont_23 = {
+    FontId: number;
+    GlyphShapeTable: ShapeWithStyle[];
+
+    FontFlagsShiftJIS: BitBoolean;
+    FontFlagsSmallText: BitBoolean;
+    FontFlagsANSI: BitBoolean;
+    FontFlagsWideOffsets: BitBoolean;
+    FontFlagsWideCodes: BitBoolean;
+    FontFlagsItalic: BitBoolean;
+    FontFlagsBold: BitBoolean;
+
+    LanguageCode: number;
+    FontNameLen: number;
+    FontName?: string;
+
+    NumGlyphs: number;
+    CodeTableOffset: number;
+    CodeTable: number[];
+};
+type DefineFont_Layout<T> = { FontFlagsHasLayout: 0 } | ({ FontFlagsHasLayout: 1; } & T);
+type DefineFont_Layout23 = {
+    FontAscent: number;
+    FontDescent: number;
+    FontLeading: number;
+
+    FontAdvanceTable: number[];
+    FontBoundsTable: Bounds[];
+};
+type DefineFont_Layout3 = {
+    FontFlagsHasLayout: 1;
+    KerningCount: number;
+    KerningRecord: Array<{
+        FontKerningCode1: number;
+        FontKerningCode2: number;
+        FontKerningAdjustment: number;
+    }>;
+};
+
+export type DefineFont = ({ tagType: TAG.DefineFont; } & DefineFont_123)
+| ({ tagType: TAG.DefineFont2; } & DefineFont_23 & DefineFont_Layout<DefineFont_Layout23>)
+| ({ tagType: TAG.DefineFont3; } & DefineFont_23 & DefineFont_Layout<DefineFont_Layout23 & DefineFont_Layout3>);
+
 type DefineFontInfo = any;
 type DefineMorphShape = any;
 type DefineScalingGrid = any;
@@ -183,8 +230,9 @@ export type VideoFrame = {
 type Vp6SwfVideoPacket = string;
 
 
-const enum TAG {
+export const enum TAG {
     DefineShape = 2,
+    DefineFont = 10,
     DefineText = 11,
     DefineSound = 14,
     StartSound = 15,
@@ -192,22 +240,27 @@ const enum TAG {
     DefineShape3 = 32,
     DefineText2 = 33,
     DefineMorphShape = 46,
+    DefineFont2 = 48,
     DefineVideoStream = 60,
     VideoFrame = 61,
+    DefineFont3 = 75,
     DefineShape4 = 83,
     DefineMorphShape2 = 84,
     StartSound2 = 89
 };
 
-type TAG_DefineText = TAG.DefineText | TAG.DefineText2;
+type TAG_DefineFont = TAG.DefineFont | TAG.DefineFont2 | TAG.DefineFont3;
+type TAG_DefineMorphShape = TAG.DefineMorphShape | TAG.DefineMorphShape2;
 type TAG_DefineShape = TAG.DefineShape
                      | TAG.DefineShape2
                      | TAG.DefineShape3
                      | TAG.DefineShape4;
+type TAG_DefineText = TAG.DefineText | TAG.DefineText2;
+type TAG_StartSound = TAG.StartSound | TAG.StartSound2;
 
 type ActionScript3 = () => any;
 type MorphShape = {
-    tagType: TAG.DefineMorphShape | TAG.DefineMorphShape2;
+    tagType: TAG_DefineMorphShape;
     data: StyleObj[];
     bounds: Bounds;
 };
@@ -267,13 +320,18 @@ type GlyphEntry = {
 type TextRecordData = any;
 
 
+type DefineFontCharacter = DefineFont;
 type DefineTextCharacter = DefineText;
 type ShapeCharacter = {
     tagType: TAG_DefineShape,
     data: StyleObj[];
     bounds: Bounds;
 };
-export type Character = any | DefineTextCharacter | ShapeCharacter | CanvasRenderingContext2D;
+export type Character = any
+                      | DefineFontCharacter
+                      | DefineTextCharacter
+                      | ShapeCharacter
+                      | CanvasRenderingContext2D;
 
 export type StartSoundTag = {
     tagType: TAG.StartSound | TAG.StartSound2;
@@ -502,17 +560,17 @@ export class SwfTag {
                 obj = _this.buildMovieClip(tag, char, parent);
             } else {
                 switch (tagType) {
-                    case 11: // DefineText
-                    case 33: // DefineText2
+                    case TAG.DefineText: // DefineText
+                    case TAG.DefineText2: // DefineText2
                         obj = _this.buildText(tag, char);
                         break;
                     case 37: // DefineEditText
                         obj = _this.buildTextField(tag, char, parent);
                         break;
-                    case 2:  // DefineShape
-                    case 22: // DefineShape2
-                    case 32: // DefineShape3
-                    case 83: // DefineShape4
+                    case TAG.DefineShape:  // DefineShape
+                    case TAG.DefineShape2: // DefineShape2
+                    case TAG.DefineShape3: // DefineShape3
+                    case TAG.DefineShape4: // DefineShape4
                         obj = _this.buildShape(tag, char);
                         break;
                     case 46: // MorphShape
@@ -997,9 +1055,9 @@ export class SwfTag {
                     );
                 }
                 break;
-            case 10: // DefineFont
-            case 48: // DefineFont2
-            case 75: // DefineFont3
+            case TAG.DefineFont: // DefineFont
+            case TAG.DefineFont2: // DefineFont2
+            case TAG.DefineFont3: // DefineFont3
                 _this.parseDefineFont(tagType, length);
                 break;
             case 13: // DefineFontInfo
@@ -1201,8 +1259,8 @@ export class SwfTag {
                 tag.frame = frame;
                 tagsArray.labels[labels.length] = tag;
                 break;
-            case 15: // StartSound
-            case 89: // StartSound2
+            case TAG.StartSound: // StartSound
+            case TAG.StartSound2: // StartSound2
                 var sounds = tagsArray.sounds;
                 tagsArray.sounds[sounds.length] = tag;
                 break;
@@ -1955,7 +2013,7 @@ export class SwfTag {
         return str;
     }
 
-    private parseDefineFont(tagType: number, length: number): void
+    private parseDefineFont(tagType: TAG_DefineFont, length: number): void
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1968,16 +2026,16 @@ export class SwfTag {
         obj.FontId = bitio.getUI16();
 
         var numGlyphs = 0;
-        if (tagType === 48 || tagType === 75) {
+        if (obj.tagType === TAG.DefineFont2 || obj.tagType === TAG.DefineFont3) {
             var fontFlags = bitio.getUI8();
-            obj.FontFlagsHasLayout = (fontFlags >>> 7) & 1;
-            obj.FontFlagsShiftJIS = (fontFlags >>> 6) & 1;
-            obj.FontFlagsSmallText = (fontFlags >>> 5) & 1;
-            obj.FontFlagsANSI = (fontFlags >>> 4) & 1;
-            obj.FontFlagsWideOffsets = (fontFlags >>> 3) & 1;
-            obj.FontFlagsWideCodes = (fontFlags >>> 2) & 1;
-            obj.FontFlagsItalic = (fontFlags >>> 1) & 1;
-            obj.FontFlagsBold = (fontFlags) & 1;
+            obj.FontFlagsHasLayout = ((fontFlags >>> 7) & 1) as BitBoolean;
+            obj.FontFlagsShiftJIS = ((fontFlags >>> 6) & 1) as BitBoolean;
+            obj.FontFlagsSmallText = ((fontFlags >>> 5) & 1) as BitBoolean;
+            obj.FontFlagsANSI = ((fontFlags >>> 4) & 1) as BitBoolean;
+            obj.FontFlagsWideOffsets = ((fontFlags >>> 3) & 1) as BitBoolean;
+            obj.FontFlagsWideCodes = ((fontFlags >>> 2) & 1) as BitBoolean;
+            obj.FontFlagsItalic = ((fontFlags >>> 1) & 1) as BitBoolean;
+            obj.FontFlagsBold = ((fontFlags) & 1) as BitBoolean;
             bitio.byteAlign();
 
             obj.LanguageCode = bitio.getUI8();
@@ -2011,37 +2069,36 @@ export class SwfTag {
 
         // offset
         var offset = bitio.byte_offset;
-        if (tagType === 10) {
+        if (obj.tagType === TAG.DefineFont) {
             numGlyphs = bitio.getUI16();
         }
 
         if (numGlyphs) {
             var OffsetTable = [];
-            if (tagType === 10) {
-                OffsetTable[0] = numGlyphs;
+            if (obj.tagType === TAG.DefineFont) {
+                OffsetTable.push(numGlyphs);
                 numGlyphs /= 2;
                 numGlyphs--;
             }
 
-            if (obj.FontFlagsWideOffsets) {
+            if (obj.tagType !== TAG.DefineFont && obj.FontFlagsWideOffsets) {
                 for (i = numGlyphs; i--;) {
-                    OffsetTable[OffsetTable.length] = bitio.getUI32();
+                    OffsetTable.push(bitio.getUI32());
                 }
-                if (tagType !== 10) {
-                    obj.CodeTableOffset = bitio.getUI32();
-                }
+
+                obj.CodeTableOffset = bitio.getUI32();
             } else {
                 for (i = numGlyphs; i--;) {
-                    OffsetTable[OffsetTable.length] = bitio.getUI16();
+                    OffsetTable.push(bitio.getUI16());
                 }
-                if (tagType !== 10) {
+                if (obj.tagType !== TAG.DefineFont) {
                     obj.CodeTableOffset = bitio.getUI16();
                 }
             }
 
             // Shape
             var GlyphShapeTable = [];
-            if (tagType === 10) {
+            if (obj.tagType === TAG.DefineFont) {
                 numGlyphs++;
             }
 
@@ -2058,7 +2115,7 @@ export class SwfTag {
                 };
 
                 var shapes = {} as ShapeWithStyle;
-                shapes.ShapeRecords = _this.shapeRecords(tagType, currentNumBits);
+                shapes.ShapeRecords = _this.shapeRecords(obj.tagType, currentNumBits);
                 shapes.lineStyles = {
                     lineStyleCount: 1,
                     lineStyles: [{
@@ -2074,20 +2131,20 @@ export class SwfTag {
                     }]
                 };
 
-                GlyphShapeTable[GlyphShapeTable.length] = shapes;
+                GlyphShapeTable.push(shapes);
             }
             obj.GlyphShapeTable = GlyphShapeTable;
 
-            if (tagType === 48 || tagType === 75) {
+            if (obj.tagType === TAG.DefineFont2 || obj.tagType === TAG.DefineFont3) {
                 bitio.setOffset(obj.CodeTableOffset + offset, 0);
                 var CodeTable = [];
                 if (obj.FontFlagsWideCodes) {
                     for (i = numGlyphs; i--;) {
-                        CodeTable[CodeTable.length] = bitio.getUI16();
+                        CodeTable.push(bitio.getUI16());
                     }
                 } else {
                     for (i = numGlyphs; i--;) {
-                        CodeTable[CodeTable.length] = bitio.getUI8();
+                        CodeTable.push(bitio.getUI8());
                     }
                 }
                 obj.CodeTable = CodeTable;
@@ -2109,7 +2166,7 @@ export class SwfTag {
                     }
                     obj.FontBoundsTable = FontBoundsTable;
 
-                    if (tagType === 75) {
+                    if (obj.tagType === TAG.DefineFont3) {
                         obj.KerningCount = bitio.getUI16();
                         obj.KerningRecord = [];
                         for (i = obj.KerningCount; i--;) {
@@ -2129,7 +2186,9 @@ export class SwfTag {
 
         bitio.byte_offset = endOffset;
         stage.setCharacter(obj.FontId, obj);
-        stage.fonts[obj.FontName] = obj;
+
+        if (obj.tagType !== TAG.DefineFont)
+            stage.fonts[obj.FontName] = obj;
     }
 
     private parseDefineFontInfo(tagType: number, length: number): void
@@ -2550,7 +2609,7 @@ export class SwfTag {
         stage.setCharacter(obj.CharacterId, obj);
     }
 
-    private buildMorphShape(tagType: TAG.DefineMorphShape | TAG.DefineMorphShape2,
+    private buildMorphShape(tagType: TAG_DefineMorphShape,
                             char: Character,
                             ratio: number = 0): MorphShape
     {
@@ -4473,18 +4532,29 @@ export class SwfTag {
         stage.sounds[obj.SoundId] = obj;
     }
 
-    private parseStartSound(tagType: number): StartSoundTag
+    private parseStartSound(tagType: TAG_StartSound): StartSoundTag
     {
         var _this = this;
         var bitio = _this.bitio;
         var stage = _this.stage;
 
-        const obj: StartSound = {
-            tagType: tagType,
-            SoundId: bitio.getUI16(),
-            SoundClassName: (tagType === TAG.StartSound2) ? bitio.getDataUntil("\0") : undefined,
-            SoundInfo: _this.parseSoundInfo()
-        };
+        let obj: StartSound;
+        if (tagType === TAG.StartSound) {
+            obj = {
+                tagType: tagType,
+                SoundId: bitio.getUI16(),
+                SoundInfo: _this.parseSoundInfo()
+            };
+        } else if (tagType === TAG.StartSound2) {
+            obj = {
+                tagType: tagType,
+                SoundId: bitio.getUI16(),
+                SoundClassName: bitio.getDataUntil("\0"),
+                SoundInfo: _this.parseSoundInfo()
+            };
+        } else {
+            ((x: never) => {})(tagType);
+        }
         stage.setCharacter(obj.SoundId, obj);
 
         var sound = stage.sounds[obj.SoundId];

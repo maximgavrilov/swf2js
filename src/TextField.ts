@@ -12,7 +12,7 @@ import { ClipEvent } from './EventDispatcher';
 import { CLS } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
 import { Stage } from './Stage';
-import { DefineFont } from './SwfTag';
+import { DefineFont, TAG } from './SwfTag';
 import { vtc } from './VectorToCanvas';
 import {
     Bounds, ColorTransform, Color, Matrix,
@@ -470,6 +470,10 @@ export class TextField extends InteractiveObject {
         }
 
         var fontData = _this.getStage().getCharacter(_this.fontId) as DefineFont;
+
+        if (fontData.tagType === TAG.DefineFont || !fontData.FontFlagsHasLayout)
+            throw new Error('Unsupported font');
+
         if (isAutoSize) {
             if (variables.embedFonts) {
                 var CodeTable = fontData.CodeTable;
@@ -654,6 +658,9 @@ export class TextField extends InteractiveObject {
                           width: number,
                           fillStyle: string): void
     {
+        if (fontData.tagType === TAG.DefineFont || !fontData.FontFlagsHasLayout)
+            throw new Error('Unsupported font');
+
         var _this = this;
         var variables = _this.variables;
         var fontScale = _this.fontScale;
@@ -771,6 +778,10 @@ export class TextField extends InteractiveObject {
         var fonts = stage.fonts;
         var face = child.face;
         var fontData = fonts[face];
+
+        if (fontData.tagType === TAG.DefineFont || !fontData.FontFlagsHasLayout)
+            throw new Error('Unsupported font');
+
         var codeTable = CodeTable;
         var faTable = FontAdvanceTable;
         var shapeTable = GlyphShapeTable;
@@ -851,6 +862,10 @@ export class TextField extends InteractiveObject {
         var width = 0;
         var face = child.face;
         var fontData = fonts[face];
+
+        if (fontData.tagType === TAG.DefineFont || !fontData.FontFlagsHasLayout)
+            throw new Error('Unsupported font');
+
         var codeTable = CodeTable;
         var faTable = FontAdvanceTable;
         if (fontData) {
