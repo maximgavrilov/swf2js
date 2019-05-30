@@ -9,7 +9,7 @@
 
 import { ActionScript } from './ActionScript';
 import { ActionScript3 } from './ActionScript3';
-import { BitIO, Data } from './BitIO';
+import { BitBoolean, BitIO, Data } from './BitIO';
 import {
     BevelFilter, BitmapFilter, BlurFilter, ColorMatrixFilter,
     ConvolutionFilter, DropShadowFilter, GradientBevelFilter,
@@ -45,7 +45,24 @@ type DefineMorphShape = any;
 type DefineScalingGrid = any;
 type DefineSceneAndFrameLabelData = any;
 type DefineShape = any;
-export type DefineSound = any;
+const enum SoundSize {
+    snd8Bit = 0,
+    snd16Bit = 1
+};
+const enum SoundType {
+    sndMono = 0,
+    sndStereo = 1
+};
+export type DefineSound = {
+    tagType: number;
+    SoundId: number;
+    SoundFormat: number;
+    SoundRate: number;
+    SoundSize: SoundSize;
+    SoundType: SoundType;
+    SoundSampleCount: number;
+    base64: string;
+};
 type DefineSprite = any;
 type DefineText = any;
 type DefineVideoStream = any;
@@ -95,22 +112,50 @@ export type RemoveObject = {
     Depth: number;
 };
 type PlaceObjectTag = any;
-export type SoundInfo = any;
+export type SoundInfo = {
+    SyncStop: BitBoolean;
+    SyncNoMultiple: BitBoolean;
+} & ({ HasInPoint: 0; } | { HasInPoint: 1;
+    InPoint: number;
+}) & ({ HasOutPoint: 0; } | { HasOutPoint: 1;
+    OutPoint: number;
+}) & ({ HasLoops: 0; } | { HasLoops: 1;
+    LoopCount: number;
+}) & ({ HasEnvelope: 0; } | { HasEnvelope: 1;
+    EnvPoints: number;
+    EnvelopeRecords: Array<{
+        Pos44: number;
+        LeftLevel: number;
+        RightLevel: number;
+    }>;
+});
 type SoundStreamHead = any;
 type SoundStreamBlock = any;
-export type StartSound = any;
+export type StartSound = {
+    tagType: TAG.StartSound;
+    SoundId: number;
+    SoundInfo: SoundInfo
+} | {
+    tagType: TAG.StartSound2;
+    SoundId: number;
+    SoundClassName: string;
+    SoundInfo: SoundInfo
+};
 export type VideoFrame = any;
 type Vp6SwfVideoPacket = string;
 
 
 const enum TAG {
-    MorphShape = 46,
-    MorphShape2 = 84
+    DefineSound = 14,
+    StartSound = 15,
+    DefineMorphShape = 46,
+    DefineMorphShape2 = 84,
+    StartSound2 = 89
 };
 
 type ActionScript3 = () => any;
 type MorphShape = {
-    tagType: TAG.MorphShape | TAG.MorphShape2;
+    tagType: TAG.DefineMorphShape | TAG.DefineMorphShape2;
     data: StyleObj[];
     bounds: Bounds;
 };
@@ -169,8 +214,15 @@ type GlyphEntry = {
 };
 type TextRecordData = any;
 
-export type Tag = any;
-type TagObj = any;
+export type StartSoundTag = {
+    SoundId: number;
+    Audio: HTMLAudioElement;
+    tagType: TAG.StartSound | TAG.StartSound2;
+};
+export type Tag = StartSoundTag | any;
+type TagObj = any & {
+    sounds: StartSoundTag[];
+};
 type Tags = { [frame: number]: TagObj };
 type Character = any;
 
@@ -945,8 +997,8 @@ export class SwfTag {
             case 56: // ExportAssets
                 _this.parseExportAssets();
                 break;
-            case 46: // DefineMorphShape
-            case 84: // DefineMorphShape2
+            case TAG.DefineMorphShape: // DefineMorphShape
+            case TAG.DefineMorphShape2: // DefineMorphShape2
                 _this.parseDefineMorphShape(tagType);
                 break;
             case 40: // NameCharacter
@@ -986,11 +1038,11 @@ export class SwfTag {
             case 76: // SymbolClass
                 _this.parseSymbolClass();
                 break;
-            case 14: // DefineSound
+            case TAG.DefineSound: // DefineSound
                 _this.parseDefineSound(tagType, length);
                 break;
-            case 15: // StartSound
-            case 89: // StartSound2
+            case TAG.StartSound: // StartSound
+            case TAG.StartSound2: // StartSound2
                 obj = _this.parseStartSound(tagType);
                 break;
             case 17: // DefineButtonSound
@@ -2440,7 +2492,9 @@ export class SwfTag {
         stage.setCharacter(obj.CharacterId, obj);
     }
 
-    private buildMorphShape(tagType: TAG.MorphShape | TAG.MorphShape2, char: Character, ratio: number = 0): MorphShape
+    private buildMorphShape(tagType: TAG.DefineMorphShape | TAG.DefineMorphShape2,
+                            char: Character,
+                            ratio: number = 0): MorphShape
     {
         var per = ratio / 65535;
         var startPer = 1 - per;
@@ -4305,19 +4359,22 @@ export class SwfTag {
 
     private parseDefineSound(tagType: number, length: number): void
     {
-        var obj = {} as DefineSound;
         var _this = this;
         var bitio = _this.bitio;
         var stage = _this.stage;
         var startOffset = bitio.byte_offset;
 
-        obj.tagType = tagType;
-        obj.SoundId = bitio.getUI16();
-        obj.SoundFormat = bitio.getUIBits(4);
-        obj.SoundRate = bitio.getUIBits(2);
-        obj.SoundSize = bitio.getUIBit();
-        obj.SoundType = bitio.getUIBit();
-        obj.SoundSampleCount = bitio.getUI32();
+        const obj: DefineSound = {
+            tagType: tagType,
+            SoundId: bitio.getUI16(),
+            SoundFormat: bitio.getUIBits(4),
+            SoundRate: bitio.getUIBits(2),
+            SoundSize: bitio.getUIBit(),
+            SoundType: bitio.getUIBit(),
+            SoundSampleCount: bitio.getUI32(),
+
+            base64: ''
+        };
 
         var sub = bitio.byte_offset - startOffset;
         var dataLength = length - sub;
@@ -4353,24 +4410,22 @@ export class SwfTag {
                 break;
         }
 
-        obj.base64 = "data:audio/" + mimeType + ";base64," + window.btoa(SoundData);
+        obj.base64 = "data:audio/" + mimeType + ";base64," + base64Encode(SoundData);
         stage.sounds[obj.SoundId] = obj;
     }
 
-    private parseStartSound(tagType: number): StartSound
+    private parseStartSound(tagType: number): StartSoundTag
     {
         var _this = this;
         var bitio = _this.bitio;
-        var obj = {} as StartSound;
         var stage = _this.stage;
 
-        obj.tagType = tagType;
-        obj.SoundId = bitio.getUI16();
-        if (tagType === 89) {
-            obj.SoundClassName = bitio.getDataUntil("\0");
-        }
-
-        obj.SoundInfo = _this.parseSoundInfo();
+        const obj: StartSound = {
+            tagType: tagType,
+            SoundId: bitio.getUI16(),
+            SoundClassName: (tagType === TAG.StartSound2) ? bitio.getDataUntil("\0") : undefined,
+            SoundInfo: _this.parseSoundInfo()
+        };
         stage.setCharacter(obj.SoundId, obj);
 
         var sound = stage.sounds[obj.SoundId];
@@ -4556,7 +4611,7 @@ export class SwfTag {
 
         bitio.byte_offset = startOffset + length;
 
-        // obj.base64 = 'data:image/jpeg;base64,' + window.btoa(VideoData);
+        // obj.base64 = 'data:image/jpeg;base64,' + base64Encode(VideoData);
         stage.videos[obj.StreamID] = obj;
     }
 

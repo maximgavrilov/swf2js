@@ -12,6 +12,7 @@ import { isXHR2 } from './utils';
 
 const isArrayBuffer: boolean = (window as any).ArrayBuffer;
 
+export type BitBoolean = 0 | 1;
 export interface Data {
     readonly length: number;
     [index: number]: number; // uint8
@@ -409,9 +410,9 @@ export class BitIO {
         return value;
     }
 
-    getUIBit(): number {
+    getUIBit(): BitBoolean {
         this.byteCarry();
-        return (this.data[this.byte_offset] >> (7 - this.bit_offset++)) & 0x1;
+        return ((this.data[this.byte_offset] >> (7 - this.bit_offset++)) & 0x1) as BitBoolean;
     }
 
     getSIBits(n: number): number {

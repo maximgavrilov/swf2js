@@ -14,7 +14,7 @@ import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { PlaceObject } from './PlaceObject';
 import { Sprite } from './Sprite';
 import { Stage } from './Stage';
-import { DefineSound, RemoveObject, StartSound, SwfTag } from './SwfTag';
+import { RemoveObject, StartSound, StartSoundTag, SwfTag } from './SwfTag';
 import { TextField } from './TextField';
 import { CAP, JOIN } from './VectorToCanvas';
 import {
@@ -37,7 +37,7 @@ export class MovieClip extends Sprite {
     isAction = true;
 
     // sound
-    sounds: { [frame: number]: DefineSound[] } = {};
+    sounds: { [frame: number]: StartSoundTag[] } = {};
     soundStopFlag = false;
 
     // avm2
@@ -1102,18 +1102,18 @@ export class MovieClip extends Sprite {
         return this.labels[name.toLowerCase()];
     }
 
-    addSound(frame: number, obj: DefineSound): void {
+    addSound(frame: number, obj: StartSoundTag): void {
         if (!(frame in this.sounds)) {
             this.sounds[frame] = [];
         }
         this.sounds[frame].push(obj);
     }
 
-    getSounds(): DefineSound[] {
+    getSounds(): StartSoundTag[] {
         return this.sounds[this.getCurrentFrame()];
     }
 
-    startSound_mc(sound: DefineSound): void {
+    startSound_mc(sound: StartSoundTag): void {
         var _this = this;
         var stage = _this.getStage();
         var soundId = sound.SoundId;
