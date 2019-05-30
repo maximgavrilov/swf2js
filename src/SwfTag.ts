@@ -65,7 +65,17 @@ export type DefineSound = {
 };
 type DefineSprite = any;
 type DefineText = any;
-type DefineVideoStream = any;
+type DefineVideoStream = {
+    tagType: TAG.DefineVideoStream;
+    CharacterId: number;
+    NumFrames: number;
+    Width: number;
+    Height: number;
+    _Reserved: number;
+    VideoFlagsDeblocking: number;
+    VideoFlagsSmoothing: number;
+    CodecID: number;
+};
 type DoABC = any;
     type Code = any;
     type ClassInfo = {
@@ -141,7 +151,11 @@ export type StartSound = {
     SoundClassName: string;
     SoundInfo: SoundInfo
 };
-export type VideoFrame = any;
+export type VideoFrame = {
+    tagType: TAG.VideoFrame;
+    StreamID: number;
+    FrameNum: number;
+};
 type Vp6SwfVideoPacket = string;
 
 
@@ -149,6 +163,8 @@ const enum TAG {
     DefineSound = 14,
     StartSound = 15,
     DefineMorphShape = 46,
+    DefineVideoStream = 60,
+    VideoFrame = 61,
     DefineMorphShape2 = 84,
     StartSound2 = 89
 };
@@ -1060,7 +1076,7 @@ export class SwfTag {
             case 60: // DefineVideoStream
                 _this.parseDefineVideoStream(tagType);
                 break;
-            case 61: // VideoFrame
+            case TAG.VideoFrame: // VideoFrame
                 _this.parseVideoFrame(tagType, length);
                 break;
             case 78: // DefineScalingGrid
@@ -4573,46 +4589,45 @@ export class SwfTag {
 
     private parseDefineVideoStream(tagType: number): void
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var stage = _this.stage;
-        var obj = {} as DefineVideoStream;
-        obj.tagType = tagType;
-        obj.CharacterId = bitio.getUI16();
-        obj.NumFrames = bitio.getUI16();
-        obj.Width = bitio.getUI16();
-        obj.Height = bitio.getUI16();
-        bitio.getUIBits(4); // Reserved
-        obj.VideoFlagsDeblocking = bitio.getUIBits(3);
-        obj.VideoFlagsSmoothing = bitio.getUIBits(1);
-        obj.CodecID = bitio.getUI8();
-        stage.setCharacter(obj.CharacterId, obj);
-        console.log(obj);
+        const bitio = this.bitio;
+        const obj: DefineVideoStream = {
+            tagType: tagType,
+            CharacterId: bitio.getUI16(),
+            NumFrames: bitio.getUI16(),
+            Width: bitio.getUI16(),
+            Height: bitio.getUI16(),
+            _Reserved: bitio.getUIBits(4),
+            VideoFlagsDeblocking: bitio.getUIBits(3),
+            VideoFlagsSmoothing: bitio.getUIBits(1),
+            CodecID: bitio.getUI8()
+        };
+        this.stage.setCharacter(obj.CharacterId, obj);
     }
 
     private parseVideoFrame(tagType: number, length: number): void
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var stage = _this.stage;
+        const bitio = this.bitio;
         var startOffset = bitio.byte_offset;
-        var obj = {} as VideoFrame;
-        obj.tagType = tagType;
-        obj.StreamID = bitio.getUI16();
-        obj.FrameNum = bitio.getUI16();
-        var StreamData = stage.getCharacter(obj.StreamID);
-        var sub = bitio.byte_offset - startOffset;
-        var dataLength = length - sub;
+        const obj: VideoFrame = {
+            tagType: tagType,
+            StreamID: bitio.getUI16(),
+            FrameNum: bitio.getUI16()
+        };
+
+        const StreamData = this.stage.getCharacter<DefineVideoStream>(obj.StreamID);
+
+        const sub = bitio.byte_offset - startOffset;
+        const dataLength = length - sub;
         switch (StreamData.CodecID) {
             case 4:
-                _this.parseVp6SwfVideoPacket(dataLength);
+                this.parseVp6SwfVideoPacket(dataLength);
                 break;
         }
 
         bitio.byte_offset = startOffset + length;
 
         // obj.base64 = 'data:image/jpeg;base64,' + base64Encode(VideoData);
-        stage.videos[obj.StreamID] = obj;
+        this.stage.videos[obj.StreamID] = obj;
     }
 
     private parseVp6SwfVideoPacket(length: number): Vp6SwfVideoPacket
