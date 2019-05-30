@@ -121,7 +121,11 @@ export type DefineSound = {
     SoundSampleCount: number;
     base64: string;
 };
-type DefineSprite = any;
+type DefineSprite = {
+    SpriteId: number;
+    FrameCount: number;
+    ControlTags: Tags;
+};
 type DefineText = {
     tagType: TAG_DefineText;
     characterId: number;
@@ -321,16 +325,24 @@ type TextRecordData = any;
 
 
 type DefineFontCharacter = DefineFont;
+type DefineMorphShapeCharacter = DefineMorphShape;
+type DefineSpriteCharacter = Tags;
 type DefineTextCharacter = DefineText;
+type DefineVideoStreamCharacter = DefineVideoStream;
 type ShapeCharacter = {
     tagType: TAG_DefineShape,
     data: StyleObj[];
     bounds: Bounds;
 };
+type StartSoundCharacter = StartSound;
 export type Character = any
                       | DefineFontCharacter
+                      | DefineMorphShapeCharacter
+                      | DefineSpriteCharacter
                       | DefineTextCharacter
+                      | DefineVideoStreamCharacter
                       | ShapeCharacter
+                      | StartSoundCharacter
                       | CanvasRenderingContext2D;
 
 export type StartSoundTag = {
@@ -1292,7 +1304,7 @@ export class SwfTag {
             data: vtc.convert(shapes, false),
             bounds: bounds
         };
-        this.stage.setCharacter(characterId, shapeTag);
+       this.stage.setCharacter<ShapeCharacter>(characterId, shapeTag);
     }
 
     public rect(): Bounds
@@ -2185,7 +2197,7 @@ export class SwfTag {
         }
 
         bitio.byte_offset = endOffset;
-        stage.setCharacter(obj.FontId, obj);
+        stage.setCharacter<DefineFontCharacter>(obj.FontId, obj);
 
         if (obj.tagType !== TAG.DefineFont)
             stage.fonts[obj.FontName] = obj;
@@ -2284,7 +2296,7 @@ export class SwfTag {
     {
         const bitio = this.bitio;
 
-        const obj = {
+        const obj: DefineTextCharacter = {
             tagType: tagType,
             characterId: bitio.getUI16(),
             bounds: this.rect(),
@@ -3472,14 +3484,16 @@ export class SwfTag {
         return result;
     }
 
-    private parseDefineSprite(dataLength: number): DefineSprite
+    private parseDefineSprite(dataLength: number): void
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var characterId = bitio.getUI16();
-        bitio.getUI16(); // FrameCount
-        var stage = _this.stage;
-        stage.setCharacter(characterId, _this.parseTags(dataLength, characterId));
+        const bitio = this.bitio;
+        const SpriteId = bitio.getUI16();
+        const obj: DefineSprite = {
+            SpriteId,
+            FrameCount: bitio.getUI16(),
+            ControlTags: this.parseTags(dataLength, SpriteId)
+        };
+        this.stage.setCharacter<DefineSpriteCharacter>(SpriteId, obj.ControlTags);
     }
 
     private parseDoAction(length: number): ActionScript
@@ -4555,7 +4569,7 @@ export class SwfTag {
         } else {
             ((x: never) => {})(tagType);
         }
-        stage.setCharacter(obj.SoundId, obj);
+        stage.setCharacter<StartSoundCharacter>(obj.SoundId, obj);
 
         var sound = stage.sounds[obj.SoundId];
         var audio = document.createElement("audio");
@@ -4714,7 +4728,7 @@ export class SwfTag {
             VideoFlagsSmoothing: bitio.getUIBits(1),
             CodecID: bitio.getUI8()
         };
-        this.stage.setCharacter(obj.CharacterId, obj);
+        this.stage.setCharacter<DefineVideoStreamCharacter>(obj.CharacterId, obj);
     }
 
     private parseVideoFrame(tagType: number, length: number): void

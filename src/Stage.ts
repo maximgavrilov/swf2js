@@ -328,7 +328,7 @@ export class Stage {
         return this.characters[id];
     }
 
-    setCharacter(id: number, obj: Character): void {
+    setCharacter<T extends Character>(id: number, obj: T): void {
         this.characters[id] = obj;
     }
 
