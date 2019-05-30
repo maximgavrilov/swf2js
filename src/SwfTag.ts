@@ -53,10 +53,21 @@ const enum SoundType {
     sndMono = 0,
     sndStereo = 1
 };
+const enum SoundFormat {
+    RawNativeEndian = 0,
+    ADPCM = 1,
+    MP3 = 2,
+    RawLittleEndian = 3,
+    Nellymoser16 = 4,
+    Nellymoser8 = 5,
+    Nellymoser = 6,
+    Speex = 11,
+    XAiff = 15
+};
 export type DefineSound = {
     tagType: number;
     SoundId: number;
-    SoundFormat: number;
+    SoundFormat: SoundFormat;
     SoundRate: number;
     SoundSize: SoundSize;
     SoundType: SoundType;
@@ -64,7 +75,20 @@ export type DefineSound = {
     base64: string;
 };
 type DefineSprite = any;
-type DefineText = any;
+type DefineText = {
+    tagType: TAG_DefineText;
+    characterId: number;
+    bounds: Bounds;
+    matrix: Matrix;
+    textRecords: TextRecordData[];
+};
+
+const enum CodecID {
+    H263 = 2,
+    ScreenVideo = 3,
+    VP6 = 4,
+    VP6Alpha = 5
+};
 type DefineVideoStream = {
     tagType: TAG.DefineVideoStream;
     CharacterId: number;
@@ -74,7 +98,7 @@ type DefineVideoStream = {
     _Reserved: number;
     VideoFlagsDeblocking: number;
     VideoFlagsSmoothing: number;
-    CodecID: number;
+    CodecID: CodecID;
 };
 type DoABC = any;
     type Code = any;
@@ -160,14 +184,26 @@ type Vp6SwfVideoPacket = string;
 
 
 const enum TAG {
+    DefineShape = 2,
+    DefineText = 11,
     DefineSound = 14,
     StartSound = 15,
+    DefineShape2 = 22,
+    DefineShape3 = 32,
+    DefineText2 = 33,
     DefineMorphShape = 46,
     DefineVideoStream = 60,
     VideoFrame = 61,
+    DefineShape4 = 83,
     DefineMorphShape2 = 84,
     StartSound2 = 89
 };
+
+type TAG_DefineText = TAG.DefineText | TAG.DefineText2;
+type TAG_DefineShape = TAG.DefineShape
+                     | TAG.DefineShape2
+                     | TAG.DefineShape3
+                     | TAG.DefineShape4;
 
 type ActionScript3 = () => any;
 type MorphShape = {
@@ -230,10 +266,19 @@ type GlyphEntry = {
 };
 type TextRecordData = any;
 
+
+type DefineTextCharacter = DefineText;
+type ShapeCharacter = {
+    tagType: TAG_DefineShape,
+    data: StyleObj[];
+    bounds: Bounds;
+};
+export type Character = any | DefineTextCharacter | ShapeCharacter | CanvasRenderingContext2D;
+
 export type StartSoundTag = {
+    tagType: TAG.StartSound | TAG.StartSound2;
     SoundId: number;
     Audio: HTMLAudioElement;
-    tagType: TAG.StartSound | TAG.StartSound2;
 };
 export type Tag = StartSoundTag | any;
 type TagObj = any & {
@@ -931,10 +976,10 @@ export class SwfTag {
                 break;
             case 1: // ShowFrame
                 break;
-            case 2:  // DefineShape
-            case 22: // DefineShape2
-            case 32: // DefineShape3
-            case 83: // DefineShape4
+            case TAG.DefineShape:  // DefineShape
+            case TAG.DefineShape2: // DefineShape2
+            case TAG.DefineShape3: // DefineShape3
+            case TAG.DefineShape4: // DefineShape4
                 if (length < 10) {
                     bitio.byte_offset += length;
                 } else {
@@ -961,8 +1006,8 @@ export class SwfTag {
             case 62: // DefineFontInfo2
                 _this.parseDefineFontInfo(tagType, length);
                 break;
-            case 11: // DefineText
-            case 33: // DefineText2
+            case TAG.DefineText: // DefineText
+            case TAG.DefineText2: // DefineText2
                 _this.parseDefineText(tagType);
                 break;
             case 4: // PlaceObject
@@ -1166,7 +1211,7 @@ export class SwfTag {
         return tags;
     }
 
-    private parseDefineShape(tagType: number): DefineShape
+    private parseDefineShape(tagType: TAG_DefineShape): DefineShape
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1183,7 +1228,13 @@ export class SwfTag {
         }
 
         var shapes = _this.shapeWithStyle(tagType);
-        _this.appendShapeTag(characterId, bounds, shapes, tagType);
+
+        const shapeTag: ShapeCharacter = {
+            tagType: tagType,
+            data: vtc.convert(shapes, false),
+            bounds: bounds
+        };
+        this.stage.setCharacter(characterId, shapeTag);
     }
 
     public rect(): Bounds
@@ -1669,16 +1720,6 @@ export class SwfTag {
         }
         obj.isChange = true;
         return obj;
-    }
-
-    private appendShapeTag(characterId: number, bounds: Bounds, shapes: ShapeWithStyle, tagType: number): void
-    {
-        var stage = this.stage;
-        stage.setCharacter(characterId, {
-            tagType: tagType,
-            data: vtc.convert(shapes, false),
-            bounds: bounds
-        });
     }
 
     private parseDefineBitsLossLess(tagType: number, length: number): void
@@ -2180,20 +2221,21 @@ export class SwfTag {
         bitio.getDataUntil("\0"); // FontCopyright
     }
 
-    private parseDefineText(tagType: number): DefineText
+    private parseDefineText(tagType: TAG_DefineText): void
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var stage = _this.stage;
-        var obj = {} as DefineText;
-        var characterId = bitio.getUI16();
-        obj.tagType = tagType;
-        obj.bounds = _this.rect();
-        obj.matrix = _this.matrix();
-        var GlyphBits = bitio.getUI8();
-        var AdvanceBits = bitio.getUI8();
-        obj.textRecords = _this.getTextRecords(tagType, GlyphBits, AdvanceBits);
-        stage.setCharacter(characterId, obj);
+        const bitio = this.bitio;
+
+        const obj = {
+            tagType: tagType,
+            characterId: bitio.getUI16(),
+            bounds: this.rect(),
+            matrix: this.matrix(),
+            textRecords: this.getTextRecords(tagType,
+                                              bitio.getUI8(), // GlyphBits
+                                              bitio.getUI8()) // AdvanceBits
+        };
+
+        this.stage.setCharacter(obj.characterId, obj);
     }
 
     private getTextRecords(tagType: number, GlyphBits: number, AdvanceBits: number): TextRecordData[]
@@ -4403,27 +4445,28 @@ export class SwfTag {
 
         var mimeType = "";
         switch (obj.SoundFormat) {
-            case 0: // Uncompressed native-endian
-            case 3: // Uncompressed little-endian
+            case SoundFormat.RawNativeEndian: // Uncompressed native-endian
+            case SoundFormat.RawLittleEndian: // Uncompressed little-endian
                 mimeType = "wave";
                 break;
-            case 1: // ADPCM ? 32KADPCM
+            case SoundFormat.ADPCM: // ADPCM ? 32KADPCM
                 mimeType = "wave";
                 break;
-            case 2: // MP3
+            case SoundFormat.MP3: // MP3
                 mimeType = "mpeg";
                 break;
-            case 4: // Nellymoser 16
-            case 5: // Nellymoser 8
-            case 6: //
+            case SoundFormat.Nellymoser16: // Nellymoser 16
+            case SoundFormat.Nellymoser8: // Nellymoser 8
+            case SoundFormat.Nellymoser: //
                 mimeType = "nellymoser";
                 break;
-            case 11: // Speex
+            case SoundFormat.Speex: // Speex
                 mimeType = "speex";
                 break;
-            case 15:
+            case SoundFormat.XAiff:
                 mimeType = "x-aiff";
                 break;
+            default: ((x: never) => {})(obj.SoundFormat);
         }
 
         obj.base64 = "data:audio/" + mimeType + ";base64," + base64Encode(SoundData);
@@ -4619,7 +4662,7 @@ export class SwfTag {
         const sub = bitio.byte_offset - startOffset;
         const dataLength = length - sub;
         switch (StreamData.CodecID) {
-            case 4:
+            case CodecID.VP6:
                 this.parseVp6SwfVideoPacket(dataLength);
                 break;
         }

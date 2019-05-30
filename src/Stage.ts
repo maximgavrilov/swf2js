@@ -21,7 +21,7 @@ import { Packages } from './Packages';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
-import { DefineFont, DefineSound, ShapeWithStyle, SwfTag, Tag, VideoFrame } from './SwfTag';
+import { Character, DefineFont, DefineSound, ShapeWithStyle, SwfTag, VideoFrame } from './SwfTag';
 import { TextField } from './TextField';
 import { vtc } from './VectorToCanvas';
 import {
@@ -126,7 +126,7 @@ export class Stage {
     private matrix: Matrix = [1,0,0,1,0,0];
     private _matrix: Matrix = [1,0,0,1,0,0];
     private _colorTransform: ColorTransform = [1,1,1,1,0,0,0,0];
-    private characters: { [id: number]: any | Tag | CanvasRenderingContext2D } = {};
+    private characters: { [id: number]: Character } = {};
     readonly initActions: { [charactedId: number]: MCAction } = {};
     readonly exportAssets: { [id: string]: number } = {};
     readonly packages: { [spriteId: number]: 1 } = {};
@@ -324,11 +324,11 @@ export class Stage {
         this.matrix = matrix;
     }
 
-    getCharacter<T = any>(id: number): T {
+    getCharacter<T extends Character = any>(id: number): T {
         return this.characters[id];
     }
 
-    setCharacter(id: number, obj: any): void {
+    setCharacter(id: number, obj: Character): void {
         this.characters[id] = obj;
     }
 
