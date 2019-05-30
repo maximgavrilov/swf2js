@@ -21,17 +21,18 @@ import { Packages } from './Packages';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
-import { DefineFont, ShapeWithStyle, SwfTag } from './SwfTag';
+import { DefineFont, DefineSound, ShapeWithStyle, SwfTag, Tag, VideoFrame } from './SwfTag';
 import { TextField } from './TextField';
 import { vtc } from './VectorToCanvas';
 import {
-    DefineSoundTag, Tag, VideoFrameTag,
-    Bounds, ColorTransform, HitEvent, Matrix, StageOptions,
+    Bounds, ColorTransform, HitEvent, Matrix,
     tmpContext,
     devicePixelRatio, isAndroid, isChrome, isTouch,
     base64Encode, cloneArray, isTouchEvent, Writeable
 } from './utils';
 
+
+type StageOptions = any;
 
 export type Action = {
     as?: Function | Function[];
@@ -136,8 +137,8 @@ export class Stage {
     readonly upEventHits: Action[] = [];
     readonly keyDownEventHits: Action[] = [];
     readonly keyUpEventHits: Action[] = [];
-    readonly sounds: { [characterId: number]: DefineSoundTag } = {};
-    readonly videos: { [streamId: number]: VideoFrameTag } = {};
+    readonly sounds: { [characterId: number]: DefineSound } = {};
+    readonly videos: { [streamId: number]: VideoFrame } = {};
     readonly actions: Action[] = [];
     private instances = [];
     readonly placeObjects: {

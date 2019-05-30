@@ -8,21 +8,7 @@
  */
 
 import { cacheStore } from './CacheStore';
-
-export type DefineSoundTag = any;
-export type RemoveObjectTag = any;
-export type StartSoundTag = any;
-export type VideoFrameTag = any;
-export type Tag = {
-    readonly instanceId: number;
-};
-
-export type AVM2 = any;
-export type ButtonAction = any;
-export type FontData = any;
-export type Script = any;
-export type SoundInfo = any;
-export type StageOptions = any;
+import { SoundInfo } from './SwfTag';
 
 export type Writeable<T> = { -readonly [P in keyof T]-?: T[P] };
 

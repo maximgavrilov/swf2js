@@ -14,12 +14,11 @@ import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { PlaceObject } from './PlaceObject';
 import { Sprite } from './Sprite';
 import { Stage } from './Stage';
-import { SwfTag } from './SwfTag';
+import { DefineSound, RemoveObject, StartSound, SwfTag } from './SwfTag';
 import { TextField } from './TextField';
 import { CAP, JOIN } from './VectorToCanvas';
 import {
-    AVM2, Bounds, Matrix, Script,
-    DefineSoundTag, RemoveObjectTag, StartSoundTag,
+    Bounds, Matrix,
     devicePixelRatio, isTouch, isXHR2,
     cloneArray, multiplicationMatrix, startSound
 } from './utils';
@@ -38,11 +37,11 @@ export class MovieClip extends Sprite {
     isAction = true;
 
     // sound
-    sounds: { [frame: number]: DefineSoundTag[] } = {};
+    sounds: { [frame: number]: DefineSound[] } = {};
     soundStopFlag = false;
 
     // avm2
-    protected avm2: AVM2 | null = null;
+    protected avm2: Object | null = null;
 
     constructor() {
         super();
@@ -1103,22 +1102,22 @@ export class MovieClip extends Sprite {
         return this.labels[name.toLowerCase()];
     }
 
-    addSound(frame: number, obj: DefineSoundTag): void {
+    addSound(frame: number, obj: DefineSound): void {
         if (!(frame in this.sounds)) {
             this.sounds[frame] = [];
         }
         this.sounds[frame].push(obj);
     }
 
-    getSounds(): DefineSoundTag[] {
+    getSounds(): DefineSound[] {
         return this.sounds[this.getCurrentFrame()];
     }
 
-    startSound_mc(sound: DefineSoundTag): void {
+    startSound_mc(sound: DefineSound): void {
         var _this = this;
         var stage = _this.getStage();
         var soundId = sound.SoundId;
-        var tag = stage.getCharacter(soundId) as StartSoundTag;
+        var tag = stage.getCharacter<StartSound>(soundId);
         if (!tag)
             return;
 
@@ -1131,7 +1130,7 @@ export class MovieClip extends Sprite {
         return this.container[frame] || [];
     }
 
-    setRemoveTag(frame: number, tags: RemoveObjectTag[]): void {
+    setRemoveTag(frame: number, tags: RemoveObject[]): void {
         this.removeTags[frame] = {};
         for (const tag of tags)
             this.removeTags[frame][tag.Depth] = 1;
@@ -1357,7 +1356,7 @@ export class MovieClip extends Sprite {
         }
     }
 
-    createActionScript(script: Script): MCAction {
+    createActionScript(script: ActionScript): MCAction {
         return ((clip, origin) => {
             var as = new ActionScript([], origin.constantPool, origin.register, origin.initAction);
             as.cache = origin.cache;
@@ -1370,7 +1369,7 @@ export class MovieClip extends Sprite {
         })(this, script);
     }
 
-    createActionScript2(script: Script, parent?: DisplayObject): MCAction {
+    createActionScript2(script: ActionScript, parent?: DisplayObject): MCAction {
         return ((clip, origin, chain) => {
             return function () {
                 var as = new ActionScript([], origin.constantPool, origin.register, origin.initAction);

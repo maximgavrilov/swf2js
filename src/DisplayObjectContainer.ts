@@ -15,9 +15,10 @@ import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
 import { Stage } from './Stage';
+import { SoundInfo } from './SwfTag';
 import { TextField } from './TextField';
 import {
-    Matrix, SoundInfo, Tag,
+    Matrix,
     multiplicationMatrix, cloneArray, startSound
 } from './utils';
 
@@ -299,7 +300,7 @@ export class DisplayObjectContainer extends InteractiveObject {
         return child;
     }
 
-    addTag(depth: number, obj: Tag): void {
+    addTag(depth: number, obj: DisplayObject): void {
         this.container[depth] = obj.instanceId;
         this._numChildren++;
     }

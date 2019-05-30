@@ -7,19 +7,20 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
+import { ActionScript } from './ActionScript';
 import { CLS, ButtonStatus, HitObject } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
 import { PlaceObject } from './PlaceObject';
 import { Sprite } from './Sprite';
 import { Stage } from './Stage';
 import {
-    Bounds, ButtonAction, ColorTransform, Matrix,
+    Bounds, ColorTransform, Matrix,
     isTouch,
     cloneArray, multiplicationColor, multiplicationMatrix
 } from './utils';
 
 export class SimpleButton extends InteractiveObject {
-    private actions: ButtonAction[] = [];
+    private actions: ActionScript[] = [];
     private _downState = new Sprite();
     private _hitState = new Sprite();
     private _overState = new Sprite();
@@ -72,11 +73,11 @@ export class SimpleButton extends InteractiveObject {
         stage.setInstance(_this);
     }
 
-    getActions(): ButtonAction[] {
+    getActions(): ActionScript[] {
         return this.actions;
     }
 
-    setActions(actions: ButtonAction[]): void {
+    setActions(actions: ActionScript[]): void {
         this.actions = actions;
     }
 

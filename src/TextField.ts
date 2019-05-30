@@ -15,7 +15,7 @@ import { Stage } from './Stage';
 import { DefineFont } from './SwfTag';
 import { vtc } from './VectorToCanvas';
 import {
-    Bounds, ColorTransform, FontData, Color, Matrix,
+    Bounds, ColorTransform, Color, Matrix,
     generateColorTransform, intToRGBA, multiplicationColor, multiplicationMatrix
 } from './utils';
 
@@ -647,7 +647,7 @@ export class TextField extends InteractiveObject {
     }
 
     private renderOutLine(ctx: CanvasRenderingContext2D,
-                          fontData: FontData,
+                          fontData: DefineFont,
                           splitData: any[],
                           matrix: Matrix,
                           offset: number,

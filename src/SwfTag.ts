@@ -26,7 +26,7 @@ import { TextRecord, StaticText } from './StaticText';
 import { TextField } from './TextField';
 import { StyleObj, vtc } from './VectorToCanvas';
 import {
-    Bounds, ButtonAction, Color, ColorTransform, Matrix,
+    Bounds, Color, ColorTransform, Matrix,
     isAlphaBug,
     base64Encode
 } from './utils';
@@ -36,6 +36,7 @@ type ClipActionRecord = any;
 type ClipEventFlags = any;
 type CSMTextSettings = any;
 type DefineButton = any;
+    type ButtonCondAction = any;
     type ButtonRecord = any;
 type DefineEditText = any;
 export type DefineFont = any;
@@ -44,7 +45,7 @@ type DefineMorphShape = any;
 type DefineScalingGrid = any;
 type DefineSceneAndFrameLabelData = any;
 type DefineShape = any;
-type DefineSound = any;
+export type DefineSound = any;
 type DefineSprite = any;
 type DefineText = any;
 type DefineVideoStream = any;
@@ -89,16 +90,16 @@ type FrameLabel = {
     name: string;
     frame: number;
 };
-type RemoveObject = {
+export type RemoveObject = {
     CharacterId?: number;
     Depth: number;
 };
 type PlaceObjectTag = any;
-type SoundInfo = any;
+export type SoundInfo = any;
 type SoundStreamHead = any;
 type SoundStreamBlock = any;
-type StartSound = any;
-type VideoFrame = any;
+export type StartSound = any;
+export type VideoFrame = any;
 type Vp6SwfVideoPacket = string;
 
 
@@ -168,7 +169,7 @@ type GlyphEntry = {
 };
 type TextRecordData = any;
 
-type Tag = any;
+export type Tag = any;
 type TagObj = any;
 type Tags = { [frame: number]: TagObj };
 type Character = any;
@@ -2760,14 +2761,14 @@ export class SwfTag {
         return obj;
     }
 
-    private buttonActions(endOffset: number): ButtonAction[]
+    private buttonActions(endOffset: number): ButtonCondAction[]
     {
         var _this = this;
         var bitio = _this.bitio;
         var results = [];
 
         while (true) {
-            var obj = {} as any;
+            var obj = {} as ButtonCondAction;
             var startOffset = bitio.byte_offset;
             var CondActionSize = bitio.getUI16();
             obj.CondIdleToOverDown = bitio.getUIBits(1);
