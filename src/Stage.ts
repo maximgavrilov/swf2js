@@ -324,8 +324,8 @@ export class Stage {
         this.matrix = matrix;
     }
 
-    getCharacter<T extends Character = any>(id: number): T {
-        return this.characters[id];
+    getCharacter<T extends Character>(id: number): T {
+        return this.characters[id] as T;
     }
 
     setCharacter<T extends Character>(id: number, obj: T): void {

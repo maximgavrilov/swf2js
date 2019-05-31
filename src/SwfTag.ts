@@ -41,7 +41,6 @@ type CSMTextSettings = any;
 type DefineButton = {
     ButtonId: number;
     characters: ButtonCharacters;
-
 } & ({
     tagType: TAG.DefineButton;
     actions: ActionScript
@@ -52,9 +51,27 @@ type DefineButton = {
     TrackAsMenu: BitBoolean;
 });
 
-type ButtonCharacter = { [depth: number]: ButtonRecord[]; };
-type ButtonCharacters = { [depth: number]: ButtonCharacter[] };
-type ButtonRecord = any;
+type ButtonCharacters = { [depth: number]: ButtonRecord[] };
+type ButtonRecord = {
+    ButtonStateHitTest: BitBoolean;
+    ButtonStateDown: BitBoolean;
+    ButtonStateOver: BitBoolean;
+    ButtonStateUp: BitBoolean;
+    CharacterId: number;
+    Depth: number;
+    PlaceFlagHasMatrix: 1;
+    Matrix: Matrix;
+    ColorTransform: ColorTransform;
+    PlaceFlagHasColorTransform: BitBoolean;
+
+    PlaceFlagHasRatio: 0;
+    PlaceFlagHasClipDepth: 0;
+    Sound: null;
+} & BitFlag<'PlaceFlagHasBlendMode', {
+    BlendMode: number;
+}> & BitFlag<'PlaceFlagHasFilterList', {
+    SurfaceFilterList: BitmapFilter[];
+}>
 
 type ButtonCondAction = {
     CondIdleToOverDown: BitBoolean;
@@ -438,21 +455,20 @@ type DefineMorphShapeCharacter = DefineMorphShape;
 type DefineSpriteCharacter = Tags;
 type DefineTextCharacter = DefineText;
 type DefineVideoStreamCharacter = DefineVideoStream;
-type ShapeCharacter = {
+type DefineShapeCharacter = {
     tagType: TAG_DefineShape,
     data: StyleObj[];
     bounds: Bounds;
 };
 type StartSoundCharacter = StartSound;
-export type Character = any
-                      | DefineButtonCharacter
+export type Character = DefineButtonCharacter
                       | DefineEditTextCharacter
                       | DefineFontCharacter
                       | DefineMorphShapeCharacter
                       | DefineSpriteCharacter
                       | DefineTextCharacter
                       | DefineVideoStreamCharacter
-                      | ShapeCharacter
+                      | DefineShapeCharacter
                       | StartSoundCharacter
                       | CanvasRenderingContext2D;
 
@@ -666,9 +682,8 @@ export class SwfTag {
         var _this = this;
         var stage = _this.stage;
         var char = stage.getCharacter<any>(tag.CharacterId);
-        var tagType = char.tagType;
         var isMorphShape = false;
-        if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
+        if (char.tagType === TAG.DefineMorphShape || char.tagType === TAG.DefineMorphShape2) {
             isMorphShape = true;
         }
 
@@ -682,7 +697,7 @@ export class SwfTag {
             if (char instanceof Array) {
                 obj = _this.buildMovieClip(tag, char, parent);
             } else {
-                switch (tagType) {
+                switch (char.tagType) {
                     case TAG.DefineText: // DefineText
                     case TAG.DefineText2: // DefineText2
                         obj = _this.buildText(tag, char);
@@ -698,7 +713,7 @@ export class SwfTag {
                         break;
                     case TAG.DefineMorphShape: // DefineMorphShape
                     case TAG.DefineMorphShape2: // DefineMorphShape2
-                        var MorphShape = _this.buildMorphShape(tagType, char, tag.Ratio);
+                        var MorphShape = _this.buildMorphShape(char.tagType, char, tag.Ratio);
                         obj = _this.buildShape(tag, MorphShape);
                         break;
                     case TAG.DefineButton: // DefineButton
@@ -785,7 +800,7 @@ export class SwfTag {
         return mc;
     }
 
-    private buildTextField(tag: Tag, character: Character, parent: DisplayObject): TextField
+    private buildTextField(tag: Tag, character: DefineEditTextCharacter, parent: DisplayObject): TextField
     {
         var _this = this;
         var stage = _this.stage;
@@ -806,17 +821,18 @@ export class SwfTag {
         var data = character.data;
         var obj = {} as any;
         var fontData = null;
-        var fontId = data.FontID;
+        var fontId = 0;
         if (data.HasFont) {
-            fontData = stage.getCharacter(fontId);
+            textField.fontId = data.FontID;
+            textField.fontScale = data.FontHeight / 1024;
+
+            fontData = stage.getCharacter<DefineFontCharacter>(fontId);
+            if (fontData && fontData.ZoneTable) {
+                textField.fontScale /= 20;
+            }
         }
 
-        textField.fontId = fontId;
-        textField.fontScale = data.FontHeight / 1024;
-        if (fontData && fontData.ZoneTable) {
-            textField.fontScale /= 20;
-        }
-        textField.initialText = data.InitialText;
+        textField.initialText = data.InitialText as any;
         obj.autoSize = data.AutoSize;
         obj.border = data.Border;
         if (obj.border) {
@@ -839,7 +855,8 @@ export class SwfTag {
         obj.tabEnabled = 0;
         obj.tabIndex = 0;
         obj.text = data.InitialText;
-        obj.textColor = data.TextColor;
+        if (data.HasTextColor)
+            obj.textColor = data.TextColor;
         obj.textHeight = 0;
         obj.textWidth = 0;
         obj.type = data.ReadOnly ? "dynamic" : "input";
@@ -881,7 +898,8 @@ export class SwfTag {
             obj.leading = (14400 > data.Leading) ? data.Leading : data.Leading - 65535;
         }
 
-        obj.size = data.FontHeight / 20;
+        if (data.HasFont)
+            obj.size = data.FontHeight / 20;
         obj.tabStops = [];
         obj.target = null;
         obj.underline = 0;
@@ -901,7 +919,7 @@ export class SwfTag {
         return textField;
     }
 
-    private buildText(tag: Tag, character: Character): StaticText
+    private buildText(tag: Tag, character: DefineTextCharacter): StaticText
     {
         var _this = this;
         var stage = _this.stage;
@@ -923,7 +941,7 @@ export class SwfTag {
             var record = records[i];
             if ("FontId" in record) {
                 var fontId = record.FontId;
-                var fontData = stage.getCharacter(fontId);
+                var fontData = stage.getCharacter<DefineFontCharacter>(fontId);
                 ShapeTable = fontData.GlyphShapeTable;
                 isZoneTable = false;
                 if ("ZoneTable" in fontData) {
@@ -966,7 +984,8 @@ export class SwfTag {
         return staticText;
     }
 
-    private buildShape(tag: Tag, character: Character): Shape
+    private buildShape(tag: Tag,
+                       character: DefineShapeCharacter | MorphShape): Shape
     {
         var shape = new Shape();
         shape.setTagType(character.tagType);
@@ -975,7 +994,9 @@ export class SwfTag {
         return shape;
     }
 
-    private buildButton(character: Character, tag: Tag, parent: DisplayObject): SimpleButton
+    private buildButton(character: DefineButtonCharacter,
+                        tag: Tag,
+                        parent: DisplayObject): SimpleButton
     {
         var _this = this;
         var stage = _this.stage;
@@ -1410,12 +1431,12 @@ export class SwfTag {
 
         var shapes = _this.shapeWithStyle(tagType);
 
-        const shapeTag: ShapeCharacter = {
+        const shapeTag: DefineShapeCharacter = {
             tagType: tagType,
             data: vtc.convert(shapes, false),
             bounds: bounds
         };
-       this.stage.setCharacter<ShapeCharacter>(characterId, shapeTag);
+       this.stage.setCharacter<DefineShapeCharacter>(characterId, shapeTag);
     }
 
     public rect(): Bounds
@@ -2517,7 +2538,11 @@ export class SwfTag {
 
         if (obj.HasFont) {
             obj.FontID = bitio.getUI16();
-            var fontData = stage.getCharacter(obj.FontID);
+            var fontData = stage.getCharacter<DefineFontCharacter>(obj.FontID);
+
+            if (fontData.tagType === TAG.DefineFont)
+                throw new Error('Unsupported font');
+
             isJis = (fontData.FontFlagsShiftJIS) ? true : false;
             if (obj.HasFontClass) {
                 obj.FontClass = bitio.getDataUntil("\0");
@@ -2734,7 +2759,7 @@ export class SwfTag {
     }
 
     private buildMorphShape(tagType: TAG_DefineMorphShape,
-                            char: Character,
+                            char: DefineMorphShapeCharacter,
                             ratio: number = 0): MorphShape
     {
         var per = ratio / 65535;
@@ -3010,7 +3035,7 @@ export class SwfTag {
 
     private buttonCharacters(): ButtonCharacters
     {
-        var characters: { [depth: number]: ButtonCharacter[] } = {};
+        var characters: ButtonCharacters = {};
         var _this = this;
         var bitio = _this.bitio;
         while (bitio.getUI8() !== 0) {
@@ -3032,23 +3057,23 @@ export class SwfTag {
         var obj = {} as ButtonRecord;
 
         bitio.getUIBits(2); // Reserved
-        obj.PlaceFlagHasBlendMode = bitio.getUIBits(1);
-        obj.PlaceFlagHasFilterList = bitio.getUIBits(1);
-        obj.ButtonStateHitTest = bitio.getUIBits(1);
-        obj.ButtonStateDown = bitio.getUIBits(1);
-        obj.ButtonStateOver = bitio.getUIBits(1);
-        obj.ButtonStateUp = bitio.getUIBits(1);
+        obj.PlaceFlagHasBlendMode = bitio.getUIBits(1) as BitBoolean;
+        obj.PlaceFlagHasFilterList = bitio.getUIBits(1) as BitBoolean;
+        obj.ButtonStateHitTest = bitio.getUIBits(1) as BitBoolean;
+        obj.ButtonStateDown = bitio.getUIBits(1) as BitBoolean;
+        obj.ButtonStateOver = bitio.getUIBits(1) as BitBoolean;
+        obj.ButtonStateUp = bitio.getUIBits(1) as BitBoolean;
         obj.CharacterId = bitio.getUI16();
         obj.Depth = bitio.getUI16();
         obj.PlaceFlagHasMatrix = 1;
         obj.Matrix = _this.matrix();
         obj.ColorTransform = _this.colorTransform();
         obj.PlaceFlagHasColorTransform = (obj.ColorTransform === undefined) ? 0 : 1;
-        if (obj.PlaceFlagHasBlendMode) {
-            obj.BlendMode = bitio.getUI8();
-        }
         if (obj.PlaceFlagHasFilterList) {
             obj.SurfaceFilterList = _this.getFilterList();
+        }
+        if (obj.PlaceFlagHasBlendMode) {
+            obj.BlendMode = bitio.getUI8();
         }
         obj.PlaceFlagHasRatio = 0;
         obj.PlaceFlagHasClipDepth = 0;
