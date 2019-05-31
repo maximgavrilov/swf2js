@@ -31,6 +31,8 @@ import {
     base64Encode
 } from './utils';
 
+type BitFlag<N extends string, T> = { [P in N]: 0 } | ({ [P in N]: 1 } & T);
+
 // tags
 type ClipActionRecord = any;
 type ClipEventFlags = any;
@@ -38,7 +40,42 @@ type CSMTextSettings = any;
 type DefineButton = any;
     type ButtonCondAction = any;
     type ButtonRecord = any;
-type DefineEditText = any;
+
+type DefineEditText = {
+    CharacterId: number;
+
+    HasText: BitBoolean;
+    WordWrap: BitBoolean;
+    Multiline: BitBoolean;
+    Password: BitBoolean;
+    ReadOnly: BitBoolean;
+    HasTextColor: BitBoolean;
+    AutoSize: BitBoolean;
+    NoSelect: BitBoolean;
+    Border: BitBoolean;
+    WasStatic: BitBoolean;
+    HTML: BitBoolean;
+    UseOutlines: BitBoolean;
+
+    VariableName: string | null;
+    InitialText: string | HTMLParagraphElement[];
+} & BitFlag<'HasFont', {
+    FontID: number;
+    FontHeight: number;
+    } & BitFlag<'HasFontClass', {
+        FontClass: string;
+    }>
+> & BitFlag<'HasTextColor', {
+    TextColor: Color;
+}> & BitFlag<'HasMaxLength', {
+    MaxLength: number;
+}> & BitFlag<'HasLayout', {
+    Align: number;
+    LeftMargin: number;
+    RightMargin: number;
+    Indent: number;
+    Leading: number;
+}>;
 
 type DefineFont_123 = {
     FontId: number;
@@ -64,7 +101,6 @@ type DefineFont_23 = {
     CodeTableOffset: number;
     CodeTable: number[];
 };
-type DefineFont_Layout<T> = { FontFlagsHasLayout: 0 } | ({ FontFlagsHasLayout: 1; } & T);
 type DefineFont_Layout23 = {
     FontAscent: number;
     FontDescent: number;
@@ -84,8 +120,12 @@ type DefineFont_Layout3 = {
 };
 
 export type DefineFont = ({ tagType: TAG.DefineFont; } & DefineFont_123)
-| ({ tagType: TAG.DefineFont2; } & DefineFont_23 & DefineFont_Layout<DefineFont_Layout23>)
-| ({ tagType: TAG.DefineFont3; } & DefineFont_23 & DefineFont_Layout<DefineFont_Layout23 & DefineFont_Layout3>);
+| ({ tagType: TAG.DefineFont2; }
+    & DefineFont_23
+    & BitFlag<'FontFlagsHasLayout', DefineFont_Layout23>)
+| ({ tagType: TAG.DefineFont3; }
+    & DefineFont_23
+    & BitFlag<'FontFlagsHasLayout', DefineFont_Layout23 & DefineFont_Layout3>);
 
 type DefineFontInfo = any;
 type DefineMorphShape = any;
@@ -200,20 +240,20 @@ type PlaceObjectTag = any;
 export type SoundInfo = {
     SyncStop: BitBoolean;
     SyncNoMultiple: BitBoolean;
-} & ({ HasInPoint: 0; } | { HasInPoint: 1;
+} & BitFlag<'HasInPoint', {
     InPoint: number;
-}) & ({ HasOutPoint: 0; } | { HasOutPoint: 1;
+}> & BitFlag<'HasOutPoint', {
     OutPoint: number;
-}) & ({ HasLoops: 0; } | { HasLoops: 1;
+}> & BitFlag<'HasLoops', {
     LoopCount: number;
-}) & ({ HasEnvelope: 0; } | { HasEnvelope: 1;
+}> & BitFlag<'HasEnvelope', {
     EnvPoints: number;
     EnvelopeRecords: Array<{
         Pos44: number;
         LeftLevel: number;
         RightLevel: number;
     }>;
-});
+}>;
 type SoundStreamHead = any;
 type SoundStreamBlock = any;
 export type StartSound = {
@@ -243,6 +283,7 @@ export const enum TAG {
     DefineShape2 = 22,
     DefineShape3 = 32,
     DefineText2 = 33,
+    DefineEditText = 37,
     DefineMorphShape = 46,
     DefineFont2 = 48,
     DefineVideoStream = 60,
@@ -324,6 +365,11 @@ type GlyphEntry = {
 type TextRecordData = any;
 
 
+type DefineEditTextCharacter = {
+    data: DefineEditText;
+    bounds: Bounds;
+    tagType: TAG.DefineEditText;
+};
 type DefineFontCharacter = DefineFont;
 type DefineMorphShapeCharacter = DefineMorphShape;
 type DefineSpriteCharacter = Tags;
@@ -336,6 +382,7 @@ type ShapeCharacter = {
 };
 type StartSoundCharacter = StartSound;
 export type Character = any
+                      | DefineEditTextCharacter
                       | DefineFontCharacter
                       | DefineMorphShapeCharacter
                       | DefineSpriteCharacter
@@ -576,7 +623,7 @@ export class SwfTag {
                     case TAG.DefineText2: // DefineText2
                         obj = _this.buildText(tag, char);
                         break;
-                    case 37: // DefineEditText
+                    case TAG.DefineEditText: // DefineEditText
                         obj = _this.buildTextField(tag, char, parent);
                         break;
                     case TAG.DefineShape:  // DefineShape
@@ -1085,7 +1132,7 @@ export class SwfTag {
             case 70: //PlaceObject3
                 obj = _this.parsePlaceObject(tagType, length);
                 break;
-            case 37: // DefineEditText
+            case TAG.DefineEditText: // DefineEditText
                 _this.parseDefineEditText(tagType);
                 break;
             case 39: // DefineSprite
@@ -2306,7 +2353,7 @@ export class SwfTag {
                                               bitio.getUI8()) // AdvanceBits
         };
 
-        this.stage.setCharacter(obj.characterId, obj);
+        this.stage.setCharacter<DefineTextCharacter>(obj.characterId, obj);
     }
 
     private getTextRecords(tagType: number, GlyphBits: number, AdvanceBits: number): TextRecordData[]
@@ -2372,7 +2419,7 @@ export class SwfTag {
         return array;
     }
 
-    private parseDefineEditText(tagType: number): void
+    private parseDefineEditText(tagType: TAG.DefineEditText): void
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -2384,24 +2431,25 @@ export class SwfTag {
         var bounds = _this.rect();
 
         var flag1 = bitio.getUI8();
-        obj.HasText = (flag1 >>> 7) & 1;
-        obj.WordWrap = (flag1 >>> 6) & 1;
-        obj.Multiline = (flag1 >>> 5) & 1;
-        obj.Password = (flag1 >>> 4) & 1;
-        obj.ReadOnly = (flag1 >>> 3) & 1;
-        obj.HasTextColor = (flag1 >>> 2) & 1;
-        obj.HasMaxLength = (flag1 >>> 1) & 1;
-        obj.HasFont = flag1 & 1;
+        obj.HasText = ((flag1 >>> 7) & 1) as BitBoolean;
+        obj.WordWrap = ((flag1 >>> 6) & 1) as BitBoolean;
+        obj.Multiline = ((flag1 >>> 5) & 1) as BitBoolean;
+        obj.Password = ((flag1 >>> 4) & 1) as BitBoolean;
+        obj.ReadOnly = ((flag1 >>> 3) & 1) as BitBoolean;
+        obj.HasTextColor = ((flag1 >>> 2) & 1) as BitBoolean;
+        obj.HasMaxLength = ((flag1 >>> 1) & 1) as BitBoolean;
+        obj.HasFont = (flag1 & 1) as BitBoolean;
 
         var flag2 = bitio.getUI8();
-        obj.HasFontClass = (flag2 >>> 7) & 1;
-        obj.AutoSize = (flag2 >>> 6) & 1;
-        obj.HasLayout = (flag2 >>> 5) & 1;
-        obj.NoSelect = (flag2 >>> 4) & 1;
-        obj.Border = (flag2 >>> 3) & 1;
-        obj.WasStatic = (flag2 >>> 2) & 1;
-        obj.HTML = (flag2 >>> 1) & 1;
-        obj.UseOutlines = flag2 & 1;
+        if (obj.HasFont)
+            obj.HasFontClass = ((flag2 >>> 7) & 1) as BitBoolean;
+        obj.AutoSize = ((flag2 >>> 6) & 1) as BitBoolean;
+        obj.HasLayout = ((flag2 >>> 5) & 1) as BitBoolean;
+        obj.NoSelect = ((flag2 >>> 4) & 1) as BitBoolean;
+        obj.Border = ((flag2 >>> 3) & 1) as BitBoolean;
+        obj.WasStatic = ((flag2 >>> 2) & 1) as BitBoolean;
+        obj.HTML = ((flag2 >>> 1) & 1) as BitBoolean;
+        obj.UseOutlines = (flag2 & 1) as BitBoolean;
 
         if (obj.HasFont) {
             obj.FontID = bitio.getUI16();
@@ -2458,7 +2506,7 @@ export class SwfTag {
             }
         }
 
-        stage.setCharacter(obj.CharacterId, {
+        stage.setCharacter<DefineEditTextCharacter>(obj.CharacterId, {
             data: obj,
             bounds: bounds,
             tagType: tagType
