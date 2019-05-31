@@ -37,9 +37,50 @@ type BitFlag<N extends string, T> = { [P in N]: 0 } | ({ [P in N]: 1 } & T);
 type ClipActionRecord = any;
 type ClipEventFlags = any;
 type CSMTextSettings = any;
-type DefineButton = any;
-    type ButtonCondAction = any;
-    type ButtonRecord = any;
+
+type DefineButton = {
+    ButtonId: number;
+    characters: ButtonCharacters;
+
+} & ({
+    tagType: TAG.DefineButton;
+    actions: ActionScript
+} | {
+    tagType: TAG.DefineButton2;
+    actions: ButtonCondAction[];
+    ReservedFlags: number;
+    TrackAsMenu: BitBoolean;
+});
+
+type ButtonCharacter = { [depth: number]: ButtonRecord[]; };
+type ButtonCharacters = { [depth: number]: ButtonCharacter[] };
+type ButtonRecord = any;
+
+type ButtonCondAction = {
+    CondIdleToOverDown: BitBoolean;
+    CondOutDownToIdle: BitBoolean;
+    CondOutDownToOverDown: BitBoolean;
+    CondOverDownToOutDown: BitBoolean;
+    CondOverDownToOverUp: BitBoolean;
+    CondOverUpToOverDown: BitBoolean;
+    CondOverUpToIdle: BitBoolean;
+    CondIdleToOverUp: BitBoolean;
+    CondKeyPress: number;
+    CondOverDownToIdle: BitBoolean;
+
+    ActionScript: ActionScript;
+}
+
+type DefineButtonSound = {
+    ButtonStateUpSoundInfo?: SoundInfo;
+    ButtonStateUpSoundId?: number;
+    ButtonStateOverSoundInfo?: SoundInfo;
+    ButtonStateOverSoundId?: number;
+    ButtonStateDownSoundInfo?: SoundInfo;
+    ButtonStateDownSoundId?: number;
+    ButtonStateHitTestSoundInfo?: SoundInfo;
+    ButtonStateHitTestSoundId?: number;
+};
 
 type DefineEditText = {
     CharacterId: number;
@@ -81,10 +122,7 @@ type DefineFont_123 = {
     FontId: number;
     GlyphShapeTable: ShapeWithStyle[];
 };
-type DefineFont_23 = {
-    FontId: number;
-    GlyphShapeTable: ShapeWithStyle[];
-
+type DefineFont_23 = DefineFont_123 & {
     FontFlagsShiftJIS: BitBoolean;
     FontFlagsSmallText: BitBoolean;
     FontFlagsANSI: BitBoolean;
@@ -127,8 +165,33 @@ export type DefineFont = ({ tagType: TAG.DefineFont; } & DefineFont_123)
     & DefineFont_23
     & BitFlag<'FontFlagsHasLayout', DefineFont_Layout23 & DefineFont_Layout3>);
 
+type DefineFontAlignZones = {
+    CSMTableHint: number;
+    ZoneTable: Array<{
+        ZoneData: number[];
+        Mask: number;
+    }>
+};
+
 type DefineFontInfo = any;
-type DefineMorphShape = any;
+
+type DefineMorphShape_12 = {
+    CharacterId: number;
+    StartBounds: Bounds;
+    EndBounds: Bounds;
+    MorphFillStyles: FillStyleArray;
+    MorphLineStyles: LineStyleArray;
+    StartEdges: ShapeWithStyle;
+    EndEdges: ShapeWithStyle;
+};
+type DefineMorphShape = ({ tagType: TAG.DefineMorphShape; } & DefineMorphShape_12)
+| ({ tagType: TAG.DefineMorphShape2; } & DefineMorphShape_12 & {
+    StartEdgeBounds: Bounds;
+    EndEdgeBounds: Bounds;
+    UsesNonScalingStrokes: BitBoolean;
+    UsesScalingStrokes: BitBoolean;
+});
+
 type DefineScalingGrid = any;
 type DefineSceneAndFrameLabelData = any;
 type DefineShape = any;
@@ -276,6 +339,7 @@ type Vp6SwfVideoPacket = string;
 
 export const enum TAG {
     DefineShape = 2,
+    DefineButton = 7,
     DefineFont = 10,
     DefineText = 11,
     DefineSound = 14,
@@ -283,6 +347,7 @@ export const enum TAG {
     DefineShape2 = 22,
     DefineShape3 = 32,
     DefineText2 = 33,
+    DefineButton2 = 34,
     DefineEditText = 37,
     DefineMorphShape = 46,
     DefineFont2 = 48,
@@ -294,6 +359,7 @@ export const enum TAG {
     StartSound2 = 89
 };
 
+type TAG_DefineButton = TAG.DefineButton | TAG.DefineButton2;
 type TAG_DefineFont = TAG.DefineFont | TAG.DefineFont2 | TAG.DefineFont3;
 type TAG_DefineMorphShape = TAG.DefineMorphShape | TAG.DefineMorphShape2;
 type TAG_DefineShape = TAG.DefineShape
@@ -308,10 +374,6 @@ type MorphShape = {
     tagType: TAG_DefineMorphShape;
     data: StyleObj[];
     bounds: Bounds;
-};
-
-type ButtonCharacter = {
-    [depth: number]: ButtonRecord[];
 };
 
 type FillStyle = any;
@@ -365,12 +427,13 @@ type GlyphEntry = {
 type TextRecordData = any;
 
 
+type DefineButtonCharacter = DefineButton & Partial<DefineButtonSound>;
 type DefineEditTextCharacter = {
     data: DefineEditText;
     bounds: Bounds;
     tagType: TAG.DefineEditText;
 };
-type DefineFontCharacter = DefineFont;
+type DefineFontCharacter = DefineFont & Partial<DefineFontAlignZones>;
 type DefineMorphShapeCharacter = DefineMorphShape;
 type DefineSpriteCharacter = Tags;
 type DefineTextCharacter = DefineText;
@@ -382,6 +445,7 @@ type ShapeCharacter = {
 };
 type StartSoundCharacter = StartSound;
 export type Character = any
+                      | DefineButtonCharacter
                       | DefineEditTextCharacter
                       | DefineFontCharacter
                       | DefineMorphShapeCharacter
@@ -604,7 +668,7 @@ export class SwfTag {
         var char = stage.getCharacter<any>(tag.CharacterId);
         var tagType = char.tagType;
         var isMorphShape = false;
-        if (tagType === 46 || tagType === 84) {
+        if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
             isMorphShape = true;
         }
 
@@ -632,13 +696,13 @@ export class SwfTag {
                     case TAG.DefineShape4: // DefineShape4
                         obj = _this.buildShape(tag, char);
                         break;
-                    case 46: // MorphShape
-                    case 84: // MorphShape2
+                    case TAG.DefineMorphShape: // DefineMorphShape
+                    case TAG.DefineMorphShape2: // DefineMorphShape2
                         var MorphShape = _this.buildMorphShape(tagType, char, tag.Ratio);
                         obj = _this.buildShape(tag, MorphShape);
                         break;
-                    case 7: // DefineButton
-                    case 34: // DefineButton2
+                    case TAG.DefineButton: // DefineButton
+                    case TAG.DefineButton2: // DefineButton2
                         obj = _this.buildButton(char, tag, parent);
                         break;
                     default:
@@ -1148,8 +1212,8 @@ export class SwfTag {
             case 28: // RemoveObject2
                 obj = _this.parseRemoveObject(tagType);
                 break;
-            case 7: // DefineButton
-            case 34: // DefineButton2
+            case TAG.DefineButton: // DefineButton
+            case TAG.DefineButton2: // DefineButton2
                 obj = _this.parseDefineButton(tagType, length);
                 break;
             case 43: // FrameLabel
@@ -1335,7 +1399,7 @@ export class SwfTag {
         var characterId = bitio.getUI16();
         var bounds = _this.rect();
 
-        if (tagType === 83) {
+        if (tagType === TAG.DefineShape4) {
             var obj = {} as any;
             obj.EdgeBounds = _this.rect();
             bitio.getUIBits(5); // Reserved
@@ -1374,7 +1438,7 @@ export class SwfTag {
         var fillStyles;
         var lineStyles;
 
-        if (tagType === 46 || tagType === 84) {
+        if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
             fillStyles = {fillStyleCount: 0, fillStyles: []};
             lineStyles = {lineStyleCount: 0, lineStyles: []};
         } else {
@@ -1426,9 +1490,9 @@ export class SwfTag {
         obj.fillStyleType = bitType;
         switch (bitType) {
             case 0x00:
-                if (tagType === 32 || tagType === 83) {
+                if (tagType === TAG.DefineShape3 || tagType === TAG.DefineShape4) {
                     obj.Color = _this.rgba();
-                } else if (tagType === 46 || tagType === 84) {
+                } else if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
                     obj.StartColor = _this.rgba();
                     obj.EndColor = _this.rgba();
                 } else {
@@ -1437,7 +1501,7 @@ export class SwfTag {
                 break;
             case 0x10:
             case 0x12:
-                if (tagType === 46 || tagType === 84) {
+                if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
                     obj.startGradientMatrix = _this.matrix();
                     obj.endGradientMatrix = _this.matrix();
                     obj.gradient = _this.gradient(tagType);
@@ -1455,7 +1519,7 @@ export class SwfTag {
             case 0x42:
             case 0x43:
                 obj.bitmapId = bitio.getUI16();
-                if (tagType === 46 || tagType === 84) {
+                if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
                     obj.startBitmapMatrix = _this.matrix();
                     obj.endBitmapMatrix = _this.matrix();
                 } else {
@@ -1523,7 +1587,7 @@ export class SwfTag {
 
         bitio.byteAlign();
 
-        if (tagType === 46 || tagType === 84) {
+        if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
             NumGradients = bitio.getUI8();
         } else {
             SpreadMode = bitio.getUIBits(2);
@@ -1547,7 +1611,7 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        if (tagType === 46 || tagType === 84) {
+        if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
             return {
                 StartRatio: bitio.getUI8() / 255,
                 StartColor: _this.rgba(),
@@ -1612,14 +1676,14 @@ export class SwfTag {
         var obj = {} as LineStyle;
 
         obj.fillStyleType = 0;
-        if (tagType === 46) {
+        if (tagType === TAG.DefineMorphShape) {
             obj = {
                 StartWidth: bitio.getUI16(),
                 EndWidth: bitio.getUI16(),
                 StartColor: _this.rgba(),
                 EndColor: _this.rgba()
             };
-        } else if (tagType === 84) {
+        } else if (tagType === TAG.DefineMorphShape2) {
             obj.StartWidth = bitio.getUI16();
             obj.EndWidth = bitio.getUI16();
 
@@ -1645,7 +1709,7 @@ export class SwfTag {
             }
         } else {
             obj.Width = bitio.getUI16();
-            if (tagType === 83) {
+            if (tagType === TAG.DefineShape4) {
                 // DefineShape4
                 obj.StartCapStyle = bitio.getUIBits(2);
                 obj.JoinStyle = bitio.getUIBits(2);
@@ -1666,7 +1730,7 @@ export class SwfTag {
                 } else {
                     obj.Color = _this.rgba();
                 }
-            } else if (tagType === 32) {
+            } else if (tagType === TAG.DefineShape3) {
                 // DefineShape3
                 obj.Color = _this.rgba();
             } else {
@@ -1739,7 +1803,7 @@ export class SwfTag {
 
         var AnchorX = deltaX;
         var AnchorY = deltaY;
-        if (tagType !== 46 && tagType !== 84) {
+        if (tagType !== TAG.DefineMorphShape && tagType !== TAG.DefineMorphShape2) {
             AnchorX = _this.currentPosition.x + deltaX;
             AnchorY = _this.currentPosition.y + deltaY;
             _this.currentPosition.x = AnchorX;
@@ -1769,7 +1833,7 @@ export class SwfTag {
         var ControlY = controlDeltaY;
         var AnchorX = anchorDeltaX;
         var AnchorY = anchorDeltaY;
-        if (tagType !== 46 && tagType !== 84) {
+        if (tagType !== TAG.DefineMorphShape && tagType !== TAG.DefineMorphShape2) {
             ControlX = _this.currentPosition.x + controlDeltaX;
             ControlY = _this.currentPosition.y + controlDeltaY;
             AnchorX = ControlX + anchorDeltaX;
@@ -1925,7 +1989,7 @@ export class SwfTag {
         }
 
         imageContext.putImageData(imgData, 0, 0);
-        stage.setCharacter(CharacterId, imageContext);
+        stage.setCharacter<CanvasRenderingContext2D>(CharacterId, imageContext);
     }
 
     private parseExportAssets(): void
@@ -2005,7 +2069,7 @@ export class SwfTag {
                 imageContext.putImageData(imgData, 0, 0);
             }
 
-            stage.setCharacter(CharacterId, imageContext);
+            stage.setCharacter<CanvasRenderingContext2D>(CharacterId, imageContext);
             stage.imgUnLoadCount--;
         });
 
@@ -2513,7 +2577,7 @@ export class SwfTag {
         });
     }
 
-    private parseDefineMorphShape(tagType: number): void
+    private parseDefineMorphShape(tagType: TAG_DefineMorphShape): void
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -2525,12 +2589,12 @@ export class SwfTag {
         obj.StartBounds = _this.rect();
         obj.EndBounds = _this.rect();
 
-        if (tagType === 84) {
+        if (obj.tagType === TAG.DefineMorphShape2) {
             obj.StartEdgeBounds = _this.rect();
             obj.EndEdgeBounds = _this.rect();
             bitio.getUIBits(6); // Reserved
-            obj.UsesNonScalingStrokes = bitio.getUIBits(1);
-            obj.UsesScalingStrokes = bitio.getUIBits(1);
+            obj.UsesNonScalingStrokes = bitio.getUIBits(1) as BitBoolean;
+            obj.UsesScalingStrokes = bitio.getUIBits(1) as BitBoolean;
         }
 
         var offset = bitio.getUI32();
@@ -2666,7 +2730,7 @@ export class SwfTag {
             FillType = (FillType) ? 0 : 1;
         }
 
-        stage.setCharacter(obj.CharacterId, obj);
+        stage.setCharacter<DefineMorphShapeCharacter>(obj.CharacterId, obj);
     }
 
     private buildMorphShape(tagType: TAG_DefineMorphShape,
@@ -2908,7 +2972,7 @@ export class SwfTag {
         return {Depth: bitio.getUI16()};
     }
 
-    private parseDefineButton(tagType: number, length: number): DefineButton
+    private parseDefineButton(tagType: TAG_DefineButton, length: number): DefineButton
     {
         var obj = {} as DefineButton;
         obj.tagType = tagType;
@@ -2920,23 +2984,23 @@ export class SwfTag {
         obj.ButtonId = bitio.getUI16();
 
         var ActionOffset = 0;
-        if (tagType !== 7) {
+        if (obj.tagType !== TAG.DefineButton) {
             obj.ReservedFlags = bitio.getUIBits(7);
-            obj.TrackAsMenu = bitio.getUIBits(1);
+            obj.TrackAsMenu = bitio.getUIBits(1) as BitBoolean;
             ActionOffset = bitio.getUI16();
         }
 
         obj.characters = _this.buttonCharacters();
 
         // actionScript
-        if (tagType === 7) {
+        if (obj.tagType === TAG.DefineButton) {
             obj.actions = _this.parseDoAction(endOffset - bitio.byte_offset);
         } else if (ActionOffset > 0) {
             obj.actions = _this.buttonActions(endOffset);
         }
 
         // set layer
-        stage.setCharacter(obj.ButtonId, obj);
+        stage.setCharacter<DefineButtonCharacter>(obj.ButtonId, obj);
         if (bitio.byte_offset !== endOffset) {
             bitio.byte_offset = endOffset;
         }
@@ -2944,7 +3008,7 @@ export class SwfTag {
         return obj;
     }
 
-    private buttonCharacters(): { [depth: number]: ButtonCharacter[] }
+    private buttonCharacters(): ButtonCharacters
     {
         var characters: { [depth: number]: ButtonCharacter[] } = {};
         var _this = this;
@@ -3002,16 +3066,16 @@ export class SwfTag {
             var obj = {} as ButtonCondAction;
             var startOffset = bitio.byte_offset;
             var CondActionSize = bitio.getUI16();
-            obj.CondIdleToOverDown = bitio.getUIBits(1);
-            obj.CondOutDownToIdle = bitio.getUIBits(1);
-            obj.CondOutDownToOverDown = bitio.getUIBits(1);
-            obj.CondOverDownToOutDown = bitio.getUIBits(1);
-            obj.CondOverDownToOverUp = bitio.getUIBits(1);
-            obj.CondOverUpToOverDown = bitio.getUIBits(1);
-            obj.CondOverUpToIdle = bitio.getUIBits(1);
-            obj.CondIdleToOverUp = bitio.getUIBits(1);
+            obj.CondIdleToOverDown = bitio.getUIBits(1) as BitBoolean;
+            obj.CondOutDownToIdle = bitio.getUIBits(1) as BitBoolean;
+            obj.CondOutDownToOverDown = bitio.getUIBits(1) as BitBoolean;
+            obj.CondOverDownToOutDown = bitio.getUIBits(1) as BitBoolean;
+            obj.CondOverDownToOverUp = bitio.getUIBits(1) as BitBoolean;
+            obj.CondOverUpToOverDown = bitio.getUIBits(1) as BitBoolean;
+            obj.CondOverUpToIdle = bitio.getUIBits(1) as BitBoolean;
+            obj.CondIdleToOverUp = bitio.getUIBits(1) as BitBoolean;
             obj.CondKeyPress = bitio.getUIBits(7);
-            obj.CondOverDownToIdle = bitio.getUIBits(1);
+            obj.CondOverDownToIdle = bitio.getUIBits(1) as BitBoolean;
 
             // ActionScript
             var length = endOffset - bitio.byte_offset + 1;
@@ -4646,7 +4710,7 @@ export class SwfTag {
         var bitio = _this.bitio;
         var stage = _this.stage;
         var buttonId = bitio.getUI16();
-        var btnObj = stage.getCharacter(buttonId);
+        var btnObj = stage.getCharacter<DefineButtonCharacter>(buttonId);
         for (var i = 0; i < 4; i++) {
             var soundId = bitio.getUI16();
             if (soundId) {
@@ -4671,7 +4735,7 @@ export class SwfTag {
                 }
             }
         }
-        stage.setCharacter(buttonId, btnObj);
+        stage.setCharacter<DefineButtonCharacter>(buttonId, btnObj);
     }
 
     private parseSoundInfo(): SoundInfo
@@ -4716,7 +4780,11 @@ export class SwfTag {
         var bitio = _this.bitio;
         var stage = _this.stage;
         var FontId = bitio.getUI16();
-        var tag = stage.getCharacter(FontId);
+        var tag = stage.getCharacter<DefineFontCharacter>(FontId);
+
+        if (tag.tagType === TAG.DefineFont)
+            throw new Error('Unsupported font');
+
         tag.CSMTableHint = bitio.getUIBits(2);
         bitio.getUIBits(6); // Reserved
         var NumGlyphs = tag.NumGlyphs;
@@ -4735,7 +4803,7 @@ export class SwfTag {
 
         bitio.byteAlign();
         tag.ZoneTable = ZoneTable;
-        stage.setCharacter(FontId, tag);
+        stage.setCharacter<DefineFontCharacter>(FontId, tag);
     }
 
     private parseCSMTextSettings(tagType: number): CSMTextSettings
