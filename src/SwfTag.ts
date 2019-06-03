@@ -2094,7 +2094,7 @@ export class SwfTag {
             stage.imgUnLoadCount--;
         });
 
-        if (jpegTables !== null && jpegTables.length > 4) {
+        if (jpegTables && jpegTables.length > 4) {
             var margeData = [];
             var len = jpegTables.length - 2;
             for (var idx = 0; idx < len; idx++) {
