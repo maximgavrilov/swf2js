@@ -488,6 +488,9 @@ export class SwfTag {
     private currentPosition = { x: 0, y: 0 };
     private jpegTables?: Data;
 
+    // Stage
+    private characters: { [id: number]: Character } = {};
+
     constructor(private readonly stage: Stage,
                 private readonly bitio?: BitIO)
     { }
@@ -681,7 +684,7 @@ export class SwfTag {
     {
         var _this = this;
         var stage = _this.stage;
-        var char = stage.getCharacter<any>(tag.CharacterId);
+        var char = this.getCharacter<any>(tag.CharacterId);
         var isMorphShape = false;
         if (char.tagType === TAG.DefineMorphShape || char.tagType === TAG.DefineMorphShape2) {
             isMorphShape = true;
@@ -826,7 +829,7 @@ export class SwfTag {
             textField.fontId = data.FontID;
             textField.fontScale = data.FontHeight / 1024;
 
-            fontData = stage.getCharacter<DefineFontCharacter>(fontId);
+            fontData = this.getCharacter<DefineFontCharacter>(fontId);
             if (fontData && fontData.ZoneTable) {
                 textField.fontScale /= 20;
             }
@@ -921,8 +924,6 @@ export class SwfTag {
 
     private buildText(tag: Tag, character: DefineTextCharacter): StaticText
     {
-        var _this = this;
-        var stage = _this.stage;
         var staticText = new StaticText();
         staticText.setTagType(character.tagType);
         staticText.setBounds(character.bounds);
@@ -941,7 +942,7 @@ export class SwfTag {
             var record = records[i];
             if ("FontId" in record) {
                 var fontId = record.FontId;
-                var fontData = stage.getCharacter<DefineFontCharacter>(fontId);
+                var fontData = this.getCharacter<DefineFontCharacter>(fontId);
                 ShapeTable = fontData.GlyphShapeTable;
                 isZoneTable = false;
                 if ("ZoneTable" in fontData) {
@@ -1436,7 +1437,7 @@ export class SwfTag {
             data: vtc.convert(shapes, false),
             bounds: bounds
         };
-       this.stage.setCharacter<DefineShapeCharacter>(characterId, shapeTag);
+       this.setCharacter<DefineShapeCharacter>(characterId, shapeTag);
     }
 
     public rect(): Bounds
@@ -1928,7 +1929,6 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
         var startOffset = bitio.byte_offset;
         var CharacterId = bitio.getUI16();
         var format = bitio.getUI8();
@@ -2010,7 +2010,7 @@ export class SwfTag {
         }
 
         imageContext.putImageData(imgData, 0, 0);
-        stage.setCharacter<CanvasRenderingContext2D>(CharacterId, imageContext);
+        this.setCharacter<CanvasRenderingContext2D>(CharacterId, imageContext);
     }
 
     private parseExportAssets(): void
@@ -2067,15 +2067,14 @@ export class SwfTag {
         var stage = _this.stage;
         stage.imgUnLoadCount++;
         var image = document.createElement("img");
-        image.addEventListener("load", function()
-        {
-            var width = this.width;
-            var height = this.height;
+        image.addEventListener("load", () => {
+            var width = image.width;
+            var height = image.height;
             var canvas = cacheStore.getCanvas();
             canvas.width = width;
             canvas.height = height;
             var imageContext = canvas.getContext("2d");
-            imageContext.drawImage(this, 0, 0, width, height);
+            imageContext.drawImage(image, 0, 0, width, height);
 
             if (BitmapAlphaData) {
                 var data = bitio.unzip(BitmapAlphaData, false);
@@ -2090,7 +2089,7 @@ export class SwfTag {
                 imageContext.putImageData(imgData, 0, 0);
             }
 
-            stage.setCharacter<CanvasRenderingContext2D>(CharacterId, imageContext);
+            this.setCharacter<CanvasRenderingContext2D>(CharacterId, imageContext);
             stage.imgUnLoadCount--;
         });
 
@@ -2329,7 +2328,7 @@ export class SwfTag {
         }
 
         bitio.byte_offset = endOffset;
-        stage.setCharacter<DefineFontCharacter>(obj.FontId, obj);
+        this.setCharacter<DefineFontCharacter>(obj.FontId, obj);
 
         if (obj.tagType !== TAG.DefineFont)
             stage.fonts[obj.FontName] = obj;
@@ -2438,7 +2437,7 @@ export class SwfTag {
                                               bitio.getUI8()) // AdvanceBits
         };
 
-        this.stage.setCharacter<DefineTextCharacter>(obj.characterId, obj);
+        this.setCharacter<DefineTextCharacter>(obj.characterId, obj);
     }
 
     private getTextRecords(tagType: number, GlyphBits: number, AdvanceBits: number): TextRecordData[]
@@ -2508,7 +2507,6 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
         var obj = {} as DefineEditText;
         var isJis = false;
 
@@ -2538,7 +2536,7 @@ export class SwfTag {
 
         if (obj.HasFont) {
             obj.FontID = bitio.getUI16();
-            var fontData = stage.getCharacter<DefineFontCharacter>(obj.FontID);
+            var fontData = this.getCharacter<DefineFontCharacter>(obj.FontID);
 
             if (fontData.tagType === TAG.DefineFont)
                 throw new Error('Unsupported font');
@@ -2595,7 +2593,7 @@ export class SwfTag {
             }
         }
 
-        stage.setCharacter<DefineEditTextCharacter>(obj.CharacterId, {
+        this.setCharacter<DefineEditTextCharacter>(obj.CharacterId, {
             data: obj,
             bounds: bounds,
             tagType: tagType
@@ -2606,7 +2604,6 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
         var obj = {} as DefineMorphShape;
         obj.tagType = tagType;
         obj.CharacterId = bitio.getUI16();
@@ -2755,7 +2752,7 @@ export class SwfTag {
             FillType = (FillType) ? 0 : 1;
         }
 
-        stage.setCharacter<DefineMorphShapeCharacter>(obj.CharacterId, obj);
+        this.setCharacter<DefineMorphShapeCharacter>(obj.CharacterId, obj);
     }
 
     private buildMorphShape(tagType: TAG_DefineMorphShape,
@@ -3004,7 +3001,6 @@ export class SwfTag {
 
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
         var endOffset = bitio.byte_offset + length;
         obj.ButtonId = bitio.getUI16();
 
@@ -3025,7 +3021,7 @@ export class SwfTag {
         }
 
         // set layer
-        stage.setCharacter<DefineButtonCharacter>(obj.ButtonId, obj);
+        this.setCharacter<DefineButtonCharacter>(obj.ButtonId, obj);
         if (bitio.byte_offset !== endOffset) {
             bitio.byte_offset = endOffset;
         }
@@ -3630,7 +3626,7 @@ export class SwfTag {
             FrameCount: bitio.getUI16(),
             ControlTags: this.parseTags(dataLength, SpriteId)
         };
-        this.stage.setCharacter<DefineSpriteCharacter>(SpriteId, obj.ControlTags);
+        this.setCharacter<DefineSpriteCharacter>(SpriteId, obj.ControlTags);
     }
 
     private parseDoAction(length: number): ActionScript
@@ -4706,7 +4702,7 @@ export class SwfTag {
         } else {
             ((x: never) => {})(tagType);
         }
-        stage.setCharacter<StartSoundCharacter>(obj.SoundId, obj);
+        this.setCharacter<StartSoundCharacter>(obj.SoundId, obj);
 
         var sound = stage.sounds[obj.SoundId];
         var audio = document.createElement("audio");
@@ -4733,9 +4729,8 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
         var buttonId = bitio.getUI16();
-        var btnObj = stage.getCharacter<DefineButtonCharacter>(buttonId);
+        var btnObj = this.getCharacter<DefineButtonCharacter>(buttonId);
         for (var i = 0; i < 4; i++) {
             var soundId = bitio.getUI16();
             if (soundId) {
@@ -4760,7 +4755,7 @@ export class SwfTag {
                 }
             }
         }
-        stage.setCharacter<DefineButtonCharacter>(buttonId, btnObj);
+        this.setCharacter<DefineButtonCharacter>(buttonId, btnObj);
     }
 
     private parseSoundInfo(): SoundInfo
@@ -4803,9 +4798,8 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
         var FontId = bitio.getUI16();
-        var tag = stage.getCharacter<DefineFontCharacter>(FontId);
+        var tag = this.getCharacter<DefineFontCharacter>(FontId);
 
         if (tag.tagType === TAG.DefineFont)
             throw new Error('Unsupported font');
@@ -4828,7 +4822,7 @@ export class SwfTag {
 
         bitio.byteAlign();
         tag.ZoneTable = ZoneTable;
-        stage.setCharacter<DefineFontCharacter>(FontId, tag);
+        this.setCharacter<DefineFontCharacter>(FontId, tag);
     }
 
     private parseCSMTextSettings(tagType: number): CSMTextSettings
@@ -4869,7 +4863,7 @@ export class SwfTag {
             VideoFlagsSmoothing: bitio.getUIBits(1),
             CodecID: bitio.getUI8()
         };
-        this.stage.setCharacter<DefineVideoStreamCharacter>(obj.CharacterId, obj);
+        this.setCharacter<DefineVideoStreamCharacter>(obj.CharacterId, obj);
     }
 
     private parseVideoFrame(tagType: number, length: number): void
@@ -4882,7 +4876,7 @@ export class SwfTag {
             FrameNum: bitio.getUI16()
         };
 
-        const StreamData = this.stage.getCharacter<DefineVideoStream>(obj.StreamID);
+        const StreamData = this.getCharacter<DefineVideoStream>(obj.StreamID);
 
         const sub = bitio.byte_offset - startOffset;
         const dataLength = length - sub;
@@ -4932,5 +4926,13 @@ export class SwfTag {
         var obj = {} as DefineScalingGrid;
         obj.CharacterId = bitio.getUI16();
         obj.Splitter = _this.rect();
+    }
+
+    getCharacter<T extends Character>(id: number): T {
+        return this.characters[id] as T;
+    }
+
+    private setCharacter<T extends Character>(id: number, obj: T): void {
+        this.characters[id] = obj;
     }
 }

@@ -369,8 +369,8 @@ export class Shape extends DisplayObject {
                     );
 
                     var image = cacheStore.getCache(bitmapCacheKey);
-                    if (image === undefined) {
-                        image = loadStage.getCharacter<CanvasRenderingContext2D>(bitmapId);
+                    if (!image) {
+                        image = loadStage.swftag.getCharacter<CanvasRenderingContext2D>(bitmapId);
                         if (!image) {
                             break;
                         }

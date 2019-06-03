@@ -8,8 +8,7 @@
  */
 
 import { ActionScript } from './ActionScript';
-import { BitIO, Data, DataIO } from './BitIO';
-import { cacheStore } from './CacheStore';
+import { BitIO, DataIO } from './BitIO';
 import { clipEvent, ClipEvent, EventDispatcher } from './EventDispatcher';
 import { ButtonStatus, DisplayObject, HitObject } from './DisplayObject';
 import { Global } from './Global';
@@ -18,17 +17,15 @@ import { keyClass } from './Key';
 import { Mouse } from './Mouse';
 import { MCAction, MovieClip } from './MovieClip';
 import { Packages } from './Packages';
-import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
-import { Character, DefineFont, DefineSound, ShapeWithStyle, SwfTag, VideoFrame } from './SwfTag';
+import { DefineFont, DefineSound, SwfTag, VideoFrame } from './SwfTag';
 import { TextField } from './TextField';
-import { vtc } from './VectorToCanvas';
 import {
-    Bounds, ColorTransform, HitEvent, Matrix,
+    ColorTransform, HitEvent, Matrix,
     tmpContext,
     devicePixelRatio, isAndroid, isChrome, isTouch,
-    base64Encode, cloneArray, isTouchEvent, Writeable
+    cloneArray, isTouchEvent, Writeable
 } from './utils';
 
 
@@ -81,6 +78,8 @@ if (isTouch) {
 export class Stage {
     public static stageId = 1;
 
+    swftag?: SwfTag;
+
     id = Stage.stageId++;
     name = 'swf2js_' + this.id;
     fileSize = 0;
@@ -106,6 +105,7 @@ export class Stage {
     private frameRate = 0;
     private stopFlag = true;
 
+
     // options
     private optionWidth = 0;
     private optionHeight = 0;
@@ -123,7 +123,6 @@ export class Stage {
     private matrix: Matrix = [1,0,0,1,0,0];
     private _matrix: Matrix = [1,0,0,1,0,0];
     private _colorTransform: ColorTransform = [1,1,1,1,0,0,0,0];
-    private characters: { [id: number]: Character } = {};
     readonly initActions: { [charactedId: number]: MCAction } = {};
     readonly exportAssets: { [id: string]: number } = {};
     readonly packages: { [spriteId: number]: 1 } = {};
@@ -321,14 +320,6 @@ export class Stage {
         this.matrix = matrix;
     }
 
-    getCharacter<T extends Character>(id: number): T {
-        return this.characters[id] as T;
-    }
-
-    setCharacter<T extends Character>(id: number, obj: T): void {
-        this.characters[id] = obj;
-    }
-
     getInstance(id: number): DisplayObject {
         return this.instances[id];
     }
@@ -407,14 +398,14 @@ export class Stage {
         var _this = this;
         _this.isLoad = false;
         var bitio = new BitIO(data);
-        var swftag = new SwfTag(_this, bitio);
+        this.swftag = new SwfTag(_this, bitio);
 
-        if (_this.setSwfHeader(bitio, swftag)) {
+        if (_this.setSwfHeader(bitio, this.swftag)) {
             var mc = _this.getParent();
             mc._url = location.href;
 
             // parse
-            var tags = swftag.parse(mc);
+            var tags = this.swftag.parse(mc);
 
             // mc reset
             mc.container = [];
@@ -426,7 +417,7 @@ export class Stage {
             mc.instances = [];
 
             // build
-            swftag.build(tags, mc);
+            this.swftag.build(tags, mc);
 
             var query = url.split("?")[1];
             if (query) {
@@ -459,7 +450,7 @@ export class Stage {
 
         var data = bitio.data;
         if (data[0] === 0xff && data[1] === 0xd8) {
-            _this.parseJPEG(data, swftag);
+            // _this.parseJPEG(data, swftag);
             return false;
         }
 
@@ -497,119 +488,6 @@ export class Stage {
         _this.loadStatus++;
 
         return true;
-    }
-
-    parseJPEG(data: Data, swftag: SwfTag): void {
-        var _this = this;
-        var image = document.createElement("img");
-        image.addEventListener("load", function ()
-        {
-            var width = this.width;
-            var height = this.height;
-
-            var canvas = cacheStore.getCanvas();
-            canvas.width = width;
-            canvas.height = height;
-            var imageContext = canvas.getContext("2d");
-            imageContext.drawImage(this, 0, 0, width, height);
-            _this.setCharacter(1, imageContext);
-
-            var shapeWidth = width * 20;
-            var shapeHeight = height * 20;
-
-            _this.setBaseWidth(width);
-            _this.setBaseHeight(height);
-
-            var shape: ShapeWithStyle = {
-                ShapeRecords: [
-                    {
-                        FillStyle1: 1,
-                        StateFillStyle0: 0,
-                        StateFillStyle1: 1,
-                        StateLineStyle: 0,
-                        StateMoveTo: 0,
-                        StateNewStyles: 0,
-                        isChange: true
-                    },
-                    {
-                        AnchorX: shapeWidth,
-                        AnchorY: 0,
-                        ControlX: 0,
-                        ControlY: 0,
-                        isChange: false,
-                        isCurved: false
-                    },
-                    {
-                        AnchorX: shapeWidth,
-                        AnchorY: shapeHeight,
-                        ControlX: 0,
-                        ControlY: 0,
-                        isChange: false,
-                        isCurved: false
-                    },
-                    {
-                        AnchorX: 0,
-                        AnchorY: shapeHeight,
-                        ControlX: 0,
-                        ControlY: 0,
-                        isChange: false,
-                        isCurved: false
-                    },
-                    {
-                        AnchorX: 0,
-                        AnchorY: 0,
-                        ControlX: 0,
-                        ControlY: 0,
-                        isChange: false,
-                        isCurved: false
-                    },
-                    0
-                ],
-                fillStyles: {
-                    fillStyleCount: 1,
-                    fillStyles: [{
-                        bitmapId: 1,
-                        bitmapMatrix: [20, 0, 0, 20, 0, 0],
-                        fillStyleType: 65
-                    }]
-                },
-                lineStyles: {
-                    lineStyleCount: 0,
-                    lineStyles: []
-                }
-            };
-
-            var bounds = new Bounds(0, 0, shapeWidth, shapeHeight);
-            var data = vtc.convert(shape);
-
-            _this.setCharacter(2, {
-                tagType: 22,
-                data: data,
-                bounds: bounds
-            });
-
-            var parent = _this.getParent();
-            var obj = new Shape();
-            obj.setParent(parent);
-            obj.setStage(_this);
-            obj.setData(data);
-            obj.setTagType(22);
-            obj.setCharacterId(2);
-            obj.setBounds(bounds);
-            obj.setLevel(1);
-
-            parent.container[1] = [];
-            parent.container[1][1] = obj.instanceId;
-
-            var placeObject = new PlaceObject();
-            _this.setPlaceObject(placeObject, obj.instanceId, 1, 1);
-
-            _this.init();
-        });
-
-
-        var jpegData = swftag.parseJpegData(data);
-        image.src = "data:image/jpeg;base64," + base64Encode(jpegData);
     }
 
     resize(): void {
@@ -926,7 +804,6 @@ export class Stage {
         mc.reset();
         mc.setStage(this);
         this.parent = mc;
-        this.characters = [];
         this.instances = [];
         whis.buttonHits = [];
         whis.downEventHits = [];

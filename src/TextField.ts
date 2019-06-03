@@ -469,7 +469,7 @@ export class TextField extends InteractiveObject {
                 break;
         }
 
-        var fontData = _this.getStage().getCharacter(_this.fontId) as DefineFont;
+        var fontData = _this.getStage().swftag.getCharacter(_this.fontId) as DefineFont;
 
         if (fontData.tagType === TAG.DefineFont || !fontData.FontFlagsHasLayout)
             throw new Error('Unsupported font');

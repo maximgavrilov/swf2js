@@ -630,7 +630,7 @@ export class MovieClip extends Sprite {
         var exportAssets = stage.exportAssets;
         if (id in exportAssets) {
             var characterId = exportAssets[id];
-            var tag = stage.getCharacter(characterId);
+            var tag = stage.swftag.getCharacter(characterId);
             if (tag) {
                 movieClip = new MovieClip();
                 movieClip.setStage(stage);
@@ -755,7 +755,7 @@ export class MovieClip extends Sprite {
                 parent = stage.getParent();
             }
 
-            var char = stage.getCharacter(targetMc.characterId);
+            var char = stage.swftag.getCharacter(targetMc.characterId);
             var swftag = new SwfTag(stage);
             if (char instanceof Array) {
                 cloneMc = new MovieClip();
@@ -1117,7 +1117,7 @@ export class MovieClip extends Sprite {
         var _this = this;
         var stage = _this.getStage();
         var soundId = sound.SoundId;
-        var tag = stage.getCharacter<StartSound>(soundId);
+        var tag = stage.swftag.getCharacter<StartSound>(soundId);
         if (!tag)
             return;
 
