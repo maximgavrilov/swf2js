@@ -97,8 +97,8 @@ export const CLS = {
 };
 
 export class DisplayObject extends EventDispatcher {
-    public static stages: { [stageId: number]: Stage };
-    public static loadStages: { [stageId: number]: Stage };
+    public static stages: { [stageId: number]: Stage } = {};
+    public static loadStages: { [stageId: number]: Stage } = {};
     public static event?: HitEvent;
 
     readonly accessibilityProperties = new AccessibilityProperties();

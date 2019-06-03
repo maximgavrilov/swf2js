@@ -33,8 +33,8 @@ export class MovieClip extends Sprite {
     private labels: { [label: string]: number } = {};
 
     // flag
-    stopFlag = false;
-    isAction = true;
+    private stopFlag = false;
+    private isAction = true;
 
     // sound
     sounds: { [frame: number]: StartSoundTag[] } = {};

@@ -32,7 +32,7 @@ import {
 } from './utils';
 
 
-type StageOptions = any;
+export type StageOptions = any;
 
 export type Action = {
     as?: Function | Function[];
@@ -65,9 +65,6 @@ const requestAnimationFrame =
     window.webkitRequestAnimationFrame ||
     (window as any).mozRequestAnimationFrame ||
     ((cb) => window.setTimeout(cb, 0));
-
-export const stages = {};
-DisplayObject.stages = stages; // any
 
 let quality = 1;
 let _devicePixelRatio = devicePixelRatio * quality;
@@ -103,6 +100,7 @@ export class Stage {
     bgcolor = null;
     imgUnLoadCount = 0;
     abcFlag = false;
+    tagId = null;
 
     private intervalId = 0;
     private frameRate = 0;
@@ -113,7 +111,6 @@ export class Stage {
     private optionHeight = 0;
     private callback = null;
     private renderMode = false;
-    private tagId = null;
     private FlashVars = {};
     private quality = "medium"; // low = 0.25, medium = 0.8, high = 1.0
 
@@ -946,7 +943,7 @@ export class Stage {
         var _this = this;
         var tagId = _this.tagId;
         var div;
-        if (_this.getId() in stages) {
+        if (_this.getId() in DisplayObject.stages) {
             if (tagId) {
                 if (document.readyState === "loading") {
                     var reTry = function ()
