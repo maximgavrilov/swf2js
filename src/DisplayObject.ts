@@ -909,7 +909,7 @@ export class DisplayObject extends EventDispatcher {
 
     getVisible(): boolean {
         const stage = this.getStage();
-        const version = stage.getVersion();
+        const version = stage.swftag.version;
 
         if (version <= 4)
             return ((this.__visible) ? 1 : 0) as any;
@@ -1119,7 +1119,7 @@ export class DisplayObject extends EventDispatcher {
         }
 
         var stage = _this.getStage();
-        var version = stage.getVersion();
+        var version = stage.swftag.version;
         if (version < 7) {
             for (var key in variables) {
                 if (!variables.hasOwnProperty(key)) {
@@ -1190,7 +1190,7 @@ export class DisplayObject extends EventDispatcher {
             name = '' + name;
         }
 
-        if (stage.getVersion() < 7) {
+        if (stage.swftag.version < 7) {
             for (var key in variables) {
                 if (!variables.hasOwnProperty(key)) {
                     continue;
@@ -1209,7 +1209,7 @@ export class DisplayObject extends EventDispatcher {
     getGlobalVariable(path: string): any {
         var _this = this;
         var stage = _this.getStage();
-        var version = stage.getVersion();
+        var version = stage.swftag.version;
         if (version < 5) {
             return undefined;
         }

@@ -679,7 +679,7 @@ ActionScript.prototype.execute = function (mc)
     }
     var stage = movieClip.getStage() as Stage;
     if (stage) {
-        _this.version = stage.getVersion();
+        _this.version = stage.swftag.version;
     }
 
     var stack = [];

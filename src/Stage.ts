@@ -148,7 +148,6 @@ export class Stage {
     private height = 0;
     private isTouchEvent = false;
     isLoad = false;
-    private version = 8;
     readonly avm2 = new Packages(this);
     readonly abc = new Packages(this);
     private parent: MovieClip;
@@ -177,14 +176,6 @@ export class Stage {
 
     setParent(parent: MovieClip): void {
         this.parent = parent;
-    }
-
-    getVersion(): number {
-        return this.version;
-    }
-
-    setVersion(version: number): void {
-        this.version = version;
     }
 
     getBackgroundColor(): string {
@@ -389,94 +380,49 @@ export class Stage {
         var bitio = new BitIO(data);
         this.swftag = new SwfTag(_this, bitio);
 
-        if (_this.setSwfHeader(bitio, this.swftag)) {
-            var mc = _this.getParent();
-            mc._url = location.href;
+        _this.loadStatus++;
 
-            // parse
-            var tags = this.swftag.parse(mc);
+        var mc = _this.getParent();
+        mc._url = location.href;
 
-            // mc reset
-            mc.container = [];
-            var frame = 1;
-            var totalFrames = mc.getTotalFrames() + 1;
-            while (frame < totalFrames) {
-                mc.container[frame++] = [];
-            }
-            mc.instances = [];
+        // parse
+        var tags = this.swftag.parse(mc);
 
-            // build
-            this.swftag.build(tags, mc);
+        // mc reset
+        mc.container = [];
+        var frame = 1;
+        var totalFrames = mc.getTotalFrames() + 1;
+        while (frame < totalFrames) {
+            mc.container[frame++] = [];
+        }
+        mc.instances = [];
 
-            var query = url.split("?")[1];
-            if (query) {
-                var values = query.split("&");
-                var length = values.length;
-                while (length--) {
-                    var value = values[length];
-                    var pair = value.split("=");
-                    if (pair.length > 1) {
-                        mc.setVariable(pair[0], pair[1]);
-                    }
+        // build
+        this.swftag.buildStage(tags, this);
+
+        var query = url.split("?")[1];
+        if (query) {
+            var values = query.split("&");
+            var length = values.length;
+            while (length--) {
+                var value = values[length];
+                var pair = value.split("=");
+                if (pair.length > 1) {
+                    mc.setVariable(pair[0], pair[1]);
                 }
             }
+        }
 
-            // FlashVars
-            var vars = _this.FlashVars;
-            for (var key in vars) {
-                if (!vars.hasOwnProperty(key)) {
-                    continue;
-                }
-                mc.setVariable(key, vars[key]);
+        // FlashVars
+        var vars = _this.FlashVars;
+        for (var key in vars) {
+            if (!vars.hasOwnProperty(key)) {
+                continue;
             }
+            mc.setVariable(key, vars[key]);
         }
 
         _this.isLoad = true;
-    }
-
-    setSwfHeader(bitio: BitIO, swftag: SwfTag): boolean {
-        var _this = this;
-
-        var data = bitio.data;
-        if (data[0] === 0xff && data[1] === 0xd8) {
-            // _this.parseJPEG(data, swftag);
-            return false;
-        }
-
-        // signature
-        var signature = bitio.getHeaderSignature();
-
-        // version
-        var version = bitio.getVersion();
-        _this.setVersion(version);
-
-        // file size
-        var fileLength = bitio.getUI32();
-        _this.fileSize = fileLength;
-
-        switch (signature) {
-            case "FWS": // No ZIP
-                break;
-            case "CWS": // ZLIB
-                bitio.deCompress(fileLength, "ZLIB");
-                break;
-            case "ZWS": // TODO LZMA
-                alert("not support LZMA");
-                //bitio.deCompress(fileLength, "LZMA");
-                return false;
-        }
-
-        var bounds = swftag.rect();
-        var frameRate = bitio.getUI16() / 0x100;
-        bitio.getUI16(); // frameCount
-
-        _this.setBaseWidth(Math.ceil((bounds.xMax - bounds.xMin) / 20));
-        _this.setBaseHeight(Math.ceil((bounds.yMax - bounds.yMin) / 20));
-        _this.setFrameRate(frameRate);
-
-        _this.loadStatus++;
-
-        return true;
     }
 
     resize(): void {

@@ -725,7 +725,7 @@ export class MovieClip extends Sprite {
         var targetMc = _this.getDisplayObject(name);
         var parent;
         var object;
-        if (!targetMc && stage.getVersion() > 4) {
+        if (!targetMc && stage.swftag.version > 4) {
             target = arguments[0];
             depth = arguments[1];
             if (isNaN(depth)) {
@@ -1138,7 +1138,7 @@ export class MovieClip extends Sprite {
     getRemoveTags(frame: number): { [depth: number]: 1 }
     {
         return this.removeTags[frame];
-    };
+    }
 
     remove(stage: Stage): void {
         var _this = this;

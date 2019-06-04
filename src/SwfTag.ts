@@ -33,6 +33,14 @@ import {
 
 type BitFlag<N extends string, T> = { [P in N]: 0 } | ({ [P in N]: 1 } & T);
 
+type SwfHeader = {
+    version: number;
+    fileSize: number;
+    bounds: Bounds;
+    frameRate: number;
+    frameCount: number;
+};
+
 // tags
 type ClipActionRecord = any;
 type ClipEventFlags = any;
@@ -611,138 +619,139 @@ export class SwfTag {
     readonly initActions: { [charactedId: number]: MCAction } = {};
     readonly packages: { [spriteId: number]: 1 } = {};
     readonly registerClass: { [characterId: number]: any }  = {};
-    abcFlag = false;
+
+    private header: SwfHeader;
+    private _abcFlag = false;
     imgUnLoadCount = 0;
 
     constructor(private readonly stage: Stage,
                 private readonly bitio?: BitIO)
     { }
 
+    get version(): number {
+        return this.header.version;
+    }
+
+    get abcFlag(): boolean {
+        return this._abcFlag;
+    }
+
     parse(mc: DisplayObject): Tags {
+        this.header = this.parseSwfHeader();
         return this.parseTags(this.bitio!.data.length, mc.characterId);
+    }
+
+    buildStage(tags: Tags, stage: Stage): void {
+        stage.setBaseWidth(Math.ceil((this.header.bounds.xMax - this.header.bounds.xMin) / 20));
+        stage.setBaseHeight(Math.ceil((this.header.bounds.yMax - this.header.bounds.yMin) / 20));
+        stage.setFrameRate(this.header.frameRate);
+
+        this.build(tags, stage.getParent());
     }
 
     build(tags: Tags, parent: MovieClip): void {
         const originTags: Tags = {};
-        for (const frame in tags) {
-            if (!tags.hasOwnProperty(frame))
-                continue;
-
+        for (const frame in tags)
             this.showFrame(tags[frame], parent, originTags);
-        }
     }
 
-    showFrame(obj: TagObj, mc: MovieClip, originTags): void
+    private showFrame(obj: TagObj, mc: MovieClip, originTags): void
     {
-        var _this = this;
-        var newDepth = [];
-        var i;
-        var tag;
-        var frame = obj.frame;
-        var stage = _this.stage;
+        const frame = obj.frame;
+        const newDepth: { [depth: number]: true } = {};
 
-        if (!(frame in originTags)) {
+        if (!(frame in originTags))
             originTags[frame] = [];
-        }
+
         mc.setTotalFrames(Math.max(mc.getTotalFrames(), frame));
 
-        // add ActionScript
-        var actions = obj.actionScript;
-        if (actions.length) {
-            for (i in actions) {
-                if (!actions.hasOwnProperty(i)) {
-                    continue;
-                }
-                mc.setActions(frame, actions[i]);
-            }
+        for (const action of obj.actionScript)
+            mc.setActions(frame, action);
+
+        for (const label of obj.labels)
+            mc.addLabel(label.frame, label.name);
+
+        for (const sound of obj.sounds)
+            mc.addSound(frame, sound);
+
+        for (const tag of obj.cTags) {
+            newDepth[tag.Depth] = true;
+            this.buildTag(frame, tag, mc, originTags);
         }
 
-        // add label
-        var labels = obj.labels;
-        if (labels.length) {
-            for (i in labels) {
-                if (!labels.hasOwnProperty(i)) {
-                    continue;
-                }
-                var label = labels[i];
-                mc.addLabel(label.frame, label.name);
-            }
-        }
+        if (obj.removeTags.length) {
+            mc.setRemoveTag(frame, obj.removeTags);
 
-        // add sounds
-        var sounds = obj.sounds;
-        if (sounds.length) {
-            for (i in sounds) {
-                if (!sounds.hasOwnProperty(i)) {
-                    continue;
-                }
-                mc.addSound(frame, sounds[i]);
-            }
-        }
-
-        var cTags = obj.cTags;
-        if (cTags.length) {
-            for (i in cTags) {
-                if (!cTags.hasOwnProperty(i)) {
-                    continue;
-                }
-                tag = cTags[i];
-                newDepth[tag.Depth] = true;
-                this.buildTag.call(_this, frame, tag, mc, originTags);
-            }
-        }
-
-        // remove tag
-        var tags = obj.removeTags;
-        if (tags.length) {
-            mc.setRemoveTag(frame, tags);
-            for (i in tags) {
-                if (!tags.hasOwnProperty(i)) {
-                    continue;
-                }
-                var rTag = tags[i];
+            for (const rTag of obj.removeTags)
                 newDepth[rTag.Depth] = true;
-            }
         }
 
         // copy
         if (frame > 1) {
-            var prevFrame = frame - 1;
-            var container = mc.container;
-            if (prevFrame in container) {
-                var prevTags = container[prevFrame];
-                if (!(frame in container)) {
-                    container[frame] = [];
-                }
+            const prevFrame = frame - 1;
+            const container = mc.container;
 
-                var length = prevTags.length;
-                if (length) {
-                    var parentId = mc.instanceId;
-                    for (var d in prevTags) {
-                        if (!prevTags.hasOwnProperty(d)) {
-                            continue;
-                        }
-                        if (d in newDepth) {
-                            continue;
-                        }
-                        container[frame][d] = prevTags[d];
-                        stage.copyPlaceObject(parentId, +d, frame);
-                        originTags[frame][d] = originTags[prevFrame][d];
-                    }
-                }
+            if (!container[prevFrame])
+                return;
+
+            const prevTags = container[prevFrame] || [];
+            if (!(frame in container))
+                container[frame] = [];
+
+            const parentId = mc.instanceId;
+            for (let depth in prevTags) {
+                if (depth in newDepth)
+                    continue;
+
+                container[frame][depth] = prevTags[depth];
+                this.stage.copyPlaceObject(parentId, +depth, frame);
+                originTags[frame][depth] = originTags[prevFrame][depth];
             }
         }
     }
 
-    private buildTag(frame: number, tag: Tag, parent: MovieClip, originTags: Tags): void
+    private parseSwfHeader(): SwfHeader
     {
-        var _this = this;
-        var container = parent.container;
-        if (!(frame in container)) {
-            container[frame] = [];
+        const bitio = this.bitio;
+
+        const signature = bitio.getHeaderSignature();
+
+        const version = bitio.getVersion();
+        const fileSize = bitio.getUI32();
+
+        switch (signature) {
+            case "FWS": // No ZIP
+                break;
+            case "CWS": // ZLIB
+                bitio.deCompress(fileSize, "ZLIB");
+                break;
+            case "ZWS": // TODO LZMA
+                alert("not support LZMA");
+                //bitio.deCompress(fileSize, "LZMA");
+                return undefined;
         }
 
-        var isCopy = true;
+        const bounds = this.rect();
+        const frameRate = bitio.getUI16() / 0x100;
+        const frameCount = bitio.getUI16();
+
+        return {
+            version,
+            fileSize,
+            bounds,
+            frameRate,
+            frameCount
+        };
+    }
+
+    private buildTag(frame: number, tag: Tag, parent: MovieClip, originTags: Tags): void
+    {
+        const container = parent.container;
+
+        if (!(frame in container))
+            container[frame] = [];
+
+        let isCopy = true;
         if (tag.PlaceFlagMove) {
             var oTag = originTags[frame - 1][tag.Depth];
             if (oTag !== undefined) {
@@ -793,11 +802,10 @@ export class SwfTag {
         }
 
         originTags[frame][tag.Depth] = tag;
-        var buildObject = _this.buildObject(tag, parent, isCopy, frame);
+        var buildObject = this.buildObject(tag, parent, isCopy, frame);
         if (buildObject) {
-            var stage = _this.stage;
-            var placeObject = _this.buildPlaceObject(tag);
-            stage.setPlaceObject(placeObject, parent.instanceId, tag.Depth, frame);
+            var placeObject = this.buildPlaceObject(tag);
+            this.stage.setPlaceObject(placeObject, parent.instanceId, tag.Depth, frame);
             container[frame][tag.Depth] = buildObject.instanceId;
         }
     }
@@ -3275,12 +3283,11 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
         var obj = {} as PlaceObjectTag;
         obj.tagType = tagType;
         var startOffset = bitio.byte_offset;
 
-        if (tagType === 4) {
+        if (tagType === TAG.PlaceObject) {
             obj.CharacterId = bitio.getUI16();
             obj.Depth = bitio.getUI16();
             obj.Matrix = _this.matrix();
@@ -3293,7 +3300,7 @@ export class SwfTag {
             }
         } else {
             obj.PlaceFlagHasClipActions = bitio.getUIBits(1);
-            if (stage.getVersion() < 5) {
+            if (this.version < 5) {
                 obj.PlaceFlagHasClipActions = 0;
             }
             obj.PlaceFlagHasClipDepth = bitio.getUIBits(1);
@@ -3305,7 +3312,7 @@ export class SwfTag {
             obj.PlaceFlagMove = bitio.getUIBits(1);
 
             // PlaceObject3
-            if (tagType === 70) {
+            if (tagType === TAG.PlaceObject3) {
                 bitio.getUIBits(1); // Reserved
                 obj.PlaceFlagOpaqueBackground = bitio.getUIBits(1);
                 obj.PlaceFlagHasVisible = bitio.getUIBits(1);
@@ -3342,7 +3349,7 @@ export class SwfTag {
                 obj.ClipDepth = bitio.getUI16();
             }
 
-            if (tagType === 70) {
+            if (tagType === TAG.PlaceObject3) {
                 if (obj.PlaceFlagHasFilterList) {
                     obj.SurfaceFilterList = _this.getFilterList();
                 }
@@ -3370,11 +3377,11 @@ export class SwfTag {
                     if (endLength <= bitio.byte_offset) {
                         break;
                     }
-                    var endFlag = (stage.getVersion() <= 5) ? bitio.getUI16() : bitio.getUI32();
+                    var endFlag = (this.version <= 5) ? bitio.getUI16() : bitio.getUI32();
                     if (!endFlag) {
                         break;
                     }
-                    if (stage.getVersion() <= 5) {
+                    if (this.version <= 5) {
                         bitio.byte_offset -= 2;
                     } else {
                         bitio.byte_offset -= 4;
@@ -3416,7 +3423,6 @@ export class SwfTag {
         var _this = this;
         var obj = {} as ClipEventFlags;
         var bitio = _this.bitio;
-        var stage = _this.stage;
 
         obj.keyUp = bitio.getUIBits(1);
         obj.keyDown = bitio.getUIBits(1);
@@ -3427,7 +3433,7 @@ export class SwfTag {
         obj.enterFrame = bitio.getUIBits(1);
         obj.load = bitio.getUIBits(1);
 
-        if (stage.getVersion() >= 6) {
+        if (this.version >= 6) {
             obj.dragOver = bitio.getUIBits(1);
             obj.rollOut = bitio.getUIBits(1);
             obj.rollOver = bitio.getUIBits(1);
@@ -3439,7 +3445,7 @@ export class SwfTag {
 
         obj.data = bitio.getUIBits(1);
 
-        if (stage.getVersion() >= 6) {
+        if (this.version >= 6) {
             bitio.getUIBits(5); // Reserved
             obj.construct = bitio.getUIBits(1);
             obj.keyPress = bitio.getUIBits(1);
@@ -3892,7 +3898,7 @@ export class SwfTag {
         var bitio = _this.bitio;
         var startOffset = bitio.byte_offset;
 
-        this.abcFlag = true;
+        this._abcFlag = true;
 
         var obj = {} as DoABC;
         obj.tagType = tagType;
