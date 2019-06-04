@@ -157,6 +157,9 @@ class VectorToCanvas {
                 continue;
             }
 
+            if (!(record.isChange === false))
+                throw new Error('Should be StyleRecord');
+
             AnchorX = record.AnchorX;
             AnchorY = record.AnchorY;
             var ControlX = record.ControlX;

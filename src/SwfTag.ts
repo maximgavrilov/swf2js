@@ -485,19 +485,44 @@ type LineStyleArray = {
     lineStyleCount: number;
     lineStyles: LineStyle[];
 };
-type ShapeRecord = {
+
+type StyleRecord = {
+    isChange: false;
+
     ControlX: number;
     ControlY: number;
     AnchorX: number;
     AnchorY: number;
     isCurved: boolean;
-    isChange: boolean;
 };
-type StyleChangeRecord = any;
+
+type StyleChangeRecord = {
+    isChange: true;
+
+    StateLineStyle: BitBoolean;
+    StateFillStyle1: BitBoolean;
+    StateFillStyle0: BitBoolean;
+
+    FillStyle0: number;
+    FillStyle1: number;
+    LineStyle: number;
+
+    NumFillBits: number;
+    NumLineBits: number;
+} & BitFlag<'StateMoveTo', {
+    MoveX: number;
+    MoveY: number;
+}> & BitFlag<'StateNewStyles', {
+    FillStyles: FillStyleArray;
+    LineStyles: LineStyleArray;
+}>;
+
+type ShapeRecord = StyleRecord | StyleChangeRecord;
+
 export type ShapeWithStyle = {
     fillStyles: FillStyleArray;
     lineStyles: LineStyleArray;
-    ShapeRecords: (ShapeRecord | StyleChangeRecord)[];
+    ShapeRecords: ShapeRecord[];
 };
 
 type GradientRecord = {
@@ -1931,7 +1956,7 @@ export class SwfTag {
     }
 
     private straightEdgeRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape,
-                               numBits: number): ShapeRecord
+                               numBits: number): StyleRecord
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1972,7 +1997,7 @@ export class SwfTag {
     }
 
     private curvedEdgeRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape,
-                             numBits: number): ShapeRecord
+                             numBits: number): StyleRecord
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -2015,11 +2040,11 @@ export class SwfTag {
         var _this = this;
         var bitio = _this.bitio;
         var obj = {} as StyleChangeRecord;
-        obj.StateNewStyles = (changeFlag >> 4) & 1;
-        obj.StateLineStyle = (changeFlag >> 3) & 1;
-        obj.StateFillStyle1 = (changeFlag >> 2) & 1;
-        obj.StateFillStyle0 = (changeFlag >> 1) & 1;
-        obj.StateMoveTo = changeFlag & 1;
+        obj.StateNewStyles = ((changeFlag >> 4) & 1) as BitBoolean;
+        obj.StateLineStyle = ((changeFlag >> 3) & 1) as BitBoolean;
+        obj.StateFillStyle1 = ((changeFlag >> 2) & 1) as BitBoolean;
+        obj.StateFillStyle0 = ((changeFlag >> 1) & 1) as BitBoolean;
+        obj.StateMoveTo = (changeFlag & 1) as BitBoolean;
 
         if (obj.StateMoveTo) {
             var moveBits = bitio.getUIBits(5);
@@ -2773,7 +2798,7 @@ export class SwfTag {
                 continue;
             }
 
-            if (!StartRecord.isChange && !EndRecord.isChange) {
+            if (StartRecord.isChange === false && EndRecord.isChange === false) {
                 if (StartRecord.isCurved) {
                     startPosition.x += StartRecord.ControlX + StartRecord.AnchorX;
                     startPosition.y += StartRecord.ControlY + StartRecord.AnchorY;
@@ -2792,7 +2817,7 @@ export class SwfTag {
                 continue;
             }
 
-            if (StartRecord.isChange && !EndRecord.isChange) {
+            if (StartRecord.isChange && EndRecord.isChange === false) {
                 addRecode = {
                     FillStyle0: StartRecord.FillStyle0,
                     FillStyle1: StartRecord.FillStyle1,
@@ -2813,7 +2838,7 @@ export class SwfTag {
                 }
 
                 EndRecords.splice(i, 0, addRecode);
-            } else if (!StartRecord.isChange && EndRecord.isChange) {
+            } else if (StartRecord.isChange === false && EndRecord.isChange) {
                 addRecode = {
                     FillStyle0: EndRecord.FillStyle0,
                     FillStyle1: EndRecord.FillStyle1,
@@ -2835,6 +2860,9 @@ export class SwfTag {
 
                 StartRecords.splice(i, 0, addRecode);
             } else {
+                if (!(StartRecord.isChange && EndRecord.isChange))
+                    throw new Error('Should be changes');
+
                 if (StartRecord.StateMoveTo) {
                     startPosition.x = StartRecord.MoveX;
                     startPosition.y = StartRecord.MoveY;
@@ -2929,6 +2957,9 @@ export class SwfTag {
                 var MoveY = 0;
 
                 if (StartRecord.StateMoveTo === 1) {
+                    if (!(EndRecord.isChange && EndRecord.StateMoveTo))
+                        throw new Error('Should be StyleChangeRecord');
+
                     MoveX = StartRecord.MoveX * startPer + EndRecord.MoveX * per;
                     MoveY = StartRecord.MoveY * startPer + EndRecord.MoveY * per;
                     position.x = MoveX;
@@ -2948,7 +2979,10 @@ export class SwfTag {
                     StateNewStyles: StartRecord.StateNewStyles,
                     isChange: true
                 };
-            } else {
+            } else if (StartRecord.isChange === false) {
+                if (!(EndRecord.isChange === false))
+                    throw new Error('Should be StyleRecord');
+
                 var AnchorX = 0;
                 var AnchorY = 0;
                 var ControlX = 0;
