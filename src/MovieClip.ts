@@ -14,7 +14,7 @@ import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { PlaceObject } from './PlaceObject';
 import { Sprite } from './Sprite';
 import { Stage } from './Stage';
-import { RemoveObject, StartSound, StartSoundTag, SwfTag } from './SwfTag';
+import { DefineSpriteCharacter, RemoveObject, StartSound, StartSoundTag, SwfTag } from './SwfTag';
 import { TextField } from './TextField';
 import { CAP, JOIN } from './VectorToCanvas';
 import {
@@ -629,7 +629,7 @@ export class MovieClip extends Sprite {
         var exportAssets = stage.swftag.exportAssets;
         if (id in exportAssets) {
             var characterId = exportAssets[id];
-            var tag = stage.swftag.getCharacter(characterId);
+            var tag = stage.swftag.getCharacter<DefineSpriteCharacter>(characterId);
             if (tag) {
                 movieClip = new MovieClip();
                 movieClip.setStage(stage);

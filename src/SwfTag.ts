@@ -242,6 +242,7 @@ type DefineSound = {
     base64: string;
 };
 type DefineSprite = {
+    tagType: TAG.DefineSprite;
     SpriteId: number;
     FrameCount: number;
     ControlTags: Tags;
@@ -355,29 +356,110 @@ type Vp6SwfVideoPacket = string;
 
 
 export const enum TAG {
+    End = 0,
+    ShowFrame = 1,
     DefineShape = 2,
+    FreeCharacter = 3,
+    PlaceObject = 4,
+    RemoveObject = 5,
+    DefineBits = 6,
     DefineButton = 7,
+    JPEGTables = 8,
+    SetBackgroundColor = 9,
     DefineFont = 10,
     DefineText = 11,
+    DoAction = 12,
+    DefineFontInfo = 13,
     DefineSound = 14,
     StartSound = 15,
+    StopSound = 16,
+    DefineButtonSound = 17,
+    SoundStreamHead = 18,
+    SoundStreamBlock = 19,
+    DefineBitsLossless = 20,
+    DefineBitsJPEG2 = 21,
     DefineShape2 = 22,
+    DefineButtonCxform = 23,
+    Protect = 24,
+    PathsArePostScript = 25,
+    PlaceObject2 = 26,
+    Invalid27 = 27,
+    RemoveObject2 = 28,
+    SyncFrame = 29,
+    Invalid30 = 30,
+    FreeAll = 31,
     DefineShape3 = 32,
     DefineText2 = 33,
     DefineButton2 = 34,
+    DefineBitsJPEG3 = 35,
+    DefineBitsLossless2 = 36,
     DefineEditText = 37,
+    DefineVideo = 38,
+    DefineSprite = 39,
+    NameCharacter = 40,
+    ProductInfo = 41,
+    DefineTextFormat = 42,
+    FrameLabel = 43,
+    DefineBehavior = 44,
+    SoundStreamHead2 = 45,
     DefineMorphShape = 46,
+    FrameTag = 47,
     DefineFont2 = 48,
+    GeProSet = 49,
+    FontRef = 52,
+    DefineFunction = 53,
+    PlaceFunction = 54,
+    GenTagObject = 55,
+    ExportAssets = 56,
+    ImportAssets = 57,
+    EnableDebugger = 58,
+    DoInitAction = 59,
     DefineVideoStream = 60,
     VideoFrame = 61,
+    DefineFontInfo2 = 62,
+    DebugID = 63,
+    EnableDebugger2 = 64,
+    ScriptLimits = 65,
+    SetTabIndex = 66,
+    Invalid67 = 67,
+    Invalid68 = 68,
+    FileAttributes = 69,
+    PlaceObject3 = 70,
+    ImportAssets2 = 71,
+    DoABC = 72,
+    DefineFontAlignZones = 73,
+    CSMTextSettings = 74,
     DefineFont3 = 75,
+    SymbolClass = 76,
+    Metadata = 77,
+    DefineScalingGrid = 78,
+    Invalid79 = 79,
+    Invalid80 = 80,
+    Invalid81 = 81,
+    DoABC2 = 82,
     DefineShape4 = 83,
     DefineMorphShape2 = 84,
-    StartSound2 = 89
+    Invalid85 = 85,
+    DefineSceneAndFrameLabelData = 86,
+    DefineBinaryData = 87,
+    DefineFontName = 88,
+    StartSound2 = 89,
+    DefineBitsJPEG4 = 90,
+    DefineFont4 = 91,
+    Invalid92 = 92,
+    EnableTelemetry = 93
 };
 
+type TAG_DefineBits = TAG.DefineBits
+                    | TAG.DefineBitsJPEG2
+                    | TAG.DefineBitsJPEG3
+                    | TAG.DefineBitsJPEG4;
+
+type TAG_DefineBitsLossless = TAG.DefineBitsLossless
+                            | TAG.DefineBitsLossless2;
 type TAG_DefineButton = TAG.DefineButton | TAG.DefineButton2;
 type TAG_DefineFont = TAG.DefineFont | TAG.DefineFont2 | TAG.DefineFont3;
+type TAG_DefineFontInfo = TAG.DefineFontInfo | TAG.DefineFontInfo2;
 type TAG_DefineMorphShape = TAG.DefineMorphShape | TAG.DefineMorphShape2;
 type TAG_DefineShape = TAG.DefineShape
                      | TAG.DefineShape2
@@ -452,7 +534,7 @@ type DefineEditTextCharacter = {
 };
 type DefineFontCharacter = DefineFont & Partial<DefineFontAlignZones>;
 type DefineMorphShapeCharacter = DefineMorphShape;
-type DefineSpriteCharacter = Tags;
+export type DefineSpriteCharacter = DefineSprite;
 type DefineTextCharacter = DefineText;
 type DefineVideoStreamCharacter = DefineVideoStream;
 type DefineShapeCharacter = {
@@ -478,7 +560,12 @@ export type StartSoundTag = {
     Audio: HTMLAudioElement;
 };
 export type Tag = StartSoundTag | any;
-type TagObj = any & {
+type TagObj = {
+    frame: number;
+    cTags: PlaceObjectTag[];
+    actionScript: ActionScript[];
+    removeTags: RemoveObject[];
+    labels: FrameLabel[];
     sounds: StartSoundTag[];
 };
 type Tags = { [frame: number]: TagObj };
@@ -499,6 +586,8 @@ export class SwfTag {
     readonly initActions: { [charactedId: number]: MCAction } = {};
     readonly packages: { [spriteId: number]: 1 } = {};
     readonly registerClass: { [characterId: number]: any }  = {};
+    abcFlag = false;
+    imgUnLoadCount = 0;
 
     constructor(private readonly stage: Stage,
                 private readonly bitio?: BitIO)
@@ -521,7 +610,6 @@ export class SwfTag {
     showFrame(obj: TagObj, mc: MovieClip, originTags): void
     {
         var _this = this;
-        var _buildTag = _this.buildTag;
         var newDepth = [];
         var i;
         var tag;
@@ -575,7 +663,7 @@ export class SwfTag {
                 }
                 tag = cTags[i];
                 newDepth[tag.Depth] = true;
-                _buildTag.call(_this, frame, tag, mc, originTags);
+                this.buildTag.call(_this, frame, tag, mc, originTags);
             }
         }
 
@@ -706,35 +794,34 @@ export class SwfTag {
             var id = parent.container[frame - 1][tag.Depth];
             obj = stage.getInstance(id);
         } else {
-            if (char instanceof Array) {
-                obj = _this.buildMovieClip(tag, char, parent);
-            } else {
-                switch (char.tagType) {
-                    case TAG.DefineText: // DefineText
-                    case TAG.DefineText2: // DefineText2
-                        obj = _this.buildText(tag, char);
-                        break;
-                    case TAG.DefineEditText: // DefineEditText
-                        obj = _this.buildTextField(tag, char, parent);
-                        break;
-                    case TAG.DefineShape:  // DefineShape
-                    case TAG.DefineShape2: // DefineShape2
-                    case TAG.DefineShape3: // DefineShape3
-                    case TAG.DefineShape4: // DefineShape4
-                        obj = _this.buildShape(tag, char);
-                        break;
-                    case TAG.DefineMorphShape: // DefineMorphShape
-                    case TAG.DefineMorphShape2: // DefineMorphShape2
-                        var MorphShape = _this.buildMorphShape(char.tagType, char, tag.Ratio);
-                        obj = _this.buildShape(tag, MorphShape);
-                        break;
-                    case TAG.DefineButton: // DefineButton
-                    case TAG.DefineButton2: // DefineButton2
-                        obj = _this.buildButton(char, tag, parent);
-                        break;
-                    default:
-                        return undefined;
-                }
+            switch (char.tagType) {
+                case TAG.DefineSprite:
+                    obj = _this.buildMovieClip(tag, char, parent);
+                    break;
+                case TAG.DefineText: // DefineText
+                case TAG.DefineText2: // DefineText2
+                    obj = _this.buildText(tag, char);
+                    break;
+                case TAG.DefineEditText: // DefineEditText
+                    obj = _this.buildTextField(tag, char, parent);
+                    break;
+                case TAG.DefineShape:  // DefineShape
+                case TAG.DefineShape2: // DefineShape2
+                case TAG.DefineShape3: // DefineShape3
+                case TAG.DefineShape4: // DefineShape4
+                    obj = _this.buildShape(tag, char);
+                    break;
+                case TAG.DefineMorphShape: // DefineMorphShape
+                case TAG.DefineMorphShape2: // DefineMorphShape2
+                    var MorphShape = _this.buildMorphShape(char.tagType, char, tag.Ratio);
+                    obj = _this.buildShape(tag, MorphShape);
+                    break;
+                case TAG.DefineButton: // DefineButton
+                case TAG.DefineButton2: // DefineButton2
+                    obj = _this.buildButton(char, tag, parent);
+                    break;
+                default:
+                    return undefined;
             }
             obj.setParent(parent);
             obj.setStage(stage);
@@ -774,12 +861,10 @@ export class SwfTag {
     }
 
 
-    private buildMovieClip(tag: Tag, character: Character, parent: DisplayObject): MovieClip
+    private buildMovieClip(tag: Tag, character: DefineSpriteCharacter, parent: DisplayObject): MovieClip
     {
-        var _this = this;
-        var stage = _this.stage;
         var mc = new MovieClip();
-        mc.setStage(stage);
+        mc.setStage(this.stage);
         mc._url = parent._url;
         var target = "instance" + mc.instanceId;
         if (tag.PlaceFlagHasName) {
@@ -787,7 +872,7 @@ export class SwfTag {
             target = tag.Name;
         }
         mc.setTarget(parent.getTarget() + "/" + target);
-        _this.build(character, mc);
+        this.build(character.ControlTags, mc);
 
         if (tag.PlaceFlagHasClipActions) {
             var ClipActionRecords = tag.ClipActionRecords;
@@ -1108,17 +1193,12 @@ export class SwfTag {
 
     private parseTags(dataLength: number, characterId: number): Tags
     {
-        var _this = this;
-        var _parseTag = _this.parseTag;
-        var _addTag = _this.addTag;
-        var _generateDefaultTagObj = _this.generateDefaultTagObj;
-        var frame = 1;
-        var tags = [];
-        var tagType = 0;
-        var bitio = _this.bitio;
+        const tags: Tags = {};
+        const bitio = this.bitio;
 
+        let frame = 1;
         // default set
-        tags[frame] = _generateDefaultTagObj.call(_this, frame, characterId);
+        tags[frame] = this.generateDefaultTagObj(frame, characterId);
 
         while (bitio.byte_offset < dataLength) {
             var tagStartOffset = bitio.byte_offset;
@@ -1127,7 +1207,7 @@ export class SwfTag {
             }
 
             var tagLength = bitio.getUI16();
-            tagType = tagLength >> 6;
+            const tagType = tagLength >> 6;
 
             // long
             var length = tagLength & 0x3f;
@@ -1141,14 +1221,14 @@ export class SwfTag {
             }
 
             var tagDataStartOffset = bitio.byte_offset;
-            if (tagType === 1) {
+            if (tagType === TAG.ShowFrame) {
                 frame++;
                 if (dataLength > tagDataStartOffset + 2) {
-                    tags[frame] = _generateDefaultTagObj.call(_this, frame, characterId);
+                    tags[frame] = this.generateDefaultTagObj(frame, characterId);
                 }
             }
 
-            var tag = _parseTag.call(_this, tagType, length);
+            var tag = this.parseTag(tagType, length);
 
             var o = bitio.byte_offset - tagDataStartOffset;
             if (o !== length) {
@@ -1163,9 +1243,8 @@ export class SwfTag {
                 }
             }
 
-            if (tag) {
-                tags = _addTag.call(_this, tagType, tags, tag, frame);
-            }
+            if (tag)
+                this.addTag(tags, tagType, tag, frame);
 
             bitio.bit_offset = 0;
         }
@@ -1173,7 +1252,7 @@ export class SwfTag {
         return tags;
     }
 
-    private parseTag(tagType: number, length: number): Tag
+    private parseTag(tagType: TAG, length: number): Tag
     {
         var _this = this;
         var obj = null;
@@ -1182,12 +1261,17 @@ export class SwfTag {
 
         switch (tagType) {
             default: // null
-                console.log('ERROR UNKNOWN TAG ' + tagType);
+                ((x: never) => {
+                    console.log('ERROR UNKNOWN TAG ' + x);
+                })(tagType);
                 break;
-            case 0: // End
+
+            case TAG.End: // End
                 break;
-            case 1: // ShowFrame
+
+            case TAG.ShowFrame: // ShowFrame
                 break;
+
             case TAG.DefineShape:  // DefineShape
             case TAG.DefineShape2: // DefineShape2
             case TAG.DefineShape3: // DefineShape3
@@ -1198,7 +1282,8 @@ export class SwfTag {
                     _this.parseDefineShape(tagType);
                 }
                 break;
-            case 9: // BackgroundColor
+
+            case TAG.SetBackgroundColor: // BackgroundColor
                 if (stage.bgcolor) {
                     stage.backgroundColor = stage.bgcolor;
                 } else {
@@ -1209,137 +1294,175 @@ export class SwfTag {
                     );
                 }
                 break;
+
             case TAG.DefineFont: // DefineFont
             case TAG.DefineFont2: // DefineFont2
             case TAG.DefineFont3: // DefineFont3
                 _this.parseDefineFont(tagType, length);
                 break;
-            case 13: // DefineFontInfo
-            case 62: // DefineFontInfo2
+
+            case TAG.DefineFontInfo: // DefineFontInfo
+            case TAG.DefineFontInfo2: // DefineFontInfo2
                 _this.parseDefineFontInfo(tagType, length);
                 break;
+
             case TAG.DefineText: // DefineText
             case TAG.DefineText2: // DefineText2
                 _this.parseDefineText(tagType);
                 break;
-            case 4: // PlaceObject
-            case 26: // PlaceObject2
-            case 70: //PlaceObject3
+
+            case TAG.PlaceObject: // PlaceObject
+            case TAG.PlaceObject2: // PlaceObject2
+            case TAG.PlaceObject3: //PlaceObject3
                 obj = _this.parsePlaceObject(tagType, length);
                 break;
+
             case TAG.DefineEditText: // DefineEditText
                 _this.parseDefineEditText(tagType);
                 break;
-            case 39: // DefineSprite
-                _this.parseDefineSprite(bitio.byte_offset + length);
+
+            case TAG.DefineSprite: // DefineSprite
+                _this.parseDefineSprite(tagType, bitio.byte_offset + length);
                 break;
-            case 12: // DoAction
+
+            case TAG.DoAction: // DoAction
                 obj = _this.parseDoAction(length);
                 break;
-            case 59: // DoInitAction
+
+            case TAG.DoInitAction: // DoInitAction
                 _this.parseDoInitAction(length);
                 break;
-            case 5: // RemoveObject
-            case 28: // RemoveObject2
+
+            case TAG.RemoveObject: // RemoveObject
+            case TAG.RemoveObject2: // RemoveObject2
                 obj = _this.parseRemoveObject(tagType);
                 break;
+
             case TAG.DefineButton: // DefineButton
             case TAG.DefineButton2: // DefineButton2
                 obj = _this.parseDefineButton(tagType, length);
                 break;
-            case 43: // FrameLabel
+
+            case TAG.FrameLabel: // FrameLabel
                 obj = _this.parseFrameLabel();
                 break;
-            case 88: // DefineFontName
+
+            case TAG.DefineFontName: // DefineFontName
                 _this.parseDefineFontName();
                 break;
-            case 20: // DefineBitsLossless
-            case 36: // DefineBitsLossless2
+
+            case TAG.DefineBitsLossless: // DefineBitsLossless
+            case TAG.DefineBitsLossless2: // DefineBitsLossless2
                 _this.parseDefineBitsLossLess(tagType, length);
                 break;
-            case 6: // DefineBits
-            case 21: // DefineBitsJPEG2
-            case 35: // DefineBitsJPEG3
-            case 90: // DefineBitsJPEG4
+
+            case TAG.DefineBits: // DefineBits
+            case TAG.DefineBitsJPEG2: // DefineBitsJPEG2
+            case TAG.DefineBitsJPEG3: // DefineBitsJPEG3
+            case TAG.DefineBitsJPEG4: // DefineBitsJPEG4
                 _this.parseDefineBits(tagType, length, _this.jpegTables);
                 _this.jpegTables = null;
                 break;
-            case 8: // JPEGTables
+
+            case TAG.JPEGTables: // JPEGTables
                 _this.jpegTables = _this.parseJPEGTables(length);
                 break;
-            case 56: // ExportAssets
+
+            case TAG.ExportAssets: // ExportAssets
                 _this.parseExportAssets();
                 break;
+
             case TAG.DefineMorphShape: // DefineMorphShape
             case TAG.DefineMorphShape2: // DefineMorphShape2
                 _this.parseDefineMorphShape(tagType);
                 break;
-            case 40: // NameCharacter
+
+            case TAG.NameCharacter: // NameCharacter
                 bitio.getDataUntil("\0"); // NameCharacter
                 break;
-            case 24: // Protect
+
+            case TAG.Protect: // Protect
                 bitio.byteAlign();
                 break;
-            case 63: // DebugID
+
+            case TAG.DebugID: // DebugID
                 bitio.getUI8(); // UUID
                 break;
-            case 64: // EnableDebugger2
+
+            case TAG.EnableDebugger2: // EnableDebugger2
                 bitio.getUI16(); // Reserved
                 bitio.getDataUntil("\0"); // Password
                 break;
-            case 65: // ScriptLimits
+
+            case TAG.ScriptLimits: // ScriptLimits
                 bitio.getUI16(); // MaxRecursionDepth
                 bitio.getUI16(); // ScriptTimeoutSeconds
                 break;
-            case 69: // FileAttributes
+
+            case TAG.FileAttributes: // FileAttributes
                 _this.parseFileAttributes();
                 break;
-            case 77: // MetaData
+
+            case TAG.Metadata: // MetaData
                 bitio.getDataUntil("\0"); // MetaData
                 break;
-            case 86: // DefineSceneAndFrameLabelData
+
+            case TAG.DefineSceneAndFrameLabelData: // DefineSceneAndFrameLabelData
                 obj = _this.parseDefineSceneAndFrameLabelData();
                 break;
-            case 18: // SoundStreamHead
-            case 45: // SoundStreamHead2
+
+            case TAG.SoundStreamHead: // SoundStreamHead
+            case TAG.SoundStreamHead2: // SoundStreamHead2
                 obj = _this.parseSoundStreamHead(tagType);
                 break;
-            case 72: // DoABC
-            case 82: // DoABC2
+
+            case TAG.DoABC: // DoABC
+            case TAG.DoABC2: // DoABC2
                 _this.parseDoABC(tagType, length);
                 break;
-            case 76: // SymbolClass
+
+            case TAG.SymbolClass: // SymbolClass
                 _this.parseSymbolClass();
                 break;
+
             case TAG.DefineSound: // DefineSound
                 _this.parseDefineSound(tagType, length);
                 break;
+
             case TAG.StartSound: // StartSound
             case TAG.StartSound2: // StartSound2
                 obj = _this.parseStartSound(tagType);
                 break;
-            case 17: // DefineButtonSound
+
+            case TAG.DefineButtonSound: // DefineButtonSound
                 _this.parseDefineButtonSound();
                 break;
-            case 73: // DefineFontAlignZones
+
+            case TAG.DefineFontAlignZones: // DefineFontAlignZones
                 _this.parseDefineFontAlignZones();
                 break;
-            case 74: // CSMTextSettings
+
+            case TAG.CSMTextSettings: // CSMTextSettings
                 _this.parseCSMTextSettings(tagType);
                 break;
-            case 19: // SoundStreamBlock
+
+            case TAG.SoundStreamBlock: // SoundStreamBlock
                 _this.parseSoundStreamBlock(tagType, length);
                 break;
-            case 60: // DefineVideoStream
+
+            case TAG.DefineVideoStream: // DefineVideoStream
                 _this.parseDefineVideoStream(tagType);
                 break;
+
             case TAG.VideoFrame: // VideoFrame
                 _this.parseVideoFrame(tagType, length);
                 break;
-            case 78: // DefineScalingGrid
+
+            case TAG.DefineScalingGrid: // DefineScalingGrid
                 _this.parseDefineScalingGrid();
                 break;
-            case 41: // ProductInfo
+
+            case TAG.ProductInfo: // ProductInfo
                 bitio.getUI32(); // ProductID
                 bitio.getUI32(); // Edition
                 bitio.getUI8(); // MajorVersion
@@ -1349,39 +1472,41 @@ export class SwfTag {
                 bitio.getUI32(); // CompilationDate
                 bitio.getUI32(); // TODO
                 break;
-            case 3:  // FreeCharacter
-            case 16: // StopSound
-            case 23: // DefineButtonCxform
-            case 25: // PathsArePostScript
-            case 29: // SyncFrame
-            case 31: // FreeAll
-            case 38: // DefineVideo
-            case 42: // DefineTextFormat
-            case 44: // DefineBehavior
-            case 47: // FrameTag
-            case 49: // GeProSet
-            case 52: // FontRef
-            case 53: // DefineFunction
-            case 54: // PlaceFunction
-            case 55: // GenTagObject
-            case 57: // ImportAssets
-            case 58: // EnableDebugger
-            case 66: // SetTabIndex
-            case 71: // ImportAssets2
-            case 87: // DefineBinaryData
-            case 91: // DefineFont4
-            case 93: // EnableTelemetry
+
+            case TAG.FreeCharacter:
+            case TAG.StopSound:
+            case TAG.DefineButtonCxform:
+            case TAG.PathsArePostScript:
+            case TAG.SyncFrame:
+            case TAG.FreeAll:
+            case TAG.DefineVideo:
+            case TAG.DefineTextFormat:
+            case TAG.DefineBehavior:
+            case TAG.FrameTag:
+            case TAG.GeProSet:
+            case TAG.FontRef:
+            case TAG.DefineFunction:
+            case TAG.PlaceFunction:
+            case TAG.GenTagObject:
+            case TAG.ImportAssets:
+            case TAG.EnableDebugger:
+            case TAG.SetTabIndex:
+            case TAG.ImportAssets2:
+            case TAG.DefineBinaryData:
+            case TAG.DefineFont4:
+            case TAG.EnableTelemetry:
                 console.log("[base] tagType -> " + tagType);
                 break;
-            case 27: // 27 (invalid)
-            case 30: // 30 (invalid)
-            case 67: // 67 (invalid)
-            case 68: // 68 (invalid)
-            case 79: // 79 (invalid)
-            case 80: // 80 (invalid)
-            case 81: // 81 (invalid)
-            case 85: // 85 (invalid)
-            case 92: // 92 (invalid)
+
+            case TAG.Invalid27: // 27 (invalid)
+            case TAG.Invalid30: // 30 (invalid)
+            case TAG.Invalid67: // 67 (invalid)
+            case TAG.Invalid68: // 68 (invalid)
+            case TAG.Invalid79: // 79 (invalid)
+            case TAG.Invalid80: // 80 (invalid)
+            case TAG.Invalid81: // 81 (invalid)
+            case TAG.Invalid85: // 85 (invalid)
+            case TAG.Invalid92: // 92 (invalid)
                 console.log("ERROR TAG" + tagType);
                 break;
         }
@@ -1389,38 +1514,36 @@ export class SwfTag {
         return obj;
     }
 
-    private addTag(tagType: number, tags: Tags, tag: Tag, frame: number): Tags
+    private addTag(tags: Tags, tagType: number, tag: Tag, frame: number): void
     {
-        var tagsArray = tags[frame];
+        const tagObj= tags[frame];
+
         switch (tagType) {
-            case 4:  // PlaceObject
-            case 26: // PlaceObject2
-            case 70: // PlaceObject3
-                var cTags = tagsArray.cTags;
-                tagsArray.cTags[cTags.length] = tag;
+            case TAG.PlaceObject:
+            case TAG.PlaceObject2:
+            case TAG.PlaceObject3:
+                tagObj.cTags.push(tag);
                 break;
-            case 12: // DoAction
-                var as = tagsArray.actionScript;
-                tagsArray.actionScript[as.length] = tag;
+
+            case TAG.DoAction:
+                tagObj.actionScript.push(tag);
                 break;
-            case 5: // RemoveObject
-            case 28: // RemoveObject2
-                var removeTags = tagsArray.removeTags;
-                tagsArray.removeTags[removeTags.length] = tag;
+
+            case TAG.RemoveObject:
+            case TAG.RemoveObject2:
+                tagObj.removeTags.push(tag);
                 break;
-            case 43: // FrameLabel
-                var labels = tagsArray.labels;
-                tag.frame = frame;
-                tagsArray.labels[labels.length] = tag;
+
+            case TAG.FrameLabel:
+                tag.frame = frame; // ANY
+                tagObj.labels.push(tag);
                 break;
-            case TAG.StartSound: // StartSound
-            case TAG.StartSound2: // StartSound2
-                var sounds = tagsArray.sounds;
-                tagsArray.sounds[sounds.length] = tag;
+
+            case TAG.StartSound:
+            case TAG.StartSound2:
+                tagObj.sounds.push(tag);
                 break;
         }
-
-        return tags;
     }
 
     private parseDefineShape(tagType: TAG_DefineShape): DefineShape
@@ -1462,27 +1585,23 @@ export class SwfTag {
         return new Bounds(xMin, yMin, xMax, yMax);
     }
 
-    private shapeWithStyle(tagType: number): ShapeWithStyle
+    private shapeWithStyle(tagType: TAG_DefineShape | TAG_DefineMorphShape): ShapeWithStyle
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var fillStyles;
-        var lineStyles;
+        let fillStyles;
+        let lineStyles;
 
         if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
             fillStyles = {fillStyleCount: 0, fillStyles: []};
             lineStyles = {lineStyleCount: 0, lineStyles: []};
         } else {
-            fillStyles = _this.fillStyleArray(tagType);
-            lineStyles = _this.lineStyleArray(tagType);
+            fillStyles = this.fillStyleArray(tagType);
+            lineStyles = this.lineStyleArray(tagType);
         }
 
-        var numBits = bitio.getUI8();
-        var NumFillBits = numBits >> 4;
-        var NumLineBits = numBits & 0x0f;
-        var ShapeRecords = _this.shapeRecords(tagType, {
-            FillBits: NumFillBits,
-            LineBits: NumLineBits
+        const numBits = this.bitio.getUI8();
+        const ShapeRecords = this.shapeRecords(tagType, {
+            FillBits: numBits >> 4,
+            LineBits: numBits & 0x0f
         });
 
         return {
@@ -1492,7 +1611,7 @@ export class SwfTag {
         };
     }
 
-    private fillStyleArray(tagType: number): FillStyleArray
+    private fillStyleArray(tagType: TAG_DefineShape | TAG_DefineMorphShape): FillStyleArray
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1512,7 +1631,7 @@ export class SwfTag {
         };
     }
 
-    private fillStyle(tagType: number): FillStyle
+    private fillStyle(tagType: TAG_DefineShape | TAG_DefineMorphShape): FillStyle
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1530,6 +1649,7 @@ export class SwfTag {
                     obj.Color = _this.rgb();
                 }
                 break;
+
             case 0x10:
             case 0x12:
                 if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
@@ -1541,6 +1661,7 @@ export class SwfTag {
                     obj.gradient = _this.gradient(tagType);
                 }
                 break;
+
             case 0x13:
                 obj.gradientMatrix = _this.matrix();
                 obj.gradient = _this.focalGradient(tagType);
@@ -1608,7 +1729,7 @@ export class SwfTag {
         return result;
     }
 
-    private gradient(tagType: number): Gradient
+    private gradient(tagType: TAG_DefineShape | TAG_DefineMorphShape): Gradient
     {
         var _this = this;
         var SpreadMode = 0;
@@ -1638,7 +1759,7 @@ export class SwfTag {
         };
     }
 
-    private gradientRecord(tagType): GradientRecord
+    private gradientRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape): GradientRecord
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1656,7 +1777,7 @@ export class SwfTag {
         }
     }
 
-    private focalGradient(tagType: number): FocalGradient
+    private focalGradient(tagType: TAG_DefineShape | TAG_DefineMorphShape): FocalGradient
     {
         var bitio = this.bitio;
         bitio.byteAlign();
@@ -1680,7 +1801,7 @@ export class SwfTag {
         };
     }
 
-    private lineStyleArray(tagType: number): LineStyleArray
+    private lineStyleArray(tagType: TAG_DefineShape | TAG_DefineMorphShape): LineStyleArray
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1700,7 +1821,7 @@ export class SwfTag {
         };
     }
 
-    private lineStyle(tagType: number): LineStyle
+    private lineStyle(tagType: TAG_DefineShape | TAG_DefineMorphShape): LineStyle
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1773,45 +1894,44 @@ export class SwfTag {
         return obj;
     }
 
-    private shapeRecords(tagType: number,
+    private shapeRecords(tagType: TAG_DefineShape | TAG_DefineMorphShape,
                          currentNumBits: {
                             FillBits: number;
                             LineBits: number;
                          }): ShapeRecord[]
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var shapeRecords = [];
-        _this.currentPosition = {x: 0, y: 0};
-        var _straightEdgeRecord = _this.straightEdgeRecord;
-        var _curvedEdgeRecord = _this.curvedEdgeRecord;
-        var _styleChangeRecord = _this.styleChangeRecord;
+        const bitio = this.bitio;
+        const shapeRecords = [];
+        this.currentPosition = {x: 0, y: 0};
 
         while (true) {
-            var first6Bits = bitio.getUIBits(6);
-            var shape = 0;
+            const first6Bits = bitio.getUIBits(6);
+
+            let shape;
             if (first6Bits & 0x20) {
                 var numBits = first6Bits & 0x0f;
                 if (first6Bits & 0x10) {
-                    shape = _straightEdgeRecord.call(_this, tagType, numBits);
+                    shape = this.straightEdgeRecord(tagType, numBits);
                 } else {
-                    shape = _curvedEdgeRecord.call(_this, tagType, numBits);
+                    shape = this.curvedEdgeRecord(tagType, numBits);
                 }
             } else if (first6Bits) {
-                shape =
-                    _styleChangeRecord.call(_this, tagType, first6Bits, currentNumBits);
+                shape = this.styleChangeRecord(tagType, first6Bits, currentNumBits);
             }
 
-            shapeRecords[shapeRecords.length] = shape;
-            if (!shape) {
-                bitio.byteAlign();
+            shapeRecords.push(shape);
+
+            if (!shape)
                 break;
-            }
         }
+
+        bitio.byteAlign();
+
         return shapeRecords;
     }
 
-    private straightEdgeRecord(tagType: number, numBits: number): ShapeRecord
+    private straightEdgeRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape,
+                               numBits: number): ShapeRecord
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1851,7 +1971,8 @@ export class SwfTag {
         };
     }
 
-    private curvedEdgeRecord(tagType: number, numBits: number): ShapeRecord
+    private curvedEdgeRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape,
+                             numBits: number): ShapeRecord
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1884,7 +2005,7 @@ export class SwfTag {
         };
     }
 
-    private styleChangeRecord(tagType: number,
+    private styleChangeRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape,
                               changeFlag: number,
                               currentNumBits: {
                                 FillBits: number;
@@ -1934,7 +2055,7 @@ export class SwfTag {
         return obj;
     }
 
-    private parseDefineBitsLossLess(tagType: number, length: number): void
+    private parseDefineBitsLossLess(tagType: TAG_DefineBitsLossless, length: number): void
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -1944,7 +2065,7 @@ export class SwfTag {
         var width = bitio.getUI16();
         var height = bitio.getUI16();
 
-        var isAlpha = (tagType === 36);
+        var isAlpha = (tagType === TAG.DefineBitsLossless2);
         var colorTableSize = 0;
         if (format === 3) {
             colorTableSize = bitio.getUI8() + 1;
@@ -2043,7 +2164,7 @@ export class SwfTag {
         return this.bitio.getData(length);
     }
 
-    private parseDefineBits(tagType: number, length: number, jpegTables: Data): void
+    private parseDefineBits(tagType: TAG_DefineBits, length: number, jpegTables: Data): void
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -2052,26 +2173,25 @@ export class SwfTag {
         var sub = bitio.byte_offset - startOffset;
 
         var ImageDataLen = length - sub;
-        if (tagType === 35 || tagType === 90) {
+        if (tagType === TAG.DefineBitsJPEG3 || tagType === TAG.DefineBitsJPEG4) {
             ImageDataLen = bitio.getUI32();
         }
 
-        if (tagType === 90) {
+        if (tagType === TAG.DefineBitsJPEG4) {
             var DeblockParam = bitio.getUI16();
             console.log("DeblockParam", DeblockParam);
         }
 
         var JPEGData = bitio.getData(ImageDataLen);
         var BitmapAlphaData: Data;
-        if (tagType === 35 || tagType === 90) {
+        if (tagType === TAG.DefineBitsJPEG3 || tagType === TAG.DefineBitsJPEG4) {
             BitmapAlphaData =
                 bitio.getData(length - sub - ImageDataLen);
         }
         bitio.byte_offset = startOffset + length;
 
         // render
-        var stage = _this.stage;
-        stage.imgUnLoadCount++;
+        this.imgUnLoadCount++;
         var image = document.createElement("img");
         image.addEventListener("load", () => {
             var width = image.width;
@@ -2096,7 +2216,7 @@ export class SwfTag {
             }
 
             this.setCharacter<CanvasRenderingContext2D>(CharacterId, imageContext);
-            stage.imgUnLoadCount--;
+            this.imgUnLoadCount--;
         });
 
         if (jpegTables && jpegTables.length > 4) {
@@ -2263,7 +2383,7 @@ export class SwfTag {
                 };
 
                 var shapes = {} as ShapeWithStyle;
-                shapes.ShapeRecords = _this.shapeRecords(obj.tagType, currentNumBits);
+                shapes.ShapeRecords = _this.shapeRecords(obj.tagType as any, currentNumBits);
                 shapes.lineStyles = {
                     lineStyleCount: 1,
                     lineStyles: [{
@@ -2339,7 +2459,7 @@ export class SwfTag {
             this.fonts[obj.FontName] = obj;
     }
 
-    private parseDefineFontInfo(tagType: number, length: number): void
+    private parseDefineFontInfo(tagType: TAG_DefineFontInfo, length: number): void
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -2365,7 +2485,7 @@ export class SwfTag {
         obj.FontFlagsItalic = bitio.getUIBits(1);
         obj.FontFlagsBold = bitio.getUIBits(1);
         obj.FontFlagsWideCodes = bitio.getUIBits(1);
-        if (tagType === 62) {
+        if (tagType === TAG.DefineFontInfo2) {
             obj.LanguageCode = bitio.getUI8();
         }
 
@@ -2380,7 +2500,7 @@ export class SwfTag {
         var CodeTable = [];
         bitio.byteAlign();
         var tLen = endOffset - bitio.byte_offset;
-        if (obj.FontFlagsWideCodes || tagType === 62) {
+        if (obj.FontFlagsWideCodes || tagType === TAG.DefineFontInfo2) {
             while (tLen) {
                 CodeTable[CodeTable.length] = bitio.getUI16();
                 tLen -= 2;
@@ -2732,7 +2852,7 @@ export class SwfTag {
         length = obj.StartEdges.ShapeRecords.length;
         for (i = 0; i < length; i++) {
             var record = StartRecords[i];
-            if (!record.isChange) {
+            if (!record || !record.isChange) {
                 continue;
             }
             if (record.StateFillStyle0) {
@@ -3622,16 +3742,17 @@ export class SwfTag {
         return result;
     }
 
-    private parseDefineSprite(dataLength: number): void
+    private parseDefineSprite(tagType: TAG.DefineSprite, dataLength: number): void
     {
         const bitio = this.bitio;
         const SpriteId = bitio.getUI16();
         const obj: DefineSprite = {
+            tagType,
             SpriteId,
             FrameCount: bitio.getUI16(),
             ControlTags: this.parseTags(dataLength, SpriteId)
         };
-        this.setCharacter<DefineSpriteCharacter>(SpriteId, obj.ControlTags);
+        this.setCharacter<DefineSpriteCharacter>(SpriteId, obj);
     }
 
     private parseDoAction(length: number): ActionScript
@@ -3735,9 +3856,9 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
-        stage.abcFlag = true;
         var startOffset = bitio.byte_offset;
+
+        this.abcFlag = true;
 
         var obj = {} as DoABC;
         obj.tagType = tagType;

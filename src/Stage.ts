@@ -96,8 +96,6 @@ export class Stage {
     dragRules: DragRules = null;
 
     bgcolor = null;
-    imgUnLoadCount = 0;
-    abcFlag = false;
     tagId = null;
 
     private intervalId = 0;
@@ -373,7 +371,7 @@ export class Stage {
                 _this.loadStatus++;
                 break;
             case 3:
-                if (!_this.isLoad || !_this.stopFlag || _this.imgUnLoadCount > 0) {
+                if (!_this.isLoad || !_this.stopFlag || _this.swftag.imgUnLoadCount > 0) {
                     break;
                 }
                 _this.loadStatus++;
@@ -1082,7 +1080,7 @@ export class Stage {
         var chkX = touchX * scale * _devicePixelRatio;
         var chkY = touchY * scale * _devicePixelRatio;
 
-        if (_this.abcFlag) {
+        if (this.swftag.abcFlag) {
             var parent = _this.getParent();
             ctx.setTransform(1, 0, 0, 1, 0, 0);
             ctx.clearRect(0, 0, hitWidth, hitHeight);
