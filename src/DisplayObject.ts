@@ -1150,7 +1150,7 @@ export class DisplayObject extends EventDispatcher {
 
             // avm2
             var cId = _this.getCharacterId();
-            var symbol = stage.symbols[cId];
+            var symbol = stage.swftag.symbols[cId];
             if (symbol) {
                 var symbols = symbol.split(".");
                 var classMethod = symbols.pop();

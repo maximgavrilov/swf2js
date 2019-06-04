@@ -310,7 +310,7 @@ export class DisplayObjectContainer extends InteractiveObject {
             return;
 
         const stage = this.getStage();
-        const sound = stage.sounds[this.soundId];
+        const sound = stage.swftag.sounds[this.soundId];
         if (!sound)
             return;
 

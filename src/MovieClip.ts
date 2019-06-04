@@ -165,7 +165,7 @@ export class MovieClip extends Sprite {
 
     stopAllSounds(): void {
         var stage = this.getStage();
-        var loadSounds = stage.loadSounds;
+        var loadSounds = stage.swftag.loadSounds;
         var sLen = loadSounds.length;
         var stopSound = function () {
             this.removeEventListener("pause", stopSound);
@@ -183,7 +183,6 @@ export class MovieClip extends Sprite {
                 audio.pause();
             }
         }
-        stage.loadSounds = [];
     }
 
     loadMovie(url: string, target: number | string, SendVarsMethod: 'GET'|'POST'|2): void {
@@ -627,7 +626,7 @@ export class MovieClip extends Sprite {
         }
 
         var stage = _this.getStage();
-        var exportAssets = stage.exportAssets;
+        var exportAssets = stage.swftag.exportAssets;
         if (id in exportAssets) {
             var characterId = exportAssets[id];
             var tag = stage.swftag.getCharacter(characterId);
@@ -641,7 +640,7 @@ export class MovieClip extends Sprite {
                 movieClip.setTarget(_this.getTarget() + "/" + name);
 
                 // init action
-                var initAction = stage.initActions[characterId];
+                var initAction = stage.swftag.initActions[characterId];
                 if (typeof initAction === "function") {
                     movieClip.active = true;
                     initAction.apply(movieClip);
@@ -649,7 +648,7 @@ export class MovieClip extends Sprite {
                 }
 
                 // registerClass
-                var RegClass = stage.registerClass[characterId];
+                var RegClass = stage.swftag.registerClass[characterId];
                 if (RegClass) {
                     movieClip.variables.registerClass = new RegClass();
                 }
@@ -888,7 +887,7 @@ export class MovieClip extends Sprite {
             tags.reverse();
         }
 
-        var initAction = stage.initActions[_this.getCharacterId()];
+        var initAction = stage.swftag.initActions[_this.getCharacterId()];
         if (typeof initAction === "function") {
             initAction.apply(_this);
         }
@@ -964,7 +963,7 @@ export class MovieClip extends Sprite {
             }
         } else {
             // init action
-            var initAction = myStage.initActions[_this.getCharacterId()];
+            var initAction = myStage.swftag.initActions[_this.getCharacterId()];
             if (typeof initAction === "function") {
                 initAction.apply(_this);
             }
@@ -1425,7 +1424,7 @@ export class MovieClip extends Sprite {
                 _this.buildAVM2();
 
                 // registerClass
-                var RegClass = myStage.registerClass[_this.getCharacterId()];
+                var RegClass = myStage.swftag.registerClass[_this.getCharacterId()];
                 if (typeof RegClass === "function") {
                     _this.variables.registerClass = new RegClass();
                 }
@@ -1566,7 +1565,7 @@ export class MovieClip extends Sprite {
     private buildAVM2(): void {
         var _this = this;
         var stage = _this.getStage();
-        var symbol = stage.symbols[_this.getCharacterId()];
+        var symbol = stage.swftag.symbols[_this.getCharacterId()];
         if (symbol) {
             var symbols = symbol.split(".");
             var classMethod = symbols.pop();

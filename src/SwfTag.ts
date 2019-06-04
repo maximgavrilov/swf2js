@@ -18,7 +18,7 @@ import {
 import { cacheStore } from './CacheStore';
 import { CLS, DisplayObject } from './DisplayObject';
 import { PlaceObject } from './PlaceObject';
-import { MovieClip } from './MovieClip';
+import { MCAction, MovieClip } from './MovieClip';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { Stage } from './Stage';
@@ -231,7 +231,7 @@ const enum SoundFormat {
     Speex = 11,
     XAiff = 15
 };
-export type DefineSound = {
+type DefineSound = {
     tagType: number;
     SoundId: number;
     SoundFormat: SoundFormat;
@@ -346,7 +346,7 @@ export type StartSound = {
     SoundClassName: string;
     SoundInfo: SoundInfo
 };
-export type VideoFrame = {
+type VideoFrame = {
     tagType: TAG.VideoFrame;
     StreamID: number;
     FrameNum: number;
@@ -490,6 +490,15 @@ export class SwfTag {
 
     // Stage
     private characters: { [id: number]: Character } = {};
+    readonly sounds: { [characterId: number]: DefineSound } = {};
+    readonly videos: { [streamId: number]: VideoFrame } = {};
+    readonly fonts: { [face: string]: DefineFont } = {};
+    readonly symbols: { [characterId: number]: string } = {};
+    readonly exportAssets: { [id: string]: number } = {};
+    readonly loadSounds: HTMLAudioElement[] = [];
+    readonly initActions: { [charactedId: number]: MCAction } = {};
+    readonly packages: { [spriteId: number]: 1 } = {};
+    readonly registerClass: { [characterId: number]: any }  = {};
 
     constructor(private readonly stage: Stage,
                 private readonly bitio?: BitIO)
@@ -2017,18 +2026,15 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
         var count = bitio.getUI16();
 
-        var exportAssets = stage.exportAssets;
-        var packages = stage.packages;
         while (count--) {
             var id = bitio.getUI16();
             var name = bitio.getDataUntil("\0");
             if (name.substr(0, 10) === "__Packages") {
-                packages[id] = 1;
+                this.packages[id] = 1;
             }
-            exportAssets[name] = id;
+            this.exportAssets[name] = id;
         }
     };
 
@@ -2160,7 +2166,6 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
         var endOffset = bitio.byte_offset + length;
         var i = 0;
         var len = 0;
@@ -2331,7 +2336,7 @@ export class SwfTag {
         this.setCharacter<DefineFontCharacter>(obj.FontId, obj);
 
         if (obj.tagType !== TAG.DefineFont)
-            stage.fonts[obj.FontName] = obj;
+            this.fonts[obj.FontName] = obj;
     }
 
     private parseDefineFontInfo(tagType: number, length: number): void
@@ -3648,13 +3653,12 @@ export class SwfTag {
         var mc = stage.getParent();
         (mc as any).variables = {};
         var action = mc.createActionScript2(as);
-        var packages = stage.packages;
-        if (spriteId in packages) {
+        if (spriteId in this.packages) {
             mc.active = true;
             action.apply(mc);
             mc.active = false;
         }
-        stage.initActions[spriteId] = action;
+        this.initActions[spriteId] = action;
     }
 
     private parseDefineSceneAndFrameLabelData(): DefineSceneAndFrameLabelData
@@ -4607,16 +4611,13 @@ export class SwfTag {
     private parseSymbolClass(): void
     {
         var bitio = this.bitio;
-        var stage = this.stage;
-        var symbols = stage.symbols;
-        var exportAssets = stage.exportAssets;
         var count = bitio.getUI16();
         if (count) {
             while (count--) {
                 var tagId = bitio.getUI16();
                 var name = bitio.getDataUntil("\0");
-                symbols[tagId] = name;
-                exportAssets[name] = tagId;
+                this.symbols[tagId] = name;
+                this.exportAssets[name] = tagId;
             }
         }
     }
@@ -4625,7 +4626,6 @@ export class SwfTag {
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
         var startOffset = bitio.byte_offset;
 
         const obj: DefineSound = {
@@ -4676,14 +4676,13 @@ export class SwfTag {
         }
 
         obj.base64 = "data:audio/" + mimeType + ";base64," + base64Encode(SoundData);
-        stage.sounds[obj.SoundId] = obj;
+        this.sounds[obj.SoundId] = obj;
     }
 
     private parseStartSound(tagType: TAG_StartSound): StartSoundTag
     {
         var _this = this;
         var bitio = _this.bitio;
-        var stage = _this.stage;
 
         let obj: StartSound;
         if (tagType === TAG.StartSound) {
@@ -4704,7 +4703,7 @@ export class SwfTag {
         }
         this.setCharacter<StartSoundCharacter>(obj.SoundId, obj);
 
-        var sound = stage.sounds[obj.SoundId];
+        var sound = this.sounds[obj.SoundId];
         var audio = document.createElement("audio");
         audio.onload = function ()
         {
@@ -4715,8 +4714,7 @@ export class SwfTag {
         };
         audio.src = sound.base64;
 
-        var loadSounds = stage.loadSounds;
-        loadSounds[loadSounds.length] = audio;
+        this.loadSounds.push(audio);
 
         return {
             SoundId: obj.SoundId,
@@ -4889,7 +4887,7 @@ export class SwfTag {
         bitio.byte_offset = startOffset + length;
 
         // obj.base64 = 'data:image/jpeg;base64,' + base64Encode(VideoData);
-        this.stage.videos[obj.StreamID] = obj;
+        this.videos[obj.StreamID] = obj;
     }
 
     private parseVp6SwfVideoPacket(length: number): Vp6SwfVideoPacket

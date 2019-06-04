@@ -10,6 +10,7 @@
 import { DisplayObject } from './DisplayObject';
 import { MovieClip } from './MovieClip';
 import { Sound } from './Sound';
+import { Stage } from './Stage';
 
 class Activation {
 }
@@ -21,7 +22,7 @@ class Activation {
  * @param stage
  * @constructor
  */
-export var ActionScript3 = function (data, id, ns, stage)
+export var ActionScript3 = function (data, id, ns, stage: Stage)
 {
     var _this = this;
 
@@ -158,7 +159,7 @@ ActionScript3.prototype.getAVM2 = function ()
 {
     var _this = this;
     var ns = _this.ns;
-    var stage = _this.stage;
+    var stage = _this.stage as Stage;
     var values = ns.split(":");
     var className = values.pop();
     var nLen = values.length;
@@ -210,7 +211,7 @@ ActionScript3.prototype.getParent = function ()
 ActionScript3.prototype.getProperty = function (name)
 {
     var _this = this;
-    var stage = _this.stage;
+    var stage = _this.stage as Stage;
     var value;
 
     // local1
@@ -281,7 +282,7 @@ ActionScript3.prototype.setOptions = function ()
         var data = _this.data;
         var options = info.options;
         var paramType = info.paramType;
-        var stage = _this.stage;
+        var stage = _this.stage as Stage;
 
         for (var i = 0; i < paramCount; i++) {
             var value = undefined;
@@ -1004,8 +1005,8 @@ ActionScript3.prototype.ActionCallPropVoid = function (stack, index, argCount)
     var func = obj[prop];
     if (!func && obj instanceof MovieClip) {
         obj = obj as any;
-        var stage = obj.getStage();
-        var symbol = stage.symbols[obj.getCharacterId()];
+        var stage = obj.getStage() as Stage;
+        var symbol = stage.swftag.symbols[obj.getCharacterId()];
         if (symbol) {
             var names = symbol.split(".");
             var classMethod = names.pop();
@@ -1055,7 +1056,7 @@ ActionScript3.prototype.ActionCallPropVoid = function (stack, index, argCount)
 
     // fscommand
     if (prop === "fscommand") {
-        obj = _this.stage;
+        obj = _this.stage as Stage;
     }
 
     if (func) {
@@ -1179,7 +1180,7 @@ ActionScript3.prototype.ActionConstructProp = function (stack, index, argCount)
     var obj = stack.pop();
 
     var value;
-    var stage = _this.stage;
+    var stage = _this.stage as Stage;
     var DoABC = stage.abc[prop];
     if (DoABC) {
         var builder = _this.getBuilder();
@@ -1211,7 +1212,7 @@ ActionScript3.prototype.ActionConstructSuper = function (stack, argCount)
     var values = SuperClassName.split("::");
     var prop = values.pop();
     var ns = values.pop();
-    var stage = _this.stage;
+    var stage = _this.stage as Stage;
     var abcObj = stage.abc;
     var avmObj = stage.avm2;
 

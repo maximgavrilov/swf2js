@@ -13,6 +13,7 @@ import { SimpleButton } from './SimpleButton';
 import { Shape } from './Shape';
 import { Sprite } from './Sprite';
 import { MovieClip } from './MovieClip';
+import { Stage } from './Stage';
 import { TextFormat, TextField } from './TextField';
 
 import { Color } from './Color';
@@ -676,7 +677,7 @@ ActionScript.prototype.execute = function (mc)
     if (!movieClip.active) {
         return undefined;
     }
-    var stage = movieClip.getStage();
+    var stage = movieClip.getStage() as Stage;
     if (stage) {
         _this.version = stage.getVersion();
     }
@@ -2070,10 +2071,10 @@ ActionScript.prototype.ActionCallMethod = function (stack, mc)
                 case "registerclass":
                     value = false;
                     var _root = mc.getDisplayObject("_root");
-                    var stage = _root.getStage();
-                    var characterId = stage.exportAssets[params[0]];
+                    var stage = _root.getStage() as Stage;
+                    var characterId = stage.swftag.exportAssets[params[0]];
                     if (characterId) {
-                        stage.registerClass[characterId] = params[1];
+                        stage.swftag.registerClass[characterId] = params[1];
                         value = true;
                     }
                     break;
@@ -2316,7 +2317,7 @@ ActionScript.prototype.ActionEnumerate = function (stack, mc)
         switch (true) {
             case object instanceof DisplayObject:
                 var container = object.getTags();
-                var stage = object.getStage();
+                var stage = object.getStage() as Stage;
                 for (name in container) {
                     if (!container.hasOwnProperty(name)) {
                         continue;
@@ -2397,9 +2398,9 @@ ActionScript.prototype.ActionGetMember = function (stack, mc)
                         typeof name === "string" &&
                         name.substr(0, 8) === "instance"
                     ) {
-                        var stage = object.getStage();
+                        var stage = object.getStage() as Stage;
                         var id = name.split("instance")[1];
-                        property = stage.getInstance(id);
+                        property = stage.getInstance(+id);
                     }
 
                     if (property === undefined && _this.checkMethod(name)) {
@@ -2533,7 +2534,7 @@ ActionScript.prototype.ActionNewObject = function (stack, mc)
                 break;
             case "MovieClip":
                 obj = new MovieClip();
-                var stage = mc.getStage();
+                var stage = mc.getStage() as Stage;
                 obj.setStage(stage);
                 obj.setParent(mc);
                 break;

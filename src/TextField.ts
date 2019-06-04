@@ -469,7 +469,7 @@ export class TextField extends InteractiveObject {
                 break;
         }
 
-        var fontData = _this.getStage().swftag.getCharacter(_this.fontId) as DefineFont;
+        var fontData = _this.getStage().swftag.getCharacter<DefineFont>(_this.fontId);
 
         if (fontData.tagType === TAG.DefineFont || !fontData.FontFlagsHasLayout)
             throw new Error('Unsupported font');
@@ -775,7 +775,7 @@ export class TextField extends InteractiveObject {
         var wordWrap = variables.wordWrap;
         var multiline = variables.multiline;
         var stage = _this.getStage();
-        var fonts = stage.fonts;
+        var fonts = stage.swftag.fonts;
         var face = child.face;
         var fontData = fonts[face];
 
@@ -858,7 +858,7 @@ export class TextField extends InteractiveObject {
         var _this = this;
         var fontScale = _this.fontScale;
         var stage = _this.getStage();
-        var fonts = stage.fonts;
+        var fonts = stage.swftag.fonts;
         var width = 0;
         var face = child.face;
         var fontData = fonts[face];

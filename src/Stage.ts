@@ -15,11 +15,11 @@ import { Global } from './Global';
 import { PlaceObject } from './PlaceObject';
 import { keyClass } from './Key';
 import { Mouse } from './Mouse';
-import { MCAction, MovieClip } from './MovieClip';
+import { MovieClip } from './MovieClip';
 import { Packages } from './Packages';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
-import { DefineFont, DefineSound, SwfTag, VideoFrame } from './SwfTag';
+import { SwfTag } from './SwfTag';
 import { TextField } from './TextField';
 import {
     ColorTransform, HitEvent, Matrix,
@@ -86,7 +86,6 @@ export class Stage {
     clipMc = false;
     isClipDepth = false;
     context?: CanvasRenderingContext2D;
-    loadSounds: HTMLAudioElement[] = [];
 
     backgroundColor: string = "transparent";
     loadStatus = 0;
@@ -123,18 +122,12 @@ export class Stage {
     private matrix: Matrix = [1,0,0,1,0,0];
     private _matrix: Matrix = [1,0,0,1,0,0];
     private _colorTransform: ColorTransform = [1,1,1,1,0,0,0,0];
-    readonly initActions: { [charactedId: number]: MCAction } = {};
-    readonly exportAssets: { [id: string]: number } = {};
-    readonly packages: { [spriteId: number]: 1 } = {};
-    readonly registerClass: { [characterId: number]: any }  = {};
     readonly buttonHits: ButtonHit[] = [];
     readonly downEventHits: Action[] = [];
     readonly moveEventHits: Action[] = [];
     readonly upEventHits: Action[] = [];
     readonly keyDownEventHits: Action[] = [];
     readonly keyUpEventHits: Action[] = [];
-    readonly sounds: { [characterId: number]: DefineSound } = {};
-    readonly videos: { [streamId: number]: VideoFrame } = {};
     readonly actions: Action[] = [];
     private instances = [];
     readonly placeObjects: {
@@ -144,7 +137,6 @@ export class Stage {
             }
         }
     } = {};
-    readonly fonts: { [face: string]: DefineFont } = {};
     private isAction = true;
     private _global = new Global();
     private touchObj = null;
@@ -161,7 +153,6 @@ export class Stage {
     private version = 8;
     readonly avm2 = new Packages(this);
     readonly abc = new Packages(this);
-    readonly symbols: { [characterId: number]: string } = {};
     private parent: MovieClip;
 
     // render
@@ -593,7 +584,7 @@ export class Stage {
 
             // load sound
             if (isTouch) {
-                var loadSounds = this.loadSounds;
+                var loadSounds = this.swftag.loadSounds;
                 var sLen = loadSounds.length;
                 if (sLen) {
                     var loadSound = function ()
@@ -811,8 +802,6 @@ export class Stage {
         whis.upEventHits = [];
         whis.keyDownEventHits = [];
         whis.keyUpEventHits = [];
-        whis.sounds = [];
-        this.loadSounds = [];
         whis.actions = [];
     }
 
