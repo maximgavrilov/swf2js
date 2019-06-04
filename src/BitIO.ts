@@ -308,10 +308,6 @@ export class BitIO {
         return str;
     }
 
-    getVersion(): number {
-        return this.getUI8();
-    }
-
     byteAlign(): void {
         if (!this.bit_offset) {
             return;

@@ -716,7 +716,7 @@ export class SwfTag {
 
         const signature = bitio.getHeaderSignature();
 
-        const version = bitio.getVersion();
+        const version = bitio.getUI8();
         const fileSize = bitio.getUI32();
 
         switch (signature) {

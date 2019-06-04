@@ -1254,7 +1254,7 @@ export class DisplayObject extends EventDispatcher {
         var _this = this;
         var mc: DisplayObject = _this;
         var _root = mc;
-        var tags, tag, stage, parent;
+        var tags, tag, stage: Stage, parent;
 
         if (!_this._lockroot) {
             while (true) {
@@ -1280,7 +1280,7 @@ export class DisplayObject extends EventDispatcher {
         }
         stage = _root.getStage();
         if (path === "_global") {
-            return stage.getGlobal();
+            return stage.getGlobal() as any;
         }
 
         parent = mc.getParent();
@@ -1323,7 +1323,7 @@ export class DisplayObject extends EventDispatcher {
             }
         }
 
-        var version = stage.getVersion();
+        var version = stage.swftag.version;
         for (var i = 0; i < len; i++) {
             var name = splitData[i];
             if (name === "") {

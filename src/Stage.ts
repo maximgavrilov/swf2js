@@ -386,7 +386,10 @@ export class Stage {
         mc._url = location.href;
 
         // parse
+
+        console.time('mc-parse');
         var tags = this.swftag.parse(mc);
+        console.timeEnd('mc-parse');
 
         // mc reset
         mc.container = [];
@@ -398,7 +401,9 @@ export class Stage {
         mc.instances = [];
 
         // build
+        console.time('mc-build');
         this.swftag.buildStage(tags, this);
+        console.timeEnd('mc-build');
 
         var query = url.split("?")[1];
         if (query) {
