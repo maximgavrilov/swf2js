@@ -622,6 +622,8 @@ export class SwfTag {
     private readonly stageInit: Array<(stage: Stage) => void> = [];
 
     private header: SwfHeader;
+    private tags: Tags;
+
     private _abcFlag = false;
     imgUnLoadCount = 0;
 
@@ -636,12 +638,12 @@ export class SwfTag {
         return this._abcFlag;
     }
 
-    parse(mc: DisplayObject): Tags {
+    parse(characterId: number = 0): void {
         this.header = this.parseSwfHeader();
-        return this.parseTags(this.bitio!.data.length, mc.characterId);
+        this.tags = this.parseTags(this.bitio!.data.length, characterId);
     }
 
-    buildStage(tags: Tags, stage: Stage): void {
+    buildStage(stage: Stage): void {
         stage.setBaseWidth(Math.ceil((this.header.bounds.xMax - this.header.bounds.xMin) / 20));
         stage.setBaseHeight(Math.ceil((this.header.bounds.yMax - this.header.bounds.yMin) / 20));
         stage.setFrameRate(this.header.frameRate);
@@ -656,7 +658,7 @@ export class SwfTag {
         for (const f of this.stageInit)
             f(stage);
 
-        this.build(tags, stage.getParent(), stage);
+        this.build(this.tags, stage.getParent(), stage);
     }
 
     build(tags: Tags, parent: MovieClip, stage: Stage): void {

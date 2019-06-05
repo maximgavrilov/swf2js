@@ -390,7 +390,7 @@ export class Stage {
         // parse
 
         console.time('mc-parse');
-        var tags = this.swftag.parse(mc);
+        this.swftag.parse(mc.characterId);
         console.timeEnd('mc-parse');
 
         // mc reset
@@ -404,7 +404,7 @@ export class Stage {
 
         // build
         console.time('mc-build');
-        this.swftag.buildStage(tags, this);
+        this.swftag.buildStage(this);
         console.timeEnd('mc-build');
 
         var query = url.split("?")[1];

@@ -8,9 +8,11 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
+import { BitIO } from './BitIO';
 import { cacheStore } from './CacheStore';
 import { DisplayObject } from './DisplayObject';
 import { Stage, StageOptions } from './Stage';
+import { SwfTag } from './SwfTag';
 import { isXHR2 } from './utils';
 
 // params
@@ -94,6 +96,45 @@ window.addEventListener("unload", function ()
 });
 
 class Swf2js {
+    loadLib(url: string, cb: (swftag: SwfTag) => void): void
+    {
+        const xmlHttpRequest = new XMLHttpRequest();
+        xmlHttpRequest.open("GET", url, true);
+        if (isXHR2) {
+            xmlHttpRequest.responseType = "arraybuffer";
+        } else {
+            xmlHttpRequest.overrideMimeType("text/plain; charset=x-user-defined");
+        }
+
+        xmlHttpRequest.onreadystatechange = function () {
+            const readyState = xmlHttpRequest.readyState;
+            if (readyState !== 4)
+                return;
+
+            var status = xmlHttpRequest.status;
+            switch (status) {
+                case 200:
+                case 304:
+                    const data = (isXHR2) ? xmlHttpRequest.response : xmlHttpRequest.responseText;
+                    const bitio = new BitIO(data);
+                    const swftag = new SwfTag(bitio);
+
+                    console.time('parse');
+                    swftag.parse();
+                    console.timeEnd('parse');
+
+                    cacheStore.reset();
+
+                    cb && cb(swftag);
+                    break;
+                default :
+                    window.alert('http status: ' + status + ' ' + xmlHttpRequest.statusText);
+                    break;
+            }
+        };
+        xmlHttpRequest.send(null);
+    }
+
     load(url: string, options: StageOptions): void
     {
         // develop only
