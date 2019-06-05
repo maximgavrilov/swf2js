@@ -14,7 +14,7 @@ import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { PlaceObject } from './PlaceObject';
 import { Sprite } from './Sprite';
 import { Stage } from './Stage';
-import { DefineSpriteCharacter, RemoveObject, StartSound, StartSoundTag, SwfTag } from './SwfTag';
+import { DefineSpriteCharacter, RemoveObject, StartSound, StartSoundTag } from './SwfTag';
 import { TextField } from './TextField';
 import { CAP, JOIN } from './VectorToCanvas';
 import {
@@ -653,8 +653,7 @@ export class MovieClip extends Sprite {
                     movieClip.variables.registerClass = new RegClass();
                 }
 
-                var swfTag = new SwfTag(stage, null);
-                swfTag.build(tag, movieClip);
+                stage.swftag.build(tag, movieClip);
 
                 var placeObject = new PlaceObject();
                 var instanceId = _this.instanceId;
@@ -755,7 +754,6 @@ export class MovieClip extends Sprite {
             }
 
             var char = stage.swftag.getCharacter(targetMc.characterId);
-            var swftag = new SwfTag(stage);
             if (char instanceof Array) {
                 cloneMc = new MovieClip();
                 cloneMc.setStage(stage);
@@ -763,14 +761,14 @@ export class MovieClip extends Sprite {
                 cloneMc.setLevel(depth);
                 cloneMc.setTotalFrames(targetMc.getTotalFrames());
                 cloneMc.setCharacterId(targetMc.characterId);
-                swftag.build(char, cloneMc);
+                stage.swftag.build(char, cloneMc);
             } else {
                 var tag = {
                     CharacterId: targetMc.characterId,
                     Ratio: 0,
                     Depth: depth
                 };
-                cloneMc = swftag.buildObject(tag, parent);
+                cloneMc = stage.swftag.buildObject(tag, parent);
             }
 
             cloneMc.setName(target);

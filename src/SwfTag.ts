@@ -625,7 +625,7 @@ export class SwfTag {
     imgUnLoadCount = 0;
 
     constructor(private readonly stage: Stage,
-                private readonly bitio?: BitIO)
+                private readonly bitio: BitIO)
     { }
 
     get version(): number {
