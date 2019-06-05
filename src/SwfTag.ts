@@ -18,7 +18,7 @@ import {
 import { cacheStore } from './CacheStore';
 import { CLS, DisplayObject } from './DisplayObject';
 import { PlaceObject } from './PlaceObject';
-import { MCAction, MovieClip } from './MovieClip';
+import { MovieClip } from './MovieClip';
 import { Shape } from './Shape';
 import { SimpleButton } from './SimpleButton';
 import { Stage } from './Stage';
@@ -39,6 +39,7 @@ type SwfHeader = {
     bounds: Bounds;
     frameRate: number;
     frameCount: number;
+    bgcolor?: Color;
 };
 
 // tags
@@ -616,16 +617,15 @@ export class SwfTag {
     readonly symbols: { [characterId: number]: string } = {};
     readonly exportAssets: { [id: string]: number } = {};
     readonly loadSounds: HTMLAudioElement[] = [];
-    readonly initActions: { [charactedId: number]: MCAction } = {};
     readonly packages: { [spriteId: number]: 1 } = {};
     readonly registerClass: { [characterId: number]: any }  = {};
+    private readonly stageInit: Array<(stage: Stage) => void> = [];
 
     private header: SwfHeader;
     private _abcFlag = false;
     imgUnLoadCount = 0;
 
-    constructor(private readonly stage: Stage,
-                private readonly bitio: BitIO)
+    constructor(private readonly bitio: BitIO)
     { }
 
     get version(): number {
@@ -646,16 +646,26 @@ export class SwfTag {
         stage.setBaseHeight(Math.ceil((this.header.bounds.yMax - this.header.bounds.yMin) / 20));
         stage.setFrameRate(this.header.frameRate);
 
-        this.build(tags, stage.getParent());
+        if (stage.bgcolor) {
+            stage.backgroundColor = stage.bgcolor;
+        } else {
+            const c = this.header.bgcolor;
+            stage.setBackgroundColor(c.R, c.G, c.B);
+        }
+
+        for (const f of this.stageInit)
+            f(stage);
+
+        this.build(tags, stage.getParent(), stage);
     }
 
-    build(tags: Tags, parent: MovieClip): void {
-        const originTags: Tags = {};
+    build(tags: Tags, parent: MovieClip, stage: Stage): void {
+        const originTags: any = {};
         for (const frame in tags)
-            this.showFrame(tags[frame], parent, originTags);
+            this.showFrame(tags[frame], parent, originTags, stage);
     }
 
-    private showFrame(obj: TagObj, mc: MovieClip, originTags): void
+    private showFrame(obj: TagObj, mc: MovieClip, originTags: any, stage: Stage): void
     {
         const frame = obj.frame;
         const newDepth: { [depth: number]: true } = {};
@@ -676,7 +686,7 @@ export class SwfTag {
 
         for (const tag of obj.cTags) {
             newDepth[tag.Depth] = true;
-            this.buildTag(frame, tag, mc, originTags);
+            this.buildTag(frame, tag, mc, originTags, stage);
         }
 
         if (obj.removeTags.length) {
@@ -704,7 +714,7 @@ export class SwfTag {
                     continue;
 
                 container[frame][depth] = prevTags[depth];
-                this.stage.copyPlaceObject(parentId, +depth, frame);
+                stage.copyPlaceObject(parentId, +depth, frame);
                 originTags[frame][depth] = originTags[prevFrame][depth];
             }
         }
@@ -744,7 +754,7 @@ export class SwfTag {
         };
     }
 
-    private buildTag(frame: number, tag: Tag, parent: MovieClip, originTags: Tags): void
+    private buildTag(frame: number, tag: Tag, parent: MovieClip, originTags: Tags, stage: Stage): void
     {
         const container = parent.container;
 
@@ -802,18 +812,17 @@ export class SwfTag {
         }
 
         originTags[frame][tag.Depth] = tag;
-        var buildObject = this.buildObject(tag, parent, isCopy, frame);
+        var buildObject = this.buildObject(stage, tag, parent, isCopy, frame);
         if (buildObject) {
             var placeObject = this.buildPlaceObject(tag);
-            this.stage.setPlaceObject(placeObject, parent.instanceId, tag.Depth, frame);
+            stage.setPlaceObject(placeObject, parent.instanceId, tag.Depth, frame);
             container[frame][tag.Depth] = buildObject.instanceId;
         }
     }
 
-    public buildObject(tag: Tag, parent: DisplayObject, isCopy: boolean = false, frame?: number): DisplayObject | undefined
+    public buildObject(stage: Stage, tag: Tag, parent: DisplayObject, isCopy: boolean = false, frame?: number): DisplayObject | undefined
     {
         var _this = this;
-        var stage = _this.stage;
         var char = this.getCharacter<any>(tag.CharacterId);
         var isMorphShape = false;
         if (char.tagType === TAG.DefineMorphShape || char.tagType === TAG.DefineMorphShape2) {
@@ -829,14 +838,14 @@ export class SwfTag {
         } else {
             switch (char.tagType) {
                 case TAG.DefineSprite:
-                    obj = _this.buildMovieClip(tag, char, parent);
+                    obj = _this.buildMovieClip(stage, tag, char, parent);
                     break;
                 case TAG.DefineText: // DefineText
                 case TAG.DefineText2: // DefineText2
                     obj = _this.buildText(tag, char);
                     break;
                 case TAG.DefineEditText: // DefineEditText
-                    obj = _this.buildTextField(tag, char, parent);
+                    obj = _this.buildTextField(stage, tag, char, parent);
                     break;
                 case TAG.DefineShape:  // DefineShape
                 case TAG.DefineShape2: // DefineShape2
@@ -851,7 +860,7 @@ export class SwfTag {
                     break;
                 case TAG.DefineButton: // DefineButton
                 case TAG.DefineButton2: // DefineButton2
-                    obj = _this.buildButton(char, tag, parent);
+                    obj = _this.buildButton(stage, char, tag, parent);
                     break;
                 default:
                     return undefined;
@@ -894,10 +903,10 @@ export class SwfTag {
     }
 
 
-    private buildMovieClip(tag: Tag, character: DefineSpriteCharacter, parent: DisplayObject): MovieClip
+    private buildMovieClip(stage: Stage, tag: Tag, character: DefineSpriteCharacter, parent: DisplayObject): MovieClip
     {
         var mc = new MovieClip();
-        mc.setStage(this.stage);
+        mc.setStage(stage);
         mc._url = parent._url;
         var target = "instance" + mc.instanceId;
         if (tag.PlaceFlagHasName) {
@@ -905,7 +914,7 @@ export class SwfTag {
             target = tag.Name;
         }
         mc.setTarget(parent.getTarget() + "/" + target);
-        this.build(character.ControlTags, mc);
+        this.build(character.ControlTags, mc, stage);
 
         if (tag.PlaceFlagHasClipActions) {
             var ClipActionRecords = tag.ClipActionRecords;
@@ -930,11 +939,8 @@ export class SwfTag {
         return mc;
     }
 
-    private buildTextField(tag: Tag, character: DefineEditTextCharacter, parent: DisplayObject): TextField
+    private buildTextField(stage: Stage, tag: Tag, character: DefineEditTextCharacter, parent: DisplayObject): TextField
     {
-        var _this = this;
-        var stage = _this.stage;
-
         var textField = new TextField();
         textField.setStage(stage);
         textField.setParent(parent);
@@ -1122,12 +1128,12 @@ export class SwfTag {
         return shape;
     }
 
-    private buildButton(character: DefineButtonCharacter,
+    private buildButton(stage: Stage,
+                        character: DefineButtonCharacter,
                         tag: Tag,
                         parent: DisplayObject): SimpleButton
     {
         var _this = this;
-        var stage = _this.stage;
         var characters = character.characters;
         var button = new SimpleButton();
         button.setStage(stage);
@@ -1181,7 +1187,7 @@ export class SwfTag {
                 }
 
                 var bTag = tags[idx];
-                var obj = _this.buildObject(bTag, button, false, 1);
+                var obj = _this.buildObject(stage, bTag, button, false, 1);
                 var placeObject = _this.buildPlaceObject(bTag);
                 var Depth = bTag.Depth;
                 if (bTag.ButtonStateDown) {
@@ -1290,7 +1296,6 @@ export class SwfTag {
         var _this = this;
         var obj = null;
         var bitio = _this.bitio;
-        var stage = _this.stage;
 
         switch (tagType) {
             default: // null
@@ -1317,15 +1322,12 @@ export class SwfTag {
                 break;
 
             case TAG.SetBackgroundColor: // BackgroundColor
-                if (stage.bgcolor) {
-                    stage.backgroundColor = stage.bgcolor;
-                } else {
-                    stage.setBackgroundColor(
-                        bitio.getUI8(),
-                        bitio.getUI8(),
-                        bitio.getUI8()
-                    );
-                }
+                this.header.bgcolor = {
+                    R: bitio.getUI8(),
+                    G: bitio.getUI8(),
+                    B: bitio.getUI8(),
+                    A: 1
+                };
                 break;
 
             case TAG.DefineFont: // DefineFont
@@ -3805,21 +3807,21 @@ export class SwfTag {
 
     private parseDoInitAction(length: number): void
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var stage = _this.stage;
-        var spriteId = bitio.getUI16();
+        var spriteId = this.bitio.getUI16();
 
-        var as = new ActionScript(bitio.getData(length - 2), undefined, undefined, true);
-        var mc = stage.getParent();
-        (mc as any).variables = {};
-        var action = mc.createActionScript2(as);
-        if (spriteId in this.packages) {
-            mc.active = true;
-            action.apply(mc);
-            mc.active = false;
-        }
-        this.initActions[spriteId] = action;
+        var as = new ActionScript(this.bitio.getData(length - 2), undefined, undefined, true);
+
+        this.stageInit.push((stage) => {
+            var mc = stage.getParent();
+            (mc as any).variables = {};
+            var action = mc.createActionScript2(as);
+            if (spriteId in this.packages) {
+                mc.active = true;
+                action.apply(mc);
+                mc.active = false;
+            }
+            stage.initActions[spriteId] = action;
+        });
     }
 
     private parseDefineSceneAndFrameLabelData(): DefineSceneAndFrameLabelData
@@ -4004,18 +4006,19 @@ export class SwfTag {
             obj.methodBody = methodBody;
         }
 
-        // build instance
-        _this.ABCBuildInstance(obj);
+        this.stageInit.push((stage) => {
+            // build instance
+            _this.ABCBuildInstance(stage, obj);
+        });
     }
 
-    private ABCBuildInstance(obj: DoABC): void
+    private ABCBuildInstance(stage: Stage, obj: DoABC): void
     {
         var _this = this;
         var instances = obj.instance;
         var length = instances.length;
         var namespaces = obj.namespace;
         var string = obj.string;
-        var stage = _this.stage;
         var names = obj.names;
         for (var i = 0; i < length; i++) {
             var instance = instances[i];
@@ -4043,7 +4046,7 @@ export class SwfTag {
             var prop = AVM2.prototype;
 
             // constructor
-            prop[className] = _this.ABCCreateActionScript3(obj, instance.iinit, object);
+            prop[className] = _this.ABCCreateActionScript3(stage, obj, instance.iinit, object);
 
             // prototype
             var traits = instance.trait;
@@ -4066,7 +4069,7 @@ export class SwfTag {
                         case 1: // Method
                         case 2: // Getter
                         case 3: // Setter
-                            val = _this.ABCCreateActionScript3(obj, trait.data.info, object);
+                            val = _this.ABCCreateActionScript3(stage, obj, trait.data.info, object);
                             break;
                         case 4: // Class
                             console.log("build: Class");
@@ -4113,19 +4116,15 @@ export class SwfTag {
         }
     }
 
-    private ABCCreateActionScript3(obj: DoABC, methodId: number, abcKey: string): ActionScript3
+    private ABCCreateActionScript3(stage: Stage, data: DoABC, id: number, ns: string): ActionScript3
     {
-        var stage = this.stage;
-        return (function (data, id, ns, stage)
+        return function ()
         {
-            return function ()
-            {
-                var as3 = new ActionScript3(data, id, ns, stage);
-                as3.caller = this;
-                as3.args = arguments;
-                return as3.execute();
-            };
-        })(obj, methodId, abcKey, stage);
+            var as3 = new ActionScript3(data, id, ns, stage);
+            as3.caller = this;
+            as3.args = arguments;
+            return as3.execute();
+        };
     }
 
     private ABCMultinameToString(obj: DoABC): DoABC

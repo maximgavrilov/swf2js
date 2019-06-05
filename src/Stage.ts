@@ -15,7 +15,7 @@ import { Global } from './Global';
 import { PlaceObject } from './PlaceObject';
 import { keyClass } from './Key';
 import { Mouse } from './Mouse';
-import { MovieClip } from './MovieClip';
+import { MCAction, MovieClip } from './MovieClip';
 import { Packages } from './Packages';
 import { SimpleButton } from './SimpleButton';
 import { Sprite } from './Sprite';
@@ -86,6 +86,8 @@ export class Stage {
     clipMc = false;
     isClipDepth = false;
     context?: CanvasRenderingContext2D;
+
+    readonly initActions: { [charactedId: number]: MCAction } = {};
 
     backgroundColor: string = "transparent";
     loadStatus = 0;
@@ -378,7 +380,7 @@ export class Stage {
         var _this = this;
         _this.isLoad = false;
         var bitio = new BitIO(data);
-        this.swftag = new SwfTag(_this, bitio);
+        this.swftag = new SwfTag(bitio);
 
         _this.loadStatus++;
 

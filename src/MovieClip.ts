@@ -640,7 +640,7 @@ export class MovieClip extends Sprite {
                 movieClip.setTarget(_this.getTarget() + "/" + name);
 
                 // init action
-                var initAction = stage.swftag.initActions[characterId];
+                var initAction = stage.initActions[characterId];
                 if (typeof initAction === "function") {
                     movieClip.active = true;
                     initAction.apply(movieClip);
@@ -653,7 +653,7 @@ export class MovieClip extends Sprite {
                     movieClip.variables.registerClass = new RegClass();
                 }
 
-                stage.swftag.build(tag, movieClip);
+                stage.swftag.build(tag, movieClip, stage);
 
                 var placeObject = new PlaceObject();
                 var instanceId = _this.instanceId;
@@ -761,14 +761,14 @@ export class MovieClip extends Sprite {
                 cloneMc.setLevel(depth);
                 cloneMc.setTotalFrames(targetMc.getTotalFrames());
                 cloneMc.setCharacterId(targetMc.characterId);
-                stage.swftag.build(char, cloneMc);
+                stage.swftag.build(char, cloneMc, stage);
             } else {
                 var tag = {
                     CharacterId: targetMc.characterId,
                     Ratio: 0,
                     Depth: depth
                 };
-                cloneMc = stage.swftag.buildObject(tag, parent);
+                cloneMc = stage.swftag.buildObject(stage, tag, parent);
             }
 
             cloneMc.setName(target);
@@ -885,7 +885,7 @@ export class MovieClip extends Sprite {
             tags.reverse();
         }
 
-        var initAction = stage.swftag.initActions[_this.getCharacterId()];
+        var initAction = stage.initActions[_this.getCharacterId()];
         if (typeof initAction === "function") {
             initAction.apply(_this);
         }
@@ -961,7 +961,7 @@ export class MovieClip extends Sprite {
             }
         } else {
             // init action
-            var initAction = myStage.swftag.initActions[_this.getCharacterId()];
+            var initAction = myStage.initActions[_this.getCharacterId()];
             if (typeof initAction === "function") {
                 initAction.apply(_this);
             }
