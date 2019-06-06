@@ -63,14 +63,8 @@ if (typeof (Object as any).setPrototypeOf !== "function") {
  */
 function resizeCanvas()
 {
-    for (var i in DisplayObject.stages) {
-        if (!DisplayObject.stages.hasOwnProperty(i)) {
-            continue;
-        }
-        var stage = DisplayObject.stages[i];
-        if (!stage.isLoad) {
-            continue;
-        }
+    for (const stageId in DisplayObject.stages) {
+        const stage = DisplayObject.stages[stageId];
         stage.resize();
     }
 }
@@ -80,8 +74,7 @@ function resizeCanvas()
  */
 let resizeId = 0;
 
-window.addEventListener("resize", function ()
-{
+window.addEventListener("resize", () => {
     clearTimeout(resizeId);
     resizeId = setTimeout(resizeCanvas, 300);
 });
@@ -89,8 +82,7 @@ window.addEventListener("resize", function ()
 /**
  * unload event
  */
-window.addEventListener("unload", function ()
-{
+window.addEventListener("unload", () => {
     DisplayObject.stages = void 0;
     DisplayObject.loadStages = void 0;
 });
@@ -135,7 +127,7 @@ class Swf2js {
         xmlHttpRequest.send(null);
     }
 
-    load(url: string, options: StageOptions): void
+    load(url: string, options: Partial<StageOptions>): void
     {
         // develop only
         if (url === "develop") {
@@ -143,7 +135,7 @@ class Swf2js {
         }
 
         if (url) {
-            var stage = (options && options.stage instanceof Stage) ? options.stage : new Stage();
+            var stage: Stage = (options && options.stage instanceof Stage) ? options.stage : new Stage();
             stage.setOptions(options);
             DisplayObject.stages[stage.getId()] = stage;
             stage.init();
@@ -183,7 +175,7 @@ class Swf2js {
         }
     }
 
-    reload(url: string, options: StageOptions): void
+    reload(url: string, options: Partial<StageOptions>): void
     {
         if (!Stage.stageId) {
             return this.load(url, options);
@@ -211,7 +203,7 @@ class Swf2js {
     createRootMovieClip(width: number,
                         height: number,
                         fps: number,
-                        options: StageOptions): DisplayObject
+                        options: Partial<StageOptions>): DisplayObject
     {
         var stage = new Stage();
         width = width || 240;

@@ -46,6 +46,12 @@ export class MovieClip extends Sprite {
     constructor() {
         super();
 
+        this.resetContainer();
+    }
+
+    resetContainer(): void {
+        this.container = {};
+
         const totalFrames = this.getTotalFrames();
         for (let frame = 1; frame <= totalFrames; frame++)
             this.container[frame] = [];

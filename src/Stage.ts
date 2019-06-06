@@ -29,7 +29,18 @@ import {
 } from './utils';
 
 
-export type StageOptions = any;
+export type StageOptions = {
+    width: number;
+    height: number;
+    callback: (this: Window, mc: MovieClip) => void;
+    tagId: string;
+    FlashVars: any;
+    quality: Quality;
+    bgcolor: string;
+    stage: Stage;
+};
+
+type Quality = 'low' | 'medium' | 'high';
 
 export type Action = {
     as?: Function | Function[];
@@ -85,7 +96,6 @@ export class Stage {
     fileSize = 0;
     clipMc = false;
     isClipDepth = false;
-    context?: CanvasRenderingContext2D;
 
     readonly initActions: { [charactedId: number]: MCAction } = {};
 
@@ -105,11 +115,14 @@ export class Stage {
     private stopFlag = true;
 
 
+    context: CanvasRenderingContext2D;
+    canvas: HTMLCanvasElement;
+    private preContext: CanvasRenderingContext2D;
+
     // options
     private optionWidth = 0;
     private optionHeight = 0;
     private callback = null;
-    private renderMode = false;
     private FlashVars = {};
     private quality = "medium"; // low = 0.25, medium = 0.8, high = 1.0
 
@@ -117,8 +130,6 @@ export class Stage {
     readonly mouse = new Mouse();
 
     // params
-    private canvas = null;
-    private preContext = null;
     private matrix: Matrix = [1,0,0,1,0,0];
     private _matrix: Matrix = [1,0,0,1,0,0];
     private _colorTransform: ColorTransform = [1,1,1,1,0,0,0,0];
@@ -222,7 +233,7 @@ export class Stage {
         this.name = name;
     }
 
-    setOptions(options?: StageOptions): void {
+    setOptions(options?: Partial<StageOptions>): void {
         if (!options)
             return;
 
@@ -231,7 +242,6 @@ export class Stage {
         _this.optionHeight = options.height || _this.optionHeight;
         _this.callback = options.callback || _this.callback;
         _this.tagId = options.tagId || _this.tagId;
-        _this.renderMode = options.renderMode || _this.renderMode;
         _this.FlashVars = options.FlashVars || _this.FlashVars;
         _this.quality = options.quality || _this.quality;
         _this.bgcolor = options.bgcolor || _this.bgcolor;
@@ -376,44 +386,25 @@ export class Stage {
         }
     }
 
-    parse(data: DataIO, url: string): void {
-        var _this = this;
-        _this.isLoad = false;
-        var bitio = new BitIO(data);
-        this.swftag = new SwfTag(bitio);
-
-        _this.loadStatus++;
-
-        var mc = _this.getParent();
+    parse(data: DataIO, url: string = ''): void {
+        const mc = this.getParent();
         mc._url = location.href;
 
-        // parse
+        this.isLoad = false;
 
-        console.time('mc-parse');
-        this.swftag.parse(mc.characterId);
-        console.timeEnd('mc-parse');
+        this.loadStatus++;
 
-        // mc reset
-        mc.container = [];
-        var frame = 1;
-        var totalFrames = mc.getTotalFrames() + 1;
-        while (frame < totalFrames) {
-            mc.container[frame++] = [];
-        }
-        mc.instances = [];
+        var bitio = new BitIO(data);
+        const swftag = new SwfTag(bitio);
 
-        // build
-        console.time('mc-build');
-        this.swftag.buildStage(this);
-        console.timeEnd('mc-build');
+        swftag.parse(mc.characterId);
 
-        var query = url.split("?")[1];
+        this.build(swftag);
+
+        const query = url.split("?")[1];
         if (query) {
-            var values = query.split("&");
-            var length = values.length;
-            while (length--) {
-                var value = values[length];
-                var pair = value.split("=");
+            for (const value of query.split('&')) {
+                const pair = value.split("=");
                 if (pair.length > 1) {
                     mc.setVariable(pair[0], pair[1]);
                 }
@@ -421,23 +412,34 @@ export class Stage {
         }
 
         // FlashVars
-        var vars = _this.FlashVars;
-        for (var key in vars) {
-            if (!vars.hasOwnProperty(key)) {
-                continue;
-            }
+        const vars = this.FlashVars;
+        for (const key in vars)
             mc.setVariable(key, vars[key]);
-        }
 
-        _this.isLoad = true;
+        this.isLoad = true;
+    }
+
+    build(swftag: SwfTag): void {
+        this.swftag = swftag;
+
+        // reset mc
+        const mc = this.getParent();
+        mc.resetContainer();
+        mc.instances = [];
+
+        // build
+        swftag.buildStage(this);
     }
 
     resize(): void {
         var _this = this;
-        var div = document.getElementById(_this.getName());
-        if (!div) {
+
+        if (!this.isLoad)
             return;
-        }
+
+        var div = document.getElementById(_this.getName());
+        if (!div)
+            return;
 
         var oWidth = _this.optionWidth;
         var oHeight = _this.optionHeight;
@@ -908,7 +910,7 @@ export class Stage {
         div.appendChild(loadingDiv);
     }
 
-    reload(url: string, options: StageOptions): void {
+    reload(url: string, options: Partial<StageOptions>): void {
         var _this = this;
         _this.stop();
 
@@ -922,11 +924,10 @@ export class Stage {
 
         var swf2js = (window as any).swf2js;
         return swf2js.load(url, {
-            optionWidth: options.optionWidth || _this.optionWidth,
-            optionHeight: options.optionHeight || _this.optionHeight,
+            optionWidth: options.width || _this.optionWidth,
+            optionHeight: options.height || _this.optionHeight,
             callback: options.callback || _this.callback,
             tagId: options.tagId || _this.tagId,
-            renderMode: options.renderMode || _this.renderMode,
             FlashVars: options.FlashVars || _this.FlashVars,
             quality: options.quality || _this.quality,
             bgcolor: options.bgcolor || _this.bgcolor,
