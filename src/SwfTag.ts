@@ -603,7 +603,6 @@ type TagObj = {
     sounds: StartSoundTag[];
 };
 type Tags = { [frame: number]: TagObj };
-type Character = any;
 
 export class SwfTag {
     private currentPosition = { x: 0, y: 0 };
@@ -630,6 +629,15 @@ export class SwfTag {
     constructor(private readonly bitio: BitIO)
     { }
 
+    create(name: string): Stage {
+        const stage = new Stage();
+        DisplayObject.stages[stage.getId()] = stage;
+        stage.build(this, name);
+        stage.isLoad = true;
+        stage.play();
+        return stage;
+    }
+
     get version(): number {
         return this.header.version;
     }
@@ -643,22 +651,45 @@ export class SwfTag {
         this.tags = this.parseTags(this.bitio!.data.length, characterId);
     }
 
-    buildStage(stage: Stage): void {
-        stage.setBaseWidth(Math.ceil((this.header.bounds.xMax - this.header.bounds.xMin) / 20));
-        stage.setBaseHeight(Math.ceil((this.header.bounds.yMax - this.header.bounds.yMin) / 20));
-        stage.setFrameRate(this.header.frameRate);
+    buildStage(stage: Stage, name?: string): void {
+        if (name) {
+            const id = this.exportAssets[name];
+            if (!id)
+                throw new Error(`No export asset with name ${name}`);
 
-        if (stage.bgcolor) {
-            stage.backgroundColor = stage.bgcolor;
+            const character = this.getCharacter<DefineSprite>(id);
+            if (!character)
+                throw new Error(`No character with name ${name} and id ${id}`);
+
+            stage.setBaseWidth(32.40);
+            stage.setBaseHeight(68.90);
+            stage.setFrameRate(this.header.frameRate);
+            stage.backgroundColor = 'transparent';
+
+            for (const f of this.stageInit)
+                f(stage);
+
+            this.build(character.ControlTags, stage.getParent(), stage);
+
+            if (!stage.canvas)
+                stage.initCanvas();
         } else {
-            const c = this.header.bgcolor;
-            stage.setBackgroundColor(c.R, c.G, c.B);
+            stage.setBaseWidth(Math.ceil((this.header.bounds.xMax - this.header.bounds.xMin) / 20));
+            stage.setBaseHeight(Math.ceil((this.header.bounds.yMax - this.header.bounds.yMin) / 20));
+            stage.setFrameRate(this.header.frameRate);
+
+            if (stage.bgcolor) {
+                stage.backgroundColor = stage.bgcolor;
+            } else {
+                const c = this.header.bgcolor;
+                stage.setBackgroundColor(c.R, c.G, c.B);
+            }
+
+            for (const f of this.stageInit)
+                f(stage);
+
+            this.build(this.tags, stage.getParent(), stage);
         }
-
-        for (const f of this.stageInit)
-            f(stage);
-
-        this.build(this.tags, stage.getParent(), stage);
     }
 
     build(tags: Tags, parent: MovieClip, stage: Stage): void {

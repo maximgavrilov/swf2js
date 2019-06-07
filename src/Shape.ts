@@ -139,8 +139,8 @@ export class Shape extends DisplayObject {
             }
 
             var canvas;
-            var loadStage = _this.getStage();
-            var cacheId = _this.getCharacterId() + "_" + loadStage.getId();
+            // var loadStage = _this.getStage();
+            var cacheId = '' + _this.getCharacterId(); //  + "_" + loadStage.getId();
             if (_this.isMorphing()) {
                 cacheId += "_" + _this.getRatio();
             }
@@ -150,8 +150,7 @@ export class Shape extends DisplayObject {
 
             if (!cache &&
                 stage.getWidth() > W &&
-                stage.getHeight() > H &&
-                cacheStore.size > (W * H)
+                stage.getHeight() > H
             ) {
                 canvas = cacheStore.getCanvas();
                 canvas.width = W;
@@ -176,6 +175,7 @@ export class Shape extends DisplayObject {
                     preCtx.fillRect(0, 0, W, H);
                 } else {
                     preCtx.drawImage(canvas, 0, 0, W, H);
+                    (window as any).blended.push([W, H]);
                 }
             } else {
                 preCtx.setTransform(m3[0],m3[1],m3[2],m3[3],m3[4],m3[5]);
@@ -391,7 +391,7 @@ export class Shape extends DisplayObject {
                                 canvas.height = height;
                                 var imageContext = canvas.getContext("2d");
                                 imageContext.drawImage(image.canvas, 0, 0, width, height);
-                                image = _this.generateImageTransform.call(_this, imageContext, colorTransform);
+                                image = _this.generateImageTransform(imageContext, colorTransform);
                                 cacheStore.setCache(bitmapCacheKey, image);
                             }
                         } else {

@@ -10,7 +10,7 @@
 class CacheStore {
     private store: { [key: string]: CanvasRenderingContext2D } = {};
     private pool: CanvasRenderingContext2D[] = [];
-    private _size = 73400320; // 70M
+    private _size = 0;
 
     reset(): void {
         for (const key in this.store) {
@@ -26,20 +26,16 @@ class CacheStore {
             this.destroy(value);
         }
         this.store = {};
-        this._size = 73400320;
-    }
-
-    get size(): number {
-        return this._size;
+        this._size = 0;
     }
 
     destroy(ctx: CanvasRenderingContext2D): void {
-        const canvas = ctx.canvas;
+        // const canvas = ctx.canvas;
 
-        ctx.clearRect(0, 0, canvas.width + 1, canvas.height + 1);
-        canvas.width = canvas.height = 1;
+        // ctx.clearRect(0, 0, canvas.width + 1, canvas.height + 1);
+        // canvas.width = canvas.height = 1;
 
-        this.pool.push(ctx);
+        // this.pool.push(ctx);
     }
 
     getCanvas(): HTMLCanvasElement {
@@ -52,12 +48,16 @@ class CacheStore {
     }
 
     setCache(key: string, value: CanvasRenderingContext2D): void {
-        if (value instanceof CanvasRenderingContext2D) {
-            const canvas = value.canvas;
-            this._size -= (canvas.width * canvas.height);
-        }
+        const old = this.store[key];
+        if (old && old instanceof CanvasRenderingContext2D)
+            this._size -= (old.canvas.width * old.canvas.height);
 
         this.store[key] = value;
+
+        if (value instanceof CanvasRenderingContext2D)
+            this._size += (value.canvas.width * value.canvas.height);
+
+        console.log('size', this._size);
     }
 
     generateKey(name: string, id: string, matrix: number[], cxForm: number[]): string {
@@ -73,4 +73,4 @@ class CacheStore {
 }
 
 export const cacheStore = new CacheStore();
-
+(window as any).cacheStore = cacheStore;

@@ -1670,6 +1670,7 @@ export class DisplayObject extends EventDispatcher {
         ctx.globalCompositeOperation = operation;
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.drawImage(canvas, xMin, yMin, canvas.width, canvas.height);
+        (window as any).blended.push([canvas.width, canvas.height]);
         ctx.globalCompositeOperation = "source-over";
         if (!isFilter) {
             cacheStore.destroy(cache);

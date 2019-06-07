@@ -8,7 +8,6 @@
  */
 
 import { ActionScript } from './ActionScript';
-import { BitIO, DataIO } from './BitIO';
 import { clipEvent, ClipEvent, EventDispatcher } from './EventDispatcher';
 import { ButtonStatus, DisplayObject, HitObject } from './DisplayObject';
 import { Global } from './Global';
@@ -386,16 +385,13 @@ export class Stage {
         }
     }
 
-    parse(data: DataIO, url: string = ''): void {
+    parse(swftag: SwfTag, url: string = ''): void {
         const mc = this.getParent();
         mc._url = location.href;
 
         this.isLoad = false;
 
         this.loadStatus++;
-
-        var bitio = new BitIO(data);
-        const swftag = new SwfTag(bitio);
 
         swftag.parse(mc.characterId);
 
@@ -419,7 +415,7 @@ export class Stage {
         this.isLoad = true;
     }
 
-    build(swftag: SwfTag): void {
+    build(swftag: SwfTag, name?: string): void {
         this.swftag = swftag;
 
         // reset mc
@@ -428,7 +424,7 @@ export class Stage {
         mc.instances = [];
 
         // build
-        swftag.buildStage(this);
+        swftag.buildStage(this, name);
     }
 
     resize(): void {

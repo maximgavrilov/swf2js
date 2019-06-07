@@ -31,6 +31,12 @@ export function isTouchEvent(event: HitEvent): event is TouchEvent {
     return isTouch;
 }
 
+
+const chkCanvas = document.createElement("canvas");
+chkCanvas.width = 1;
+chkCanvas.height = 1;
+export const tmpContext = chkCanvas.getContext("2d");
+
 // Alpha Bug
 export const isAlphaBug = (() => {
     if (!isAndroid)
@@ -48,11 +54,6 @@ export const isAlphaBug = (() => {
     pixelArray = null;
     return result;
 })();
-
-const chkCanvas = document.createElement("canvas");
-chkCanvas.width = 1;
-chkCanvas.height = 1;
-export const tmpContext = chkCanvas.getContext("2d");
 
 export function cloneArray<T>(src: T): T
 export function cloneArray<T>(src: T[]): T[]

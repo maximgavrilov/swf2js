@@ -9,7 +9,6 @@
  */
 
 import { BitIO } from './BitIO';
-import { cacheStore } from './CacheStore';
 import { DisplayObject } from './DisplayObject';
 import { Stage, StageOptions } from './Stage';
 import { SwfTag } from './SwfTag';
@@ -115,8 +114,6 @@ class Swf2js {
                     swftag.parse();
                     console.timeEnd('parse');
 
-                    cacheStore.reset();
-
                     cb && cb(swftag);
                     break;
                 default :
@@ -158,10 +155,11 @@ class Swf2js {
                         case 304:
                             var data = (isXHR2) ? xmlHttpRequest.response : xmlHttpRequest.responseText;
                             console.time('parse');
-                            stage.parse(data, url);
+                            const bitio = new BitIO(data);
+                            const swftag = new SwfTag(bitio);
+                            stage.parse(swftag, url);
                             console.timeEnd('parse');
 
-                            cacheStore.reset();
                             break;
                         default :
                             window.alert('http status: ' + status + ' ' + xmlHttpRequest.statusText);

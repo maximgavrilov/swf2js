@@ -374,7 +374,7 @@ export class Graphics {
             cacheKey = cacheStore.generateKey("Graphics", '0', [xScale, yScale], colorTransform);
             cacheKey += this.getCacheKey();
             cache = cacheStore.getCache(cacheKey);
-            if (!cache && stage.getWidth() > W && stage.getHeight() > H && cacheStore.size > (W * H)) {
+            if (!cache && stage.getWidth() > W && stage.getHeight() > H) {
                 canvas = cacheStore.getCanvas();
                 canvas.width = W;
                 canvas.height = H;

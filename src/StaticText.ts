@@ -112,12 +112,12 @@ export class StaticText extends DisplayObject {
         var H = Math.abs(Math.ceil((yMax - yMin) * yScale));
         var isClipDepth = _this.isClipDepth || stageClip;
         if (W > 0 && H > 0) {
-            var cacheId = _this.getCharacterId() + "_" + _this.getStage().getId();
+            var cacheId = '' + _this.getCharacterId();// + "_" + _this.getStage().getId();
             var cacheKey = cacheStore.generateKey("Text", cacheId, [xScale, yScale], rColorTransform);
             var cache = cacheStore.getCache(cacheKey);
             var canvas;
             if (!cache && !isClipDepth) {
-                if (stage.getWidth() > W && stage.getHeight() > H && cacheStore.size > W * H) {
+                if (stage.getWidth() > W && stage.getHeight() > H) {
                     canvas = cacheStore.getCanvas();
                     canvas.width = W;
                     canvas.height = H;
