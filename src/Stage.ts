@@ -119,7 +119,6 @@ export class Stage {
 
     context: CanvasRenderingContext2D;
     canvas: HTMLCanvasElement;
-    private preContext: CanvasRenderingContext2D;
 
     // options
     private optionWidth = 0;
@@ -447,35 +446,30 @@ export class Stage {
         const baseWidth = this.getBaseWidth();
         const baseHeight = this.getBaseHeight();
         const scale = Math.min((screenWidth / baseWidth), (screenHeight / baseHeight));
-        let width = baseWidth * scale;
-        let height = baseHeight * scale;
+        const pwidth = baseWidth * scale;
+        const pheight = baseHeight * scale;
+
+        const width = pwidth * devicePixelRatio;
+        const height = pheight * devicePixelRatio;
 
         if (width === this.getWidth() && height === this.getHeight())
             return;
 
         // div
         const style = div.style;
-        style.width = width + "px";
-        style.height = height + "px";
+        style.width = pwidth + "px";
+        style.height = pheight + "px";
         style.top = '0';
-        style.left = ((screenWidth - width) / 2) + "px";
+        style.left = ((screenWidth - pwidth) / 2) + "px";
 
         this.setScale(scale);
         this.setWidth(width);
         this.setHeight(height);
 
-        width *= devicePixelRatio;
-        height *= devicePixelRatio;
-
         // main
         const canvas = this.context.canvas;
         canvas.width = width;
         canvas.height = height;
-
-        // pre
-        const preCanvas = this.preContext.canvas;
-        preCanvas.width = width;
-        preCanvas.height = height;
 
         const hitCanvas = this.hitContext.canvas;
         hitCanvas.width = width;
@@ -519,7 +513,6 @@ export class Stage {
             }
 
             this.render();
-            this.renderMain();
 
             var ctx = this.context;
             var canvas = ctx.canvas;
@@ -607,7 +600,6 @@ export class Stage {
         this.addActions();
         this.executeAction();
         this.render();
-        this.renderMain();
     }
 
     putFrame(): void {
@@ -627,25 +619,20 @@ export class Stage {
         this.buttonHits = [];
         this.doneTags = [];
 
-        const preCtx = this.preContext;
-        preCtx.globalCompositeOperation = "source-over";
-        preCtx.setTransform(1, 0, 0, 1, 0, 0);
+        this.context.globalCompositeOperation = "source-over";
+        this.context.setTransform(1, 0, 0, 1, 0, 0);
 
         const backgroundColor = this.getBackgroundColor();
         if (!backgroundColor || backgroundColor === "transparent") {
-            // pre clear
-            const canvas = preCtx.canvas;
-            preCtx.clearRect(0, 0, canvas.width + 1, canvas.height + 1);
-
-            // main clear
+            const canvas = this.context.canvas;
             this.context.clearRect(0, 0, canvas.width + 1, canvas.height + 1);
         } else {
-            preCtx.fillStyle = backgroundColor;
-            preCtx.fillRect(0, 0, this.getWidth() + 1, this.getHeight() + 1);
+            this.context.fillStyle = backgroundColor;
+            this.context.fillRect(0, 0, this.getWidth() + 1, this.getHeight() + 1);
         }
 
         const mc = this.getParent();
-        mc.render(preCtx, this._matrix, this._colorTransform, this, true);
+        mc.render(this.context, this._matrix, this._colorTransform, this, true);
     }
 
     executeAction(): void {
@@ -685,15 +672,6 @@ export class Stage {
         as.execute(mc);
 
         this.executeAction();
-    }
-
-    renderMain(): void {
-        const preCanvas = this.preContext.canvas;
-
-        if (preCanvas.width > 0 && preCanvas.height > 0) {
-            this.context.setTransform(1,0,0,1,0,0);
-            this.context.drawImage(preCanvas, 0, 0, preCanvas.width, preCanvas.height);
-        }
     }
 
     reset(): void {
@@ -807,11 +785,6 @@ export class Stage {
             });
         }
 
-        const preCanvas = document.createElement("canvas");
-        preCanvas.width = 1;
-        preCanvas.height = 1;
-        this.preContext = preCanvas.getContext("2d");
-
         const hitCanvas = document.createElement("canvas");
         hitCanvas.width = 1;
         hitCanvas.height = 1;
@@ -902,7 +875,7 @@ export class Stage {
         mc.addActions(this);
 
         // backgroundColor
-        this.preContext.canvas.style.backgroundColor = this.backgroundColor;
+        this.context.canvas.style.backgroundColor = this.backgroundColor;
 
         // render
         this.render();
@@ -928,7 +901,7 @@ export class Stage {
             }
         };
 
-        const base64 = this.preContext.canvas.toDataURL();
+        const base64 = this.context.canvas.toDataURL();
         xmlHttpRequest.send("data=" + encodeURIComponent(base64));
     }
 
@@ -1678,6 +1651,5 @@ export class Stage {
 
     touchRender(): void {
         this.render();
-        this.renderMain();
     }
 }
