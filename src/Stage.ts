@@ -388,13 +388,11 @@ export class Stage {
 
         this.build(swftag);
 
-        const query = url.split("?")[1];
-        if (query) {
-            for (const value of query.split('&')) {
-                const pair = value.split("=");
-                if (pair.length > 1) {
-                    mc.setVariable(pair[0], pair[1]);
-                }
+        const query = url.split("?")[1] || '';
+        for (const value of query.split('&')) {
+            const pair = value.split("=");
+            if (pair.length > 1) {
+                mc.setVariable(pair[0], pair[1]);
             }
         }
 
@@ -488,113 +486,90 @@ export class Stage {
 
     loaded(): void {
         // reset
-        const whis = this as Writeable<this>;
-        whis.buttonHits = [];
-        whis.downEventHits = [];
-        whis.moveEventHits = [];
-        whis.upEventHits = [];
-        whis.keyDownEventHits = [];
-        whis.keyUpEventHits = [];
-        whis.actions = [];
+        this.buttonHits = [];
+        this.downEventHits = [];
+        this.moveEventHits = [];
+        this.upEventHits = [];
+        this.keyDownEventHits = [];
+        this.keyUpEventHits = [];
+        this.actions = [];
 
         // DOM
         this.deleteNode();
-        var div = document.getElementById(this.getName());
+        const div = document.getElementById(this.getName());
         if (div) {
-            var mc = this.getParent();
+            const mc = this.getParent();
             mc.initFrame();
             mc.addActions(this);
             this.executeAction();
 
             // callback
-            var callback = this.callback;
-            if (typeof callback === "function") {
-                callback.call(window, mc);
-            }
+            if (typeof this.callback === "function")
+                this.callback.call(window, mc);
 
             this.render();
 
-            var ctx = this.context;
-            var canvas = ctx.canvas;
-
             // load sound
             if (isTouch) {
-                var loadSounds = this.swftag.loadSounds;
-                var sLen = loadSounds.length;
-                if (sLen) {
-                    var loadSound = function ()
-                    {
-                        canvas.removeEventListener(startEvent, loadSound);
-                        for (var i = sLen; i--;) {
-                            if (!(i in loadSounds)) {
-                                continue;
-                            }
-                            var audio = loadSounds[i];
-                            audio.load();
-                        }
-                    };
-                    canvas.addEventListener(startEvent, loadSound);
-                }
+                const loadSound = () => {
+                    this.context.canvas.removeEventListener(startEvent, loadSound);
+
+                    for (const audio of this.swftag.loadSounds)
+                        audio.load();
+                };
+
+                this.context.canvas.addEventListener(startEvent, loadSound);
             }
 
-            canvas.addEventListener(startEvent, (event) => {
+            this.context.canvas.addEventListener(startEvent, (event) => {
                 DisplayObject.event = event;
                 this.touchStart(event);
             });
 
-            canvas.addEventListener(moveEvent, (event) => {
+            this.context.canvas.addEventListener(moveEvent, (event) => {
                 DisplayObject.event = event;
                 this.touchMove(event);
             });
 
-            canvas.addEventListener(endEvent, (event) => {
+            this.context.canvas.addEventListener(endEvent, (event) => {
                 DisplayObject.event = event;
                 this.touchEnd(event);
             });
 
-            div.appendChild(canvas);
+            div.appendChild(this.context.canvas);
 
             this.play();
         }
     }
 
     deleteNode(tagId: string = this.getName()): void {
-        var div = document.getElementById(tagId);
-        if (div) {
-            var childNodes = div.childNodes;
-            var length = childNodes.length;
-            if (length) {
-                while (length--) {
-                    div.removeChild(childNodes[length]);
-                }
-            }
-        }
+        const div = document.getElementById(tagId);
+        if (!div)
+            return;
+
+        while (div.firstChild)
+            div.removeChild(div.firstChild);
     }
 
     nextFrame(): void {
-        const whis = this as Writeable<this>;
-        whis.downEventHits = [];
-        whis.moveEventHits = [];
-        whis.upEventHits = [];
-        whis.keyDownEventHits = [];
-        whis.keyUpEventHits = [];
+        this.downEventHits = [];
+        this.moveEventHits = [];
+        this.upEventHits = [];
+        this.keyDownEventHits = [];
+        this.keyUpEventHits = [];
 
         // mouse event
-        var parent = this.getParent();
-        var mouse = this.mouse;
-        var mouseEvents = mouse.events;
-        var onMouseDown = mouseEvents.onMouseDown;
-        if (onMouseDown) {
-            this.downEventHits.push({as: onMouseDown, mc: parent});
-        }
-        var onMouseMove = mouseEvents.onMouseMove;
-        if (onMouseMove) {
-            this.moveEventHits.push({as: onMouseMove, mc: parent});
-        }
-        var onMouseUp = mouseEvents.onMouseUp;
-        if (onMouseUp) {
-            this.upEventHits.push({as: onMouseUp, mc: parent});
-        }
+        const mc = this.getParent();
+        const mouseEvents = this.mouse.events;
+
+        if (mouseEvents.onMouseDown)
+            this.downEventHits.push({as: mouseEvents.onMouseDown, mc });
+
+        if (mouseEvents.onMouseMove)
+            this.moveEventHits.push({as: mouseEvents.onMouseMove, mc });
+
+        if (mouseEvents.onMouseUp)
+            this.upEventHits.push({as: mouseEvents.onMouseUp, mc });
 
         this.putFrame();
         this.addActions();

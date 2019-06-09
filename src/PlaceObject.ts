@@ -7,12 +7,12 @@
  * Copyright (c) 2013 Toshiyuki Ienaga. Licensed under the MIT License.
  */
 
-import { BlendMode, ColorTransform, cloneArray, getBlendName, Matrix } from './utils';
 import { BitmapFilter } from './BitmapFilter';
+import { BlendMode, ColorTransform, cloneArray, getBlendName, Matrix } from './utils';
 
 export class PlaceObject {
-    private matrix: Matrix = cloneArray([1, 0, 0, 1, 0, 0]);
-    private colorTransform: ColorTransform = cloneArray([1, 1, 1, 1, 0, 0, 0, 0]);
+    private matrix: Matrix = [1, 0, 0, 1, 0, 0];
+    private colorTransform: ColorTransform = [1, 1, 1, 1, 0, 0, 0, 0];
     private filters: BitmapFilter[] | null = null;
     private blendMode: BlendMode = 'normal';
 
