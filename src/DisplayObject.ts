@@ -1434,7 +1434,7 @@ export class DisplayObject extends EventDispatcher {
 
             // blend
             var blendMode = _this.getBlendMode();
-            if (blendMode !== null && blendMode !== "normal") {
+            if (blendMode && blendMode !== "normal") {
                 isBlend = true;
             }
         }
@@ -1482,12 +1482,12 @@ export class DisplayObject extends EventDispatcher {
         }
 
         return {
-            preCtx: preCtx,
-            preMatrix: preMatrix,
-            isFilter: isFilter,
-            isBlend: isBlend,
-            rMatrix: rMatrix,
-            cacheKey: cacheKey,
+            preCtx,
+            preMatrix,
+            isFilter,
+            isBlend,
+            rMatrix,
+            cacheKey,
             xMin: xMin * xScale,
             yMin: yMin * yScale
         };
@@ -1669,8 +1669,8 @@ export class DisplayObject extends EventDispatcher {
         ctx.globalAlpha = 1;
         ctx.globalCompositeOperation = operation;
         ctx.setTransform(1, 0, 0, 1, 0, 0);
-        ctx.drawImage(canvas, xMin, yMin, canvas.width, canvas.height);
-        (window as any).blended.push([canvas.width, canvas.height]);
+        ctx.drawImage(canvas, Math.round(xMin), Math.round(yMin), canvas.width, canvas.height);
+        (window as any).blended.push([canvas.width, canvas.height, mode, xMin, yMin]);
         ctx.globalCompositeOperation = "source-over";
         if (!isFilter) {
             cacheStore.destroy(cache);

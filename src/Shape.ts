@@ -175,7 +175,7 @@ export class Shape extends DisplayObject {
                     preCtx.fillRect(0, 0, W, H);
                 } else {
                     preCtx.drawImage(canvas, 0, 0, W, H);
-                    (window as any).blended.push([W, H]);
+                    (window as any).blended.push([W, H, m4]);
                 }
             } else {
                 preCtx.setTransform(m3[0],m3[1],m3[2],m3[3],m3[4],m3[5]);

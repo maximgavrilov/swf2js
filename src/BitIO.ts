@@ -397,6 +397,8 @@ export class BitIO {
         }
     }
 
+    getUIBits(n: 1): BitBoolean;
+    getUIBits(n: number): number;
     getUIBits(n: number): number {
         let value = 0;
         while (n--) {

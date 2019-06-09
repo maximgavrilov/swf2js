@@ -32,6 +32,8 @@ import {
 } from './utils';
 
 type BitFlag<N extends string, T> = { [P in N]: 0 } | ({ [P in N]: 1 } & T);
+type BitFlagU<N extends string, T> = ({ [P in N]: 0 } & { [P in keyof T]: undefined })
+                                   | ({ [P in N]: 1 } & T);
 
 type SwfHeader = {
     version: number;
@@ -61,26 +63,18 @@ type DefineButton = {
 });
 
 type ButtonCharacters = { [depth: number]: ButtonRecord[] };
-type ButtonRecord = {
+type ButtonRecord = PlaceObjectTag & {
     ButtonStateHitTest: BitBoolean;
     ButtonStateDown: BitBoolean;
     ButtonStateOver: BitBoolean;
     ButtonStateUp: BitBoolean;
     CharacterId: number;
     Depth: number;
-    PlaceFlagHasMatrix: 1;
-    Matrix: Matrix;
-    ColorTransform: ColorTransform;
-    PlaceFlagHasColorTransform: BitBoolean;
 
     PlaceFlagHasRatio: 0;
     PlaceFlagHasClipDepth: 0;
     Sound: null;
-} & BitFlag<'PlaceFlagHasBlendMode', {
-    BlendMode: number;
-}> & BitFlag<'PlaceFlagHasFilterList', {
-    SurfaceFilterList: BitmapFilter[];
-}>
+};
 
 type ButtonCondAction = {
     CondIdleToOverDown: BitBoolean;
@@ -326,7 +320,61 @@ export type RemoveObject = {
     CharacterId?: number;
     Depth: number;
 };
-type PlaceObjectTag = any;
+
+type PlaceObjectTag_1 = {
+    CharacterId: number;
+    Depth: number;
+};
+
+type PlaceObjectTag_23 = {
+    PlaceFlagMove: BitBoolean;
+    Depth: number;
+    ClassName?: string;
+} & BitFlagU<'PlaceFlagHasCharacter', {
+    CharacterId: number;
+}> & BitFlagU<'PlaceFlagHasRatio', {
+    Ratio: number;
+}> & BitFlag<'PlaceFlagHasName', {
+    Name: string;
+}> & BitFlagU<'PlaceFlagHasClipDepth', {
+    ClipDepth: number;
+}> & BitFlagU<'PlaceFlagHasClipActions', {
+    AllEventFlags: ClipEventFlags;
+    ClipActionRecords: ClipActionRecord;
+}>;
+
+type PlaceObjectTag_3 = {
+    PlaceFlagOpaqueBackground: BitBoolean;
+    PlaceFlagHasImage: BitBoolean;
+    PlaceFlagHasClassName: BitBoolean;
+} & BitFlag<'PlaceFlagHasCacheAsBitmap', {
+    BitmapCache: number;
+}> & BitFlag<'PlaceFlagHasVisible', {
+    Visible: number;
+    BackgroundColor: Color;
+}>;
+
+type PlaceObjectTag = ({ tagType: TAG.PlaceObject; } & PlaceObjectData & PlaceObjectTag_1)
+                    | ({ tagType: TAG.PlaceObject2; } & PlaceObjectData & PlaceObjectTag_23)
+                    | ({ tagType: TAG.PlaceObject3; } & PlaceObjectData & PlaceObjectTag_23 & PlaceObjectTag_3);
+
+type PlaceObjectData = {
+} & BitFlagU<'PlaceFlagHasMatrix', {
+    Matrix: Matrix;
+}> & BitFlagU<'PlaceFlagHasColorTransform', {
+    ColorTransform: ColorTransform;
+}> & BitFlagU<'PlaceFlagHasBlendMode', {
+    BlendMode: number;
+}> & BitFlagU<'PlaceFlagHasFilterList', {
+    SurfaceFilterList: BitmapFilter[];
+}>;
+
+type PlaceObjectTags = {
+    [frame: number]: {
+        [depth: number]: PlaceObjectTag;
+    }
+};
+
 export type SoundInfo = {
     SyncStop: BitBoolean;
     SyncNoMultiple: BitBoolean;
@@ -475,6 +523,7 @@ type TAG_DefineShape = TAG.DefineShape
                      | TAG.DefineShape3
                      | TAG.DefineShape4;
 type TAG_DefineText = TAG.DefineText | TAG.DefineText2;
+type TAG_PlaceObject = TAG.PlaceObject | TAG.PlaceObject2 | TAG.PlaceObject3;
 type TAG_StartSound = TAG.StartSound | TAG.StartSound2;
 
 type ActionScript3 = () => any;
@@ -693,12 +742,12 @@ export class SwfTag {
     }
 
     build(tags: Tags, parent: MovieClip, stage: Stage): void {
-        const originTags: any = {};
+        const originTags: PlaceObjectTags = {};
         for (const frame in tags)
             this.showFrame(tags[frame], parent, originTags, stage);
     }
 
-    private showFrame(obj: TagObj, mc: MovieClip, originTags: any, stage: Stage): void
+    private showFrame(obj: TagObj, mc: MovieClip, originTags: PlaceObjectTags, stage: Stage): void
     {
         const frame = obj.frame;
         const newDepth: { [depth: number]: true } = {};
@@ -787,7 +836,11 @@ export class SwfTag {
         };
     }
 
-    private buildTag(frame: number, tag: Tag, parent: MovieClip, originTags: Tags, stage: Stage): void
+    private buildTag(frame: number,
+                     tag: PlaceObjectTag,
+                     parent: MovieClip,
+                     originTags: PlaceObjectTags,
+                     stage: Stage): void
     {
         const container = parent.container;
 
@@ -795,9 +848,12 @@ export class SwfTag {
             container[frame] = [];
 
         let isCopy = true;
-        if (tag.PlaceFlagMove) {
-            var oTag = originTags[frame - 1][tag.Depth];
-            if (oTag !== undefined) {
+        if (tag.tagType !== TAG.PlaceObject && tag.PlaceFlagMove) {
+            const oTag: PlaceObjectTag = originTags[frame - 1][tag.Depth];
+            if (oTag.tagType === TAG.PlaceObject)
+                throw new Error('Old tag has incorrect type');
+
+            if (oTag) {
                 if (tag.PlaceFlagHasCharacter) {
                     if (tag.CharacterId !== oTag.CharacterId) {
                         isCopy = false;
@@ -832,14 +888,16 @@ export class SwfTag {
                     tag.Ratio = frame - 1;
                 }
 
-                if (!tag.PlaceFlagHasFilterList && oTag.PlaceFlagHasFilterList) {
-                    tag.PlaceFlagHasFilterList = oTag.PlaceFlagHasFilterList;
-                    tag.SurfaceFilterList = oTag.SurfaceFilterList;
-                }
+                if (tag.tagType === TAG.PlaceObject3 && oTag.tagType === TAG.PlaceObject3) {
+                    if (!tag.PlaceFlagHasFilterList && oTag.PlaceFlagHasFilterList) {
+                        tag.PlaceFlagHasFilterList = oTag.PlaceFlagHasFilterList;
+                        tag.SurfaceFilterList = oTag.SurfaceFilterList;
+                    }
 
-                if (!tag.PlaceFlagHasBlendMode && oTag.PlaceFlagHasBlendMode) {
-                    tag.PlaceFlagHasBlendMode = oTag.PlaceFlagHasBlendMode;
-                    tag.BlendMode = oTag.BlendMode;
+                    if (!tag.PlaceFlagHasBlendMode && oTag.PlaceFlagHasBlendMode) {
+                        tag.PlaceFlagHasBlendMode = oTag.PlaceFlagHasBlendMode;
+                        tag.BlendMode = oTag.BlendMode;
+                    }
                 }
             }
         }
@@ -913,25 +971,22 @@ export class SwfTag {
         return obj;
     }
 
-    private buildPlaceObject(tag: Tag): PlaceObject
+    private buildPlaceObject(tag: PlaceObjectData): PlaceObject
     {
-        var placeObject = new PlaceObject();
-        // Matrix
-        if (tag.PlaceFlagHasMatrix) {
+        const placeObject = new PlaceObject();
+
+        if (tag.PlaceFlagHasMatrix)
             placeObject.setMatrix(tag.Matrix);
-        }
-        // ColorTransform
-        if (tag.PlaceFlagHasColorTransform) {
+
+        if (tag.PlaceFlagHasColorTransform)
             placeObject.setColorTransform(tag.ColorTransform);
-        }
-        // Filter
-        if (tag.PlaceFlagHasFilterList) {
+
+        if (tag.PlaceFlagHasFilterList)
             placeObject.setFilters(tag.SurfaceFilterList);
-        }
-        // BlendMode
-        if (tag.PlaceFlagHasBlendMode) {
+
+        if (tag.PlaceFlagHasBlendMode)
             placeObject.setBlendMode(tag.BlendMode);
-        }
+
         return placeObject;
     }
 
@@ -2808,8 +2863,8 @@ export class SwfTag {
             obj.StartEdgeBounds = _this.rect();
             obj.EndEdgeBounds = _this.rect();
             bitio.getUIBits(6); // Reserved
-            obj.UsesNonScalingStrokes = bitio.getUIBits(1) as BitBoolean;
-            obj.UsesScalingStrokes = bitio.getUIBits(1) as BitBoolean;
+            obj.UsesNonScalingStrokes = bitio.getUIBits(1);
+            obj.UsesScalingStrokes = bitio.getUIBits(1);
         }
 
         var offset = bitio.getUI32();
@@ -3209,7 +3264,7 @@ export class SwfTag {
         var ActionOffset = 0;
         if (obj.tagType !== TAG.DefineButton) {
             obj.ReservedFlags = bitio.getUIBits(7);
-            obj.TrackAsMenu = bitio.getUIBits(1) as BitBoolean;
+            obj.TrackAsMenu = bitio.getUIBits(1);
             ActionOffset = bitio.getUI16();
         }
 
@@ -3255,12 +3310,12 @@ export class SwfTag {
         var obj = {} as ButtonRecord;
 
         bitio.getUIBits(2); // Reserved
-        obj.PlaceFlagHasBlendMode = bitio.getUIBits(1) as BitBoolean;
-        obj.PlaceFlagHasFilterList = bitio.getUIBits(1) as BitBoolean;
-        obj.ButtonStateHitTest = bitio.getUIBits(1) as BitBoolean;
-        obj.ButtonStateDown = bitio.getUIBits(1) as BitBoolean;
-        obj.ButtonStateOver = bitio.getUIBits(1) as BitBoolean;
-        obj.ButtonStateUp = bitio.getUIBits(1) as BitBoolean;
+        obj.PlaceFlagHasBlendMode = bitio.getUIBits(1);
+        obj.PlaceFlagHasFilterList = bitio.getUIBits(1);
+        obj.ButtonStateHitTest = bitio.getUIBits(1);
+        obj.ButtonStateDown = bitio.getUIBits(1);
+        obj.ButtonStateOver = bitio.getUIBits(1);
+        obj.ButtonStateUp = bitio.getUIBits(1);
         obj.CharacterId = bitio.getUI16();
         obj.Depth = bitio.getUI16();
         obj.PlaceFlagHasMatrix = 1;
@@ -3289,16 +3344,16 @@ export class SwfTag {
             var obj = {} as ButtonCondAction;
             var startOffset = bitio.byte_offset;
             var CondActionSize = bitio.getUI16();
-            obj.CondIdleToOverDown = bitio.getUIBits(1) as BitBoolean;
-            obj.CondOutDownToIdle = bitio.getUIBits(1) as BitBoolean;
-            obj.CondOutDownToOverDown = bitio.getUIBits(1) as BitBoolean;
-            obj.CondOverDownToOutDown = bitio.getUIBits(1) as BitBoolean;
-            obj.CondOverDownToOverUp = bitio.getUIBits(1) as BitBoolean;
-            obj.CondOverUpToOverDown = bitio.getUIBits(1) as BitBoolean;
-            obj.CondOverUpToIdle = bitio.getUIBits(1) as BitBoolean;
-            obj.CondIdleToOverUp = bitio.getUIBits(1) as BitBoolean;
+            obj.CondIdleToOverDown = bitio.getUIBits(1);
+            obj.CondOutDownToIdle = bitio.getUIBits(1);
+            obj.CondOutDownToOverDown = bitio.getUIBits(1);
+            obj.CondOverDownToOutDown = bitio.getUIBits(1);
+            obj.CondOverDownToOverUp = bitio.getUIBits(1);
+            obj.CondOverUpToOverDown = bitio.getUIBits(1);
+            obj.CondOverUpToIdle = bitio.getUIBits(1);
+            obj.CondIdleToOverUp = bitio.getUIBits(1);
             obj.CondKeyPress = bitio.getUIBits(7);
-            obj.CondOverDownToIdle = bitio.getUIBits(1) as BitBoolean;
+            obj.CondOverDownToIdle = bitio.getUIBits(1);
 
             // ActionScript
             var length = endOffset - bitio.byte_offset + 1;
@@ -3314,23 +3369,24 @@ export class SwfTag {
         return results;
     }
 
-    private parsePlaceObject(tagType: number, length: number): PlaceObjectTag
+    private parsePlaceObject(tagType: TAG_PlaceObject, length: number): PlaceObjectTag
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var obj = {} as PlaceObjectTag;
+        const bitio = this.bitio;
+        const obj = {} as PlaceObjectTag;
         obj.tagType = tagType;
-        var startOffset = bitio.byte_offset;
+        const startOffset = bitio.byte_offset;
 
-        if (tagType === TAG.PlaceObject) {
+        if (obj.tagType === TAG.PlaceObject) {
             obj.CharacterId = bitio.getUI16();
             obj.Depth = bitio.getUI16();
-            obj.Matrix = _this.matrix();
+            obj.Matrix = this.matrix();
             obj.PlaceFlagHasMatrix = 1;
+            obj.PlaceFlagHasBlendMode = 0;
+            obj.PlaceFlagHasFilterList = 0;
 
             bitio.byteAlign();
             if ((bitio.byte_offset - startOffset) < length) {
-                obj.ColorTransform = _this.colorTransform();
+                obj.ColorTransform = this.colorTransform();
                 obj.PlaceFlagHasColorTransform = 1;
             }
         } else {
@@ -3347,7 +3403,7 @@ export class SwfTag {
             obj.PlaceFlagMove = bitio.getUIBits(1);
 
             // PlaceObject3
-            if (tagType === TAG.PlaceObject3) {
+            if (obj.tagType === TAG.PlaceObject3) {
                 bitio.getUIBits(1); // Reserved
                 obj.PlaceFlagOpaqueBackground = bitio.getUIBits(1);
                 obj.PlaceFlagHasVisible = bitio.getUIBits(1);
@@ -3360,19 +3416,19 @@ export class SwfTag {
 
             obj.Depth = bitio.getUI16();
 
-            if (obj.PlaceFlagHasClassName ||
-                (obj.PlaceFlagHasImage && obj.PlaceFlagHasCharacter)
-            ) {
+            if (obj.tagType === TAG.PlaceObject3 &&
+               (obj.PlaceFlagHasClassName || (obj.PlaceFlagHasImage && obj.PlaceFlagHasCharacter)))
+            {
                 obj.ClassName = bitio.getDataUntil("\0");
             }
             if (obj.PlaceFlagHasCharacter) {
                 obj.CharacterId = bitio.getUI16();
             }
             if (obj.PlaceFlagHasMatrix) {
-                obj.Matrix = _this.matrix();
+                obj.Matrix = this.matrix();
             }
             if (obj.PlaceFlagHasColorTransform) {
-                obj.ColorTransform = _this.colorTransform();
+                obj.ColorTransform = this.colorTransform();
             }
             if (obj.PlaceFlagHasRatio) {
                 obj.Ratio = bitio.getUI16();
@@ -3384,9 +3440,9 @@ export class SwfTag {
                 obj.ClipDepth = bitio.getUI16();
             }
 
-            if (tagType === TAG.PlaceObject3) {
+            if (obj.tagType === TAG.PlaceObject3) {
                 if (obj.PlaceFlagHasFilterList) {
-                    obj.SurfaceFilterList = _this.getFilterList();
+                    obj.SurfaceFilterList = this.getFilterList();
                 }
                 if (obj.PlaceFlagHasBlendMode) {
                     obj.BlendMode = bitio.getUI8();
@@ -3396,18 +3452,18 @@ export class SwfTag {
                 }
                 if (obj.PlaceFlagHasVisible) {
                     obj.Visible = bitio.getUI8();
-                    obj.BackgroundColor = _this.rgba();
+                    obj.BackgroundColor = this.rgba();
                 }
             }
 
             if (obj.PlaceFlagHasClipActions) {
                 bitio.getUI16(); // Reserved
-                obj.AllEventFlags = _this.parseClipEventFlags();
+                obj.AllEventFlags = this.parseClipEventFlags();
 
                 var endLength = startOffset + length;
                 var actionRecords = [];
                 while (bitio.byte_offset < endLength) {
-                    var clipActionRecord = _this.parseClipActionRecord(endLength);
+                    var clipActionRecord = this.parseClipActionRecord(endLength);
                     actionRecords[actionRecords.length] = clipActionRecord;
                     if (endLength <= bitio.byte_offset) {
                         break;
