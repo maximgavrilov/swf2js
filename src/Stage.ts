@@ -25,7 +25,7 @@ import {
     ColorTransform, HitEvent, Matrix,
     tmpContext,
     devicePixelRatio, isAndroid, isChrome, isTouch,
-    cloneArray, isTouchEvent, Writeable
+    isTouchEvent, Writeable
 } from './utils';
 
 
@@ -78,8 +78,6 @@ const requestAnimationFrame =
     (window as any).mozRequestAnimationFrame ||
     ((cb) => window.setTimeout(cb, 0));
 
-let quality = 1;
-let _devicePixelRatio = devicePixelRatio * quality;
 
 let startEvent: 'mousedown' | 'touchstart' = "mousedown";
 let moveEvent: 'mousemove' | 'touchmove' = "mousemove";
@@ -129,6 +127,7 @@ export class Stage {
     private callback = null;
     private FlashVars = {};
     private quality: Quality = 'high';
+    private _devicePixelRatio = devicePixelRatio;
 
     // event
     readonly mouse = new Mouse();
@@ -248,15 +247,15 @@ export class Stage {
         // quality
         switch (this.quality) {
             case 'low':
-                _devicePixelRatio = devicePixelRatio * 0.5;
+                this._devicePixelRatio = devicePixelRatio * 0.5;
                 break;
 
             case 'medium':
-                _devicePixelRatio = devicePixelRatio * 0.8;
+                this._devicePixelRatio = devicePixelRatio * 0.8;
                 break;
 
             case "high":
-                _devicePixelRatio = devicePixelRatio;
+                this._devicePixelRatio = devicePixelRatio;
                 break;
 
             default:
@@ -424,70 +423,73 @@ export class Stage {
         if (!this.isLoad)
             return;
 
-        var div = document.getElementById(this.getName());
+        const div = document.getElementById(this.getName());
         if (!div)
             return;
 
-        var oWidth = this.optionWidth;
-        var oHeight = this.optionHeight;
+        const oWidth = this.optionWidth;
+        const oHeight = this.optionHeight;
 
-        var element = document.documentElement;
-        var innerWidth = Math.max(element.clientWidth, window.innerWidth || 0);
-        var innerHeight = Math.max(element.clientHeight, window.innerHeight || 0);
-
-        var parent = div.parentNode as HTMLElement;
+        let innerWidth;
+        let innerHeight;
+        const parent = div.parentNode as HTMLElement;
         if (parent.tagName !== "BODY") {
             innerWidth = parent.offsetWidth;
             innerHeight = parent.offsetHeight;
+        } else {
+            innerWidth = Math.max(document.documentElement.clientWidth, window.innerWidth || 0);
+            innerHeight = Math.max(document.documentElement.clientHeight, window.innerHeight || 0);
         }
-        var screenWidth = (oWidth > 0) ? oWidth : innerWidth;
-        var screenHeight = (oHeight > 0) ? oHeight : innerHeight;
 
-        var baseWidth = this.getBaseWidth();
-        var baseHeight = this.getBaseHeight();
-        var scale = Math.min((screenWidth / baseWidth), (screenHeight / baseHeight));
-        var width = baseWidth * scale;
-        var height = baseHeight * scale;
+        const screenWidth = (oWidth > 0) ? oWidth : innerWidth;
+        const screenHeight = (oHeight > 0) ? oHeight : innerHeight;
 
-        if (width !== this.getWidth() || height !== this.getHeight()) {
-            // div
-            var style = div.style;
-            style.width = width + "px";
-            style.height = height + "px";
-            style.top = '0';
-            style.left = ((screenWidth / 2) - (width / 2)) + "px";
+        const baseWidth = this.getBaseWidth();
+        const baseHeight = this.getBaseHeight();
+        const scale = Math.min((screenWidth / baseWidth), (screenHeight / baseHeight));
+        let width = baseWidth * scale;
+        let height = baseHeight * scale;
 
-            width *= devicePixelRatio;
-            height *= devicePixelRatio;
+        if (width === this.getWidth() && height === this.getHeight())
+            return;
 
-            this.setScale(scale);
-            this.setWidth(width);
-            this.setHeight(height);
+        // div
+        const style = div.style;
+        style.width = width + "px";
+        style.height = height + "px";
+        style.top = '0';
+        style.left = ((screenWidth - width) / 2) + "px";
 
-            // main
-            var canvas = this.context.canvas;
-            canvas.width = width;
-            canvas.height = height;
+        this.setScale(scale);
+        this.setWidth(width);
+        this.setHeight(height);
 
-            // pre
-            var preCanvas = this.preContext.canvas;
-            preCanvas.width = width;
-            preCanvas.height = height;
+        width *= devicePixelRatio;
+        height *= devicePixelRatio;
 
-            var hitCanvas = this.hitContext.canvas;
-            hitCanvas.width = width;
-            hitCanvas.height = height;
+        // main
+        const canvas = this.context.canvas;
+        canvas.width = width;
+        canvas.height = height;
 
-            // tmp
-            if (isAndroid && isChrome) {
-                var tmpCanvas = tmpContext.canvas;
-                tmpCanvas.width = width;
-                tmpCanvas.height = height;
-            }
+        // pre
+        const preCanvas = this.preContext.canvas;
+        preCanvas.width = width;
+        preCanvas.height = height;
 
-            var mScale = scale * _devicePixelRatio / 20;
-            this.setMatrix(cloneArray([mScale, 0, 0, mScale, 0, 0]));
+        const hitCanvas = this.hitContext.canvas;
+        hitCanvas.width = width;
+        hitCanvas.height = height;
+
+        // tmp
+        if (isAndroid && isChrome) {
+            const tmpCanvas = tmpContext.canvas;
+            tmpCanvas.width = width;
+            tmpCanvas.height = height;
         }
+
+        const mScale = scale * this._devicePixelRatio / 20;
+        this.setMatrix([mScale, 0, 0, mScale, 0, 0]);
     }
 
     loaded(): void {
@@ -793,11 +795,11 @@ export class Stage {
         style.position = "absolute";
         style.top = '0';
         style.left = '0';
-        style.zoom = 100 / _devicePixelRatio + "%";
+        style.zoom = 100 / this._devicePixelRatio + "%";
         style["-webkit-tap-highlight-color"] = "rgba(0,0,0,0)";
 
         (style as any).MozTransformOrigin = "0 0";
-        (style as any).MozTransform = "scale(" + 1 / _devicePixelRatio + ")";
+        (style as any).MozTransform = "scale(" + 1 / this._devicePixelRatio + ")";
 
         if (isAndroid) {
             this.canvas.addEventListener("touchcancel", () => {
@@ -960,8 +962,8 @@ export class Stage {
         touchY /= scale;
 
         const hitCanvas = this.hitContext.canvas;
-        const chkX = touchX * scale * _devicePixelRatio;
-        const chkY = touchY * scale * _devicePixelRatio;
+        const chkX = touchX * scale * this._devicePixelRatio;
+        const chkY = touchY * scale * this._devicePixelRatio;
 
         if (this.swftag.abcFlag) {
             const parent = this.getParent();
