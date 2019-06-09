@@ -61,14 +61,14 @@ class CacheStore {
     }
 
     generateKey(name: string, id: string, matrix: number[], cxForm: number[]): string {
-        let key = name + "_" + id;
+        let result: any[] = [ name, id ];
         if (matrix instanceof Array) {
-            key += "_" + matrix.join("_");
+            result = result.concat(matrix);
         }
         if (cxForm instanceof Array) {
-            key += "_" + cxForm.join("_");
+            result = result.concat(cxForm);
         }
-        return key;
+        return result.join('_');
     }
 }
 

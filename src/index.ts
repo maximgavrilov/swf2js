@@ -86,7 +86,7 @@ window.addEventListener("unload", () => {
     DisplayObject.loadStages = void 0;
 });
 
-class Swf2js {
+export class Swf2js {
     loadLib(url: string, cb: (swftag: SwfTag) => void): void
     {
         const xmlHttpRequest = new XMLHttpRequest();

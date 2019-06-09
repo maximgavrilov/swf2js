@@ -11,6 +11,7 @@ import { ActionScript } from './ActionScript';
 import { clipEvent, ClipEvent, EventDispatcher } from './EventDispatcher';
 import { ButtonStatus, DisplayObject, HitObject } from './DisplayObject';
 import { Global } from './Global';
+import { Swf2js } from './index';
 import { PlaceObject } from './PlaceObject';
 import { keyClass } from './Key';
 import { Mouse } from './Mouse';
@@ -57,6 +58,10 @@ export type ButtonHit = {
     button?: SimpleButton;
     CondKeyPress?: number;
 };
+
+function isButtonHit(stage: Stage, hit: ButtonHit | HitObject | undefined): hit is ButtonHit {
+    return hit && stage.isHit;
+}
 
 export type DragRules = {
     startX: number;
@@ -123,7 +128,7 @@ export class Stage {
     private optionHeight = 0;
     private callback = null;
     private FlashVars = {};
-    private quality = "medium"; // low = 0.25, medium = 0.8, high = 1.0
+    private quality: Quality = 'high';
 
     // event
     readonly mouse = new Mouse();
@@ -132,13 +137,13 @@ export class Stage {
     private matrix: Matrix = [1,0,0,1,0,0];
     private _matrix: Matrix = [1,0,0,1,0,0];
     private _colorTransform: ColorTransform = [1,1,1,1,0,0,0,0];
-    readonly buttonHits: ButtonHit[] = [];
-    readonly downEventHits: Action[] = [];
-    readonly moveEventHits: Action[] = [];
-    readonly upEventHits: Action[] = [];
-    readonly keyDownEventHits: Action[] = [];
-    readonly keyUpEventHits: Action[] = [];
-    readonly actions: Action[] = [];
+    buttonHits: ButtonHit[] = [];
+    downEventHits: Action[] = [];
+    moveEventHits: Action[] = [];
+    upEventHits: Action[] = [];
+    keyDownEventHits: Action[] = [];
+    keyUpEventHits: Action[] = [];
+    actions: Action[] = [];
     private instances = [];
     readonly placeObjects: {
         [instanceId: number]: {
@@ -149,8 +154,8 @@ export class Stage {
     } = {};
     private isAction = true;
     private _global = new Global();
-    private touchObj = null;
-    private touchStatus = "up";
+    private touchObj;
+    private touchStatus: 'up' | 'down' = 'up';
     private overObj = null;
     private touchEndAction = null;
     private scale = 1;
@@ -165,8 +170,8 @@ export class Stage {
     private parent: MovieClip;
 
     // render
-    readonly doneTags = [];
-    readonly newTags = [];
+    doneTags = [];
+    newTags = [];
 
     constructor() {
         const mc = new MovieClip();
@@ -203,25 +208,21 @@ export class Stage {
     }
 
     play(): void {
-        var _this = this;
-        _this.stopFlag = false;
-
-        var enterFrame = function (stage) {
-            return function () {
-                requestAnimationFrame(function () {
-                    if (stage.isLoad && !stage.stopFlag) {
-                        stage.nextFrame();
-                    }
-                });
-            };
-        };
-        _this.intervalId = setInterval(enterFrame(_this), _this.getFrameRate());
+        this.stopFlag = false;
+        this.intervalId = setInterval(this.enterFrame, this.getFrameRate());
     }
 
+    private enterFrame = () => {
+        requestAnimationFrame(() => {
+            if (this.isLoad && !this.stopFlag)
+                this.nextFrame();
+        });
+    };
+
     stop(): void {
-        var _this = this;
-        _this.stopFlag = true;
-        clearInterval(_this.intervalId);
+        this.stopFlag = true;
+        clearInterval(this.intervalId);
+        this.intervalId = 0;
     }
 
     getName(): string {
@@ -236,23 +237,30 @@ export class Stage {
         if (!options)
             return;
 
-        var _this = this;
-        _this.optionWidth = options.width || _this.optionWidth;
-        _this.optionHeight = options.height || _this.optionHeight;
-        _this.callback = options.callback || _this.callback;
-        _this.tagId = options.tagId || _this.tagId;
-        _this.FlashVars = options.FlashVars || _this.FlashVars;
-        _this.quality = options.quality || _this.quality;
-        _this.bgcolor = options.bgcolor || _this.bgcolor;
+        this.optionWidth = options.width || this.optionWidth;
+        this.optionHeight = options.height || this.optionHeight;
+        this.callback = options.callback || this.callback;
+        this.tagId = options.tagId || this.tagId;
+        this.FlashVars = options.FlashVars || this.FlashVars;
+        this.quality = options.quality || this.quality;
+        this.bgcolor = options.bgcolor || this.bgcolor;
 
         // quality
-        switch (_this.quality) {
-            case "low":
+        switch (this.quality) {
+            case 'low':
                 _devicePixelRatio = devicePixelRatio * 0.5;
                 break;
+
+            case 'medium':
+                _devicePixelRatio = devicePixelRatio * 0.8;
+                break;
+
             case "high":
                 _devicePixelRatio = devicePixelRatio;
                 break;
+
+            default:
+                ((x: never) => {})(this.quality);
         }
     }
 
@@ -277,11 +285,7 @@ export class Stage {
     }
 
     setWidth(width: number): void {
-        if (width < 0) {
-            width *= -1;
-        }
-
-        this.width = width;
+        this.width = width >= 0 ? width : -width;
     }
 
     getHeight(): number {
@@ -289,10 +293,7 @@ export class Stage {
     }
 
     setHeight(height: number): void {
-        if (height < 0) {
-            height *= -1;
-        }
-        this.height = height;
+        this.height = height >= 0 ? height : -height;
     }
 
     getScale(): number {
@@ -320,41 +321,34 @@ export class Stage {
     }
 
     getPlaceObject(instanceId: number, depth: number, frame: number): PlaceObject {
-        var placeObjects = this.placeObjects;
-        if (!(instanceId in placeObjects)) {
-            return null;
-        }
-        var placeObject = placeObjects[instanceId];
-        if (!(frame in placeObject)) {
-            return null;
-        }
-        var tags = placeObject[frame];
-        if (!(depth in tags)) {
-            return null;
-        }
+        const placeObject = this.placeObjects[instanceId];
+        if (!placeObject)
+            return undefined;
+
+        const tags = placeObject[frame];
+        if (!tags)
+            return undefined;
+
         return tags[depth];
     }
 
     setPlaceObject(placeObject: PlaceObject, instanceId: number, depth: number, frame: number): void {
-        var _this = this;
-        var placeObjects = _this.placeObjects;
-        if (!(instanceId in placeObjects)) {
-            placeObjects[instanceId] = [];
-        }
-        if (!(frame in placeObjects[instanceId])) {
-            placeObjects[instanceId][frame] = [];
-        }
-        placeObjects[instanceId][frame][depth] = placeObject;
+        if (!(instanceId in this.placeObjects))
+            this.placeObjects[instanceId] = [];
+
+        if (!(frame in this.placeObjects[instanceId]))
+            this.placeObjects[instanceId][frame] = [];
+
+        this.placeObjects[instanceId][frame][depth] = placeObject;
     }
 
     copyPlaceObject(instanceId: number, depth: number, frame: number): void {
-        var placeObject = this.getPlaceObject(instanceId, depth, frame - 1);
+        const placeObject = this.getPlaceObject(instanceId, depth, frame - 1);
         this.setPlaceObject(placeObject, instanceId, depth, frame);
     }
 
     removePlaceObject(instanceId: number): void {
         delete this.placeObjects[instanceId];
-        // delete this.instances[instanceId];
     }
 
     getFrameRate(): number {
@@ -365,24 +359,23 @@ export class Stage {
         this.frameRate = (1000 / fps) | 0;
     }
 
-    loadEvent(): void {
-        var _this = this;
-        switch (_this.loadStatus) {
+    loadEvent = () => {
+        switch (this.loadStatus) {
             case 2:
-                _this.resize();
-                _this.loadStatus++;
+                this.resize();
+                this.loadStatus++;
                 break;
             case 3:
-                if (!_this.isLoad || !_this.stopFlag || _this.swftag.imgUnLoadCount > 0) {
+                if (!this.isLoad || !this.stopFlag || this.swftag.imgUnLoadCount > 0)
                     break;
-                }
-                _this.loadStatus++;
-                _this.loaded();
+
+                this.loadStatus++;
+                this.loaded();
                 break;
         }
-        if (_this.loadStatus !== 4) {
-            setTimeout(function () { _this.loadEvent(); }, 0);
-        }
+
+        if (this.loadStatus !== 4)
+            setTimeout(this.loadEvent, 0);
     }
 
     parse(swftag: SwfTag, url: string = ''): void {
@@ -428,17 +421,15 @@ export class Stage {
     }
 
     resize(): void {
-        var _this = this;
-
         if (!this.isLoad)
             return;
 
-        var div = document.getElementById(_this.getName());
+        var div = document.getElementById(this.getName());
         if (!div)
             return;
 
-        var oWidth = _this.optionWidth;
-        var oHeight = _this.optionHeight;
+        var oWidth = this.optionWidth;
+        var oHeight = this.optionHeight;
 
         var element = document.documentElement;
         var innerWidth = Math.max(element.clientWidth, window.innerWidth || 0);
@@ -452,13 +443,13 @@ export class Stage {
         var screenWidth = (oWidth > 0) ? oWidth : innerWidth;
         var screenHeight = (oHeight > 0) ? oHeight : innerHeight;
 
-        var baseWidth = _this.getBaseWidth();
-        var baseHeight = _this.getBaseHeight();
+        var baseWidth = this.getBaseWidth();
+        var baseHeight = this.getBaseHeight();
         var scale = Math.min((screenWidth / baseWidth), (screenHeight / baseHeight));
         var width = baseWidth * scale;
         var height = baseHeight * scale;
 
-        if (width !== _this.getWidth() || height !== _this.getHeight()) {
+        if (width !== this.getWidth() || height !== this.getHeight()) {
             // div
             var style = div.style;
             style.width = width + "px";
@@ -469,21 +460,21 @@ export class Stage {
             width *= devicePixelRatio;
             height *= devicePixelRatio;
 
-            _this.setScale(scale);
-            _this.setWidth(width);
-            _this.setHeight(height);
+            this.setScale(scale);
+            this.setWidth(width);
+            this.setHeight(height);
 
             // main
-            var canvas = _this.context.canvas;
+            var canvas = this.context.canvas;
             canvas.width = width;
             canvas.height = height;
 
             // pre
-            var preCanvas = _this.preContext.canvas;
+            var preCanvas = this.preContext.canvas;
             preCanvas.width = width;
             preCanvas.height = height;
 
-            var hitCanvas = _this.hitContext.canvas;
+            var hitCanvas = this.hitContext.canvas;
             hitCanvas.width = width;
             hitCanvas.height = height;
 
@@ -495,7 +486,7 @@ export class Stage {
             }
 
             var mScale = scale * _devicePixelRatio / 20;
-            _this.setMatrix(cloneArray([mScale, 0, 0, mScale, 0, 0]));
+            this.setMatrix(cloneArray([mScale, 0, 0, mScale, 0, 0]));
         }
     }
 
@@ -618,207 +609,166 @@ export class Stage {
     }
 
     putFrame(): void {
-        const _this = this as Writeable<this>;
-        _this.newTags = [];
-        var doneTags = _this.doneTags;
-        var length = doneTags.length;
-        if (length) {
-            clipEvent.type = "enterFrame";
-            var i = 0;
-            while (i < length) {
-                var tag = doneTags[i];
-                tag.putFrame(_this, clipEvent);
-                i++;
-            }
-        }
+        this.newTags = [];
+
+        clipEvent.type = "enterFrame";
+        for (const tag of this.doneTags)
+            tag.putFrame(this, clipEvent);
     }
 
     addActions(): void {
-        var _this = this;
-        var newTags = _this.newTags;
-        var length = newTags.length;
-        if (length) {
-            var i = 0;
-            while (i < length) {
-                var tag = newTags[i];
-                tag.addActions(_this);
-                i++;
-            }
-        }
+        for (const tag of this.newTags)
+            tag.addActions(this);
     }
 
     render(): void {
-        var whis = this as Writeable<this>;
-        whis.buttonHits = [];
-        whis.doneTags = [];
+        this.buttonHits = [];
+        this.doneTags = [];
 
-        var ctx = this.preContext;
-        ctx.globalCompositeOperation = "source-over";
-        ctx.setTransform(1, 0, 0, 1, 0, 0);
-        var backgroundColor = this.getBackgroundColor();
+        const preCtx = this.preContext;
+        preCtx.globalCompositeOperation = "source-over";
+        preCtx.setTransform(1, 0, 0, 1, 0, 0);
+
+        const backgroundColor = this.getBackgroundColor();
         if (!backgroundColor || backgroundColor === "transparent") {
             // pre clear
-            var canvas = ctx.canvas;
-            ctx.clearRect(0, 0, canvas.width + 1, canvas.height + 1);
+            const canvas = preCtx.canvas;
+            preCtx.clearRect(0, 0, canvas.width + 1, canvas.height + 1);
+
             // main clear
-            var mainCtx = this.context;
-            mainCtx.clearRect(0, 0, canvas.width + 1, canvas.height + 1);
+            this.context.clearRect(0, 0, canvas.width + 1, canvas.height + 1);
         } else {
-            ctx.fillStyle = backgroundColor;
-            ctx.fillRect(0, 0, this.getWidth() + 1, this.getHeight() + 1);
+            preCtx.fillStyle = backgroundColor;
+            preCtx.fillRect(0, 0, this.getWidth() + 1, this.getHeight() + 1);
         }
 
-        var mc = this.getParent();
-        mc.render(ctx, this._matrix, this._colorTransform, this, true);
+        const mc = this.getParent();
+        mc.render(preCtx, this._matrix, this._colorTransform, this, true);
     }
 
     executeAction(): void {
-        const whis = this as Writeable<this>;
-
-        if (this.isAction && this.actions.length) {
+        if (this.isAction) {
             this.isAction = false;
-            var i = 0;
-            while (i < this.actions.length) {
-                var obj = this.actions[i];
-                i++;
 
-                var mc = obj.mc;
-                var args = obj.args || [];
-                if (!mc.active) {
+            for (const obj of this.actions) {
+                const mc = obj.mc;
+                if (!mc.active)
                     continue;
-                }
 
-                var actions = obj.as;
-                if (typeof actions === "function") {
+                const args = obj.args || [];
+                const actions = obj.as;
+
+                if (typeof actions === 'function') {
                     actions.apply(mc, args);
                 } else {
-                    var length = actions.length;
-                    if (!length) {
-                        continue;
-                    }
-                    var idx = 0;
-                    while (idx < length) {
-                        if (!(idx in actions)) {
-                            continue;
-                        }
-                        var action = actions[idx];
-                        if (typeof action === "function") {
+                    for (const action of actions) {
+                        if (typeof action === "function")
                             action.apply(mc, args);
-                        }
-                        idx++;
                     }
                 }
             }
         }
-        whis.actions = [];
+
+        this.actions = [];
         this.isAction = true;
     }
 
     buttonAction(mc: DisplayObject, as: ActionScript): void {
-        const whis = this as Writeable<this>;
-        whis.downEventHits = [];
-        whis.moveEventHits = [];
-        whis.upEventHits = [];
-        whis.keyDownEventHits = [];
-        whis.keyUpEventHits = [];
+        this.downEventHits = [];
+        this.moveEventHits = [];
+        this.upEventHits = [];
+        this.keyDownEventHits = [];
+        this.keyUpEventHits = [];
+
         as.execute(mc);
+
         this.executeAction();
     }
 
     renderMain(): void {
-        var _this = this;
-        var preContext = _this.preContext;
-        var preCanvas = preContext.canvas;
-        var width = preCanvas.width;
-        var height = preCanvas.height;
-        if (width > 0 && height > 0) {
-            var ctx = _this.context;
-            ctx.setTransform(1,0,0,1,0,0);
-            ctx.drawImage(preCanvas, 0, 0, width, height);
+        const preCanvas = this.preContext.canvas;
+
+        if (preCanvas.width > 0 && preCanvas.height > 0) {
+            this.context.setTransform(1,0,0,1,0,0);
+            this.context.drawImage(preCanvas, 0, 0, preCanvas.width, preCanvas.height);
         }
     }
 
     reset(): void {
-        const whis = this as Writeable<this>;
-        var mc = new MovieClip();
+        const mc = new MovieClip();
         mc.reset();
         mc.setStage(this);
+
         this.parent = mc;
         this.instances = [];
-        whis.buttonHits = [];
-        whis.downEventHits = [];
-        whis.moveEventHits = [];
-        whis.upEventHits = [];
-        whis.keyDownEventHits = [];
-        whis.keyUpEventHits = [];
-        whis.actions = [];
+        this.buttonHits = [];
+        this.downEventHits = [];
+        this.moveEventHits = [];
+        this.upEventHits = [];
+        this.keyDownEventHits = [];
+        this.keyUpEventHits = [];
+        this.actions = [];
     }
 
     init(): void {
-        var _this = this;
-        var tagId = _this.tagId;
-        var div;
-        if (_this.getId() in DisplayObject.stages) {
-            if (tagId) {
+        let div;
+        if (this.getId() in DisplayObject.stages) {
+            if (this.tagId) {
                 if (document.readyState === "loading") {
-                    var reTry = function ()
-                    {
+                    const reTry = () => {
                         window.removeEventListener("DOMContentLoaded", reTry);
-                        _this.init();
+                        this.init();
                     };
                     window.addEventListener("DOMContentLoaded", reTry);
                     return;
                 }
 
-                var container = document.getElementById(tagId);
+                const container = document.getElementById(this.tagId);
                 if (!container) {
-                    alert("Not Found Tag ID:" + tagId);
+                    console.error("Not Found Tag ID:" + this.tagId);
                     return;
                 }
 
-                div = document.getElementById(_this.getName());
+                div = document.getElementById(this.getName());
                 if (div) {
-                    _this.deleteNode();
+                    this.deleteNode();
                 } else {
                     div = document.createElement("div");
-                    div.id = _this.getName();
+                    div.id = this.getName();
                     container.appendChild(div);
                 }
             } else {
-                document.body.insertAdjacentHTML("beforeend", "<div id='" + _this.getName() + "'></div>");
+                document.body.insertAdjacentHTML("beforeend", "<div id='" + this.getName() + "'></div>");
             }
         }
 
-        div = document.getElementById(_this.getName());
+        div = document.getElementById(this.getName());
         if (div) {
-            _this.initStyle(div);
-            _this.loading();
+            this.initStyle(div);
+            this.loading();
         }
 
-        if (!_this.canvas) {
-            _this.initCanvas();
+        if (!this.canvas) {
+            this.initCanvas();
         }
 
-        _this.loadStatus++;
-        _this.loadEvent();
+        this.loadStatus++;
+        this.loadEvent();
     }
 
     initStyle(div: HTMLDivElement): void {
-        var style;
-        var _this = this;
-
-        style = div.style;
+        const style = div.style;
         style.position = "relative";
         style.top = "0";
         style.backgroundColor = "transparent";
         style.overflow = "hidden";
         style["-webkit-backface-visibility"] = "hidden";
 
-        var parent = div.parentNode as HTMLElement;
-        var oWidth = _this.optionWidth;
-        var oHeight = _this.optionHeight;
-        var width;
-        var height;
+        const parent = div.parentNode as HTMLElement;
+        const oWidth = this.optionWidth;
+        const oHeight = this.optionHeight;
+        let width;
+        let height;
         if (parent.tagName === "BODY") {
             width = (oWidth > 0) ? oWidth : window.innerWidth;
             height = (oHeight > 0) ? oHeight : window.innerHeight;
@@ -833,182 +783,168 @@ export class Stage {
     }
 
     initCanvas(): void {
-        var _this = this;
-        var style;
-        var canvas = document.createElement("canvas");
-        canvas.width = 1;
-        canvas.height = 1;
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = 1;
+        this.canvas.height = 1;
+        this.context = this.canvas.getContext("2d");
 
-        style = canvas.style;
-        style.zIndex = 0;
+        const style = this.canvas.style;
+        style.zIndex = '0';
         style.position = "absolute";
-        style.top = 0;
-        style.left = 0;
+        style.top = '0';
+        style.left = '0';
         style.zoom = 100 / _devicePixelRatio + "%";
         style["-webkit-tap-highlight-color"] = "rgba(0,0,0,0)";
 
-        style.MozTransformOrigin = "0 0";
-        style.MozTransform = "scale(" + 1 / _devicePixelRatio + ")";
+        (style as any).MozTransformOrigin = "0 0";
+        (style as any).MozTransform = "scale(" + 1 / _devicePixelRatio + ")";
 
         if (isAndroid) {
-            canvas.addEventListener("touchcancel", function ()
-            {
-                _this.touchEnd(DisplayObject.event);
+            this.canvas.addEventListener("touchcancel", () => {
+                this.touchEnd(DisplayObject.event);
             });
         }
 
-        _this.context = canvas.getContext("2d");
-        _this.canvas = canvas;
-
-        var preCanvas = document.createElement("canvas");
+        const preCanvas = document.createElement("canvas");
         preCanvas.width = 1;
         preCanvas.height = 1;
-        _this.preContext = preCanvas.getContext("2d");
+        this.preContext = preCanvas.getContext("2d");
 
-        var hitCanvas = document.createElement("canvas");
+        const hitCanvas = document.createElement("canvas");
         hitCanvas.width = 1;
         hitCanvas.height = 1;
-        _this.hitContext = hitCanvas.getContext("2d");
+        this.hitContext = hitCanvas.getContext("2d");
     }
 
     loading(): void {
-        var _this = this;
-        var div = document.getElementById(_this.getName());
-        var loadingId = _this.getName() + "_loading";
-        var css = "<style>";
-        css += "#" + loadingId + " {\n";
-        // css += "z-index: 999;\n";
-        css += "position: absolute;\n";
-        css += "top: 50%;\n";
-        css += "left: 50%;\n";
-        css += "margin: -24px 0 0 -24px;\n";
-        css += "width: 50px;\n";
-        css += "height: 50px;\n";
-        css += "border-radius: 50px;\n";
-        css += "border: 8px solid #dcdcdc;\n";
-        css += "border-right-color: transparent;\n";
-        css += "box-sizing: border-box;\n";
-        css += "-webkit-animation: " + loadingId + " 0.8s infinite linear;\n";
-        css += "animation: " + loadingId + " 0.8s infinite linear;\n";
-        css += "} \n";
-        css += "@-webkit-keyframes " + loadingId + " {\n";
-        css += "0% {-webkit-transform: rotate(0deg);}\n";
-        css += "100% {-webkit-transform: rotate(360deg);}\n";
-        css += "} \n";
-        css += "@keyframes " + loadingId + " {\n";
-        css += "0% {transform: rotate(0deg);}\n";
-        css += "100% {transform: rotate(360deg);}\n";
-        css += "} \n";
-        css += "</style>";
-        div.innerHTML = css;
-        var loadingDiv = document.createElement("div");
-        loadingDiv.id = loadingId;
-        div.appendChild(loadingDiv);
+        const loadingId = this.getName() + "_loading";
+
+        const div = document.getElementById(this.getName());
+        div.innerHTML = `
+            <style>
+                #${loadingId} {
+                    position: absolute;
+                    top: 50%;
+                    left: 50%;
+                    margin: -24px 0 0 -24px;
+                    width: 50px;
+                    height: 50px;
+                    border-radius: 50px;
+                    border: 8px solid #dcdcdc;
+                    border-right-color: transparent;
+                    box-sizing: border-box;
+                    -webkit-animation: ${loadingId} 0.8s infinite linear;
+                    animation: ${loadingId} 0.8s infinite linear;
+                }
+                @-webkit-keyframes ${loadingId} {
+                    0% {-webkit-transform: rotate(0deg);}
+                    100% {-webkit-transform: rotate(360deg);}
+                }
+                @keyframes ${loadingId} {
+                    0% {transform: rotate(0deg);}
+                    100% {transform: rotate(360deg);}
+                }
+            </style>
+            <div id='${loadingId}'></div>
+        `;
     }
 
     reload(url: string, options: Partial<StageOptions>): void {
-        var _this = this;
-        _this.stop();
+        this.stop();
 
-        if (_this.loadStatus === 4) {
-            _this.deleteNode();
-        }
+        if (this.loadStatus === 4)
+            this.deleteNode();
 
-        _this.loadStatus = 0;
-        _this.isLoad = false;
-        _this.reset();
+        this.loadStatus = 0;
+        this.isLoad = false;
+        this.reset();
 
-        var swf2js = (window as any).swf2js;
+        const swf2js = (window as any).swf2js as Swf2js;
         return swf2js.load(url, {
-            optionWidth: options.width || _this.optionWidth,
-            optionHeight: options.height || _this.optionHeight,
-            callback: options.callback || _this.callback,
-            tagId: options.tagId || _this.tagId,
-            FlashVars: options.FlashVars || _this.FlashVars,
-            quality: options.quality || _this.quality,
-            bgcolor: options.bgcolor || _this.bgcolor,
-            stage: _this
+            width: options.width || this.optionWidth,
+            height: options.height || this.optionHeight,
+            callback: options.callback || this.callback,
+            tagId: options.tagId || this.tagId,
+            FlashVars: options.FlashVars || this.FlashVars,
+            quality: options.quality || this.quality,
+            bgcolor: options.bgcolor || this.bgcolor,
+            stage: this
         });
     }
 
-    output(url: string, frame: number, width: number, height: number): void {
-        var _this = this;
-        if (!_this.isLoad || _this.stopFlag) {
-            setTimeout(function ()
-            {
-                _this.output(url, frame, width, height);
+    output(url: string,
+           frame: number = 1,
+           width: number = this.getWidth(),
+           height: number = this.getHeight()): void
+    {
+        if (!this.isLoad || this.stopFlag) {
+            setTimeout(() => {
+                this.output(url, frame, width, height);
             }, 500);
             return;
         }
 
-        _this.stop();
-        frame = frame || 1;
-        width = width || _this.getWidth();
-        height = height || _this.getHeight();
+        this.stop();
 
         // resize
-        var mc = _this.getParent();
+        const mc = this.getParent();
         mc.reset();
         mc.gotoAndStop(frame);
-        if (width !== _this.getWidth() || height !== _this.getHeight()) {
-            _this.optionWidth = width;
-            _this.optionHeight = height;
-            _this.resize();
+        if (width !== this.getWidth() || height !== this.getHeight()) {
+            this.optionWidth = width;
+            this.optionHeight = height;
+            this.resize();
         }
 
         // action
         mc.addActions(this);
 
         // backgroundColor
-        var canvas = _this.preContext.canvas;
-        var style = canvas.style;
-        style.backgroundColor = _this.backgroundColor;
+        this.preContext.canvas.style.backgroundColor = this.backgroundColor;
 
         // render
-        _this.render();
+        this.render();
 
         // output
-        var xmlHttpRequest = new XMLHttpRequest();
+        const xmlHttpRequest = new XMLHttpRequest();
         xmlHttpRequest.open("POST", url, true);
         xmlHttpRequest.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-        xmlHttpRequest.onreadystatechange = function ()
-        {
-            var readyState = xmlHttpRequest.readyState;
-            if (readyState === 4) {
-                var status = xmlHttpRequest.status;
-                switch (status) {
-                    case 200:
-                    case 304:
-                        console.log("OUTPUT SUCCESS");
-                        break;
-                    default :
-                        alert(xmlHttpRequest.statusText);
-                        break;
-                }
+        xmlHttpRequest.onreadystatechange = () => {
+            const readyState = xmlHttpRequest.readyState;
+            if (readyState !== 4)
+                return;
+
+            var status = xmlHttpRequest.status;
+            switch (status) {
+                case 200:
+                case 304:
+                    console.log("OUTPUT SUCCESS");
+                    break;
+                default :
+                    console.error(xmlHttpRequest.statusText);
+                    break;
             }
         };
-        var base64 = canvas.toDataURL();
+
+        const base64 = this.preContext.canvas.toDataURL();
         xmlHttpRequest.send("data=" + encodeURIComponent(base64));
     }
 
-    hitCheck(event: HitEvent): HitObject | undefined {
-        var _this = this;
-        _this.isHit = false;
-        var buttonHits = _this.buttonHits;
-        var length = buttonHits.length;
-        if (!length) {
+    hitCheck(event: HitEvent): ButtonHit | HitObject | undefined {
+        this.isHit = false;
+
+        if (this.buttonHits.length === 0)
             return undefined;
-        }
 
-        var div = document.getElementById(_this.getName());
-        var bounds = div.getBoundingClientRect();
-        var x = window.pageXOffset + bounds.left;
-        var y = window.pageYOffset + bounds.top;
-        var touchX = 0;
-        var touchY = 0;
+        const div = document.getElementById(this.getName());
+        const bounds = div.getBoundingClientRect();
+        const x = window.pageXOffset + bounds.left;
+        const y = window.pageYOffset + bounds.top;
 
+        let touchX = 0;
+        let touchY = 0;
         if (isTouchEvent(event)) {
-            var changedTouche = event.changedTouches[0];
+            const changedTouche = event.changedTouches[0];
             touchX = changedTouche.pageX;
             touchY = changedTouche.pageY;
         } else {
@@ -1018,60 +954,50 @@ export class Stage {
 
         touchX -= x;
         touchY -= y;
-        var scale = _this.getScale();
 
+        const scale = this.getScale();
         touchX /= scale;
         touchY /= scale;
 
-        var ctx = _this.hitContext;
-        var hitCanvas = ctx.canvas;
-        var hitWidth = hitCanvas.width;
-        var hitHeight = hitCanvas.height;
-        var chkX = touchX * scale * _devicePixelRatio;
-        var chkY = touchY * scale * _devicePixelRatio;
+        const hitCanvas = this.hitContext.canvas;
+        const chkX = touchX * scale * _devicePixelRatio;
+        const chkY = touchY * scale * _devicePixelRatio;
 
         if (this.swftag.abcFlag) {
-            var parent = _this.getParent();
-            ctx.setTransform(1, 0, 0, 1, 0, 0);
-            ctx.clearRect(0, 0, hitWidth, hitHeight);
-            var ret = parent.hitCheck(ctx, [1,0,0,1,0,0], _this, chkX, chkY);
+            const parent = this.getParent();
+            this.hitContext.setTransform(1, 0, 0, 1, 0, 0);
+            this.hitContext.clearRect(0, 0, hitCanvas.width, hitCanvas.height);
+            const ret = parent.hitCheck(this.hitContext, [1,0,0,1,0,0], this, chkX, chkY);
             return (typeof ret === "object") ? ret : undefined;
         }
 
-        for (var i = length; i--;) {
-            if (!(i in buttonHits)) {
+        for (let i = length; i--;) {
+            const hitObj = this.buttonHits[i];
+            if (!hitObj)
                 continue;
-            }
 
-            var hitObj = buttonHits[i];
-            if (hitObj === undefined) {
+            const inBounds = touchX >= hitObj.xMin && touchX <= hitObj.xMax &&
+                             touchY >= hitObj.yMin && touchY <= hitObj.yMax;
+
+            if (!inBounds)
                 continue;
-            }
 
-            var hit = false;
-            if (touchX >= hitObj.xMin && touchX <= hitObj.xMax &&
-                touchY >= hitObj.yMin && touchY <= hitObj.yMax
-            ) {
-                var matrix = hitObj.matrix;
-                if (matrix) {
-                    var mc = hitObj.parent;
-                    var button = hitObj.button;
-
-                    ctx.setTransform(1, 0, 0, 1, 0, 0);
-                    ctx.clearRect(0, 0, hitWidth, hitHeight);
-                    if (button) {
-                        hit = button.renderHitTest(ctx, matrix, _this, chkX, chkY);
-                    } else {
-                        hit = mc.renderHitTest(ctx, matrix, _this, chkX, chkY);
-                    }
+            let hit = false;
+            if (hitObj.matrix) {
+                this.hitContext.setTransform(1, 0, 0, 1, 0, 0);
+                this.hitContext.clearRect(0, 0, hitCanvas.width, hitCanvas.height);
+                if (hitObj.button) {
+                    hit = hitObj.button.renderHitTest(this.hitContext, hitObj.matrix, this, chkX, chkY);
                 } else {
-                    hit = true;
+                    hit = hitObj.parent.renderHitTest(this.hitContext, hitObj.matrix, this, chkX, chkY);
                 }
+            } else {
+                hit = true;
             }
 
             if (hit) {
                 event.preventDefault();
-                _this.isHit = true;
+                this.isHit = true;
                 return hitObj;
             }
         }
@@ -1080,245 +1006,195 @@ export class Stage {
     }
 
     executeEventAction(actions: Function | Function[], caller: DisplayObject, args: any[] = []): void {
-        if (actions) {
-            if (typeof actions === "function") {
-                actions.apply(caller, args);
-            } else {
-                var length = actions.length;
-                if (length) {
-                    var i = 0;
-                    while (i < length) {
-                        var action = actions[i];
-                        if (typeof action === "function") {
-                            action.apply(caller, args);
-                        }
-                        i++;
-                    }
+        if (!actions)
+            return;
+
+        if (typeof actions === "function") {
+            actions.apply(caller, args);
+        } else {
+            for (const action of actions) {
+                if (typeof action === "function") {
+                    action.apply(caller, args);
                 }
             }
-            this.executeAction();
         }
+
+        this.executeAction();
     }
 
     touchStart(event: HitEvent): void {
-        var _this = this;
-        if (_this.touchStatus === "up") {
-            _this.touchStatus = "down";
-            _this.isHit = false;
-            _this.isTouchEvent = true;
-            _this.touchEndAction = null;
-            var downEventHits = _this.downEventHits;
-            var length = downEventHits.length;
-            var mc, as;
-            if (length) {
-                event.preventDefault();
-                for (var i = 0; i < length; i++) {
-                    var obj = downEventHits[i];
-                    mc = obj.mc as DisplayObject;
-                    as = obj.as;
-                    if (!as) {
-                        as = mc.onMouseDown;
-                    }
-                    _this.executeEventAction(as, mc);
-                }
-                (_this as Writeable<this>).downEventHits = [];
+        if (this.touchStatus !== "up")
+            return;
+
+        this.touchStatus = "down";
+        this.isHit = false;
+        this.isTouchEvent = true;
+        this.touchEndAction = null;
+
+        if (this.downEventHits.length > 0) {
+            event.preventDefault();
+
+            for (const obj of this.downEventHits) {
+                const mc = obj.mc as DisplayObject;
+                const as = obj.as || mc.onMouseDown;
+                this.executeEventAction(as, mc);
             }
 
-            var hitObj = _this.hitCheck(event) as ButtonHit; // ANY
-            if (_this.isHit) {
-                mc = hitObj.parent;
-                if (mc.active) {
-                    mc.setButtonStatus("down");
-                    if (mc instanceof TextField) {
-                        _this.appendTextArea(mc, hitObj);
-                    } else {
-                        _this.executePress(mc, hitObj);
-                    }
-                }
-                if (_this.touchObj === null) {
-                    _this.touchObj = hitObj;
+            this.downEventHits = [];
+        }
+
+        const hitObj = this.hitCheck(event);
+        if (isButtonHit(this, hitObj)) {
+            const mc = hitObj.parent;
+            if (mc.active) {
+                mc.setButtonStatus("down");
+
+                if (mc instanceof TextField) {
+                    this.appendTextArea(mc, hitObj);
+                } else {
+                    this.executePress(mc, hitObj);
                 }
             }
+
+            if (!this.touchObj)
+                this.touchObj = hitObj;
         }
     }
 
     private executePress(mc: DisplayObject, hitObj: ButtonHit): void {
-        var _this = this;
-        var isRender = false;
-        var press;
-        var onPress;
-        var rollOver;
-        var onRollOver;
-        var cEvent = new ClipEvent();
+        const cEvent = new ClipEvent();
+        let isRender = false;
 
         if (isTouch) {
-            rollOver = mc.hasEventListener('rollOver');
-            if (rollOver) {
-                cEvent.type = "rollOver";
-                cEvent.target = mc;
-                _this.executeEventAction(rollOver, mc, [cEvent]);
-                isRender = true;
-            }
-
-            onRollOver = mc.onRollOver;
-            if (typeof onRollOver === "function") {
-                _this.executeEventAction(onRollOver, mc);
-                isRender = true;
-            }
-        }
-
-        press = mc.hasEventListener('press');
-        if (press) {
-            cEvent.type = "press";
+            cEvent.type = 'rollOver';
             cEvent.target = mc;
-            _this.executeEventAction(press, mc, [cEvent]);
+            if (mc.hasEventListener('rollOver')) {
+                mc.dispatchEvent(cEvent, this);
+                isRender = true;
+            }
+            if (mc.onRollOver) {
+                mc.onRollOver.call(mc, cEvent);
+                isRender = true;
+            }
+        }
+
+        cEvent.type = "press";
+        cEvent.target = mc;
+        if (mc.hasEventListener('press')) {
+            mc.dispatchEvent(cEvent, this);
             isRender = true;
         }
-        onPress = mc.onPress;
-        if (typeof onPress === "function") {
-            _this.executeEventAction(onPress, mc);
+        if (mc.onPress) {
+            mc.onPress.call(mc, cEvent);
             isRender = true;
         }
 
-        var button = hitObj.button;
+        const button = hitObj.button;
         if (button) {
-
             if (isTouch) {
-                rollOver = button.hasEventListener('rollOver');
-                if (rollOver) {
-                    cEvent.type = "rollOver";
-                    cEvent.target = button;
-                    _this.executeEventAction(rollOver, button, [cEvent]);
-                }
-
-                onRollOver = button.onRollOver;
-                if (typeof onRollOver === "function") {
-                    _this.executeEventAction(onRollOver, button);
-                }
+                cEvent.type = "rollOver";
+                cEvent.target = button;
+                if (button.hasEventListener('rollOver'))
+                    button.dispatchEvent(cEvent, this);
+                if (button.onRollOver)
+                    button.onRollOver.call(button, cEvent);
             }
 
             button.setButtonStatus("down");
-            if (isTouch) {
-                _this.executeButtonAction(button, mc, "CondIdleToOverUp");
-            }
 
-            var actions = button.getActions();
-            var length = actions.length;
-            if (length) {
-                var touchObj = _this.touchObj;
+            if (isTouch)
+                this.executeButtonAction(button, mc, "CondIdleToOverUp");
 
-                for (var idx = 0; idx < length; idx++) {
-                    if (!(idx in actions)) {
-                        continue;
+            for (const cond of button.getActions()) {
+                if (cond.CondOverDownToOverUp && !this.touchObj) {
+                    this.touchEndAction = cond.ActionScript;
+                    continue;
+                }
+
+                // enter
+                const keyPress = cond.CondKeyPress;
+                if (hitObj.CondKeyPress === 13 && hitObj.CondKeyPress !== keyPress)
+                    continue;
+
+                if (isTouch) {
+                    if (keyPress === 13 ||
+                        (keyPress >= 48 && keyPress <= 57) ||
+                        cond.CondOverUpToOverDown
+                    ) {
+                        this.buttonAction(mc, cond.ActionScript);
                     }
-
-                    var cond = actions[idx];
-                    if (cond.CondOverDownToOverUp && touchObj === null) {
-                        _this.touchEndAction = cond.ActionScript;
-                        continue;
-                    }
-
-                    // enter
-                    var keyPress = cond.CondKeyPress;
-                    if (hitObj.CondKeyPress === 13 && hitObj.CondKeyPress !== keyPress) {
-                        continue;
-                    }
-
-                    if (isTouch) {
-                        if (keyPress === 13 ||
-                            (keyPress >= 48 && keyPress <= 57) ||
-                            cond.CondOverUpToOverDown
-                        ) {
-                            _this.buttonAction(mc, cond.ActionScript);
-                        }
-                    } else {
-                        if (cond.CondOverUpToOverDown) {
-                            _this.buttonAction(mc, cond.ActionScript);
-                        }
+                } else {
+                    if (cond.CondOverUpToOverDown) {
+                        this.buttonAction(mc, cond.ActionScript);
                     }
                 }
             }
 
-            press = button.hasEventListener('press');
-            if (press) {
-                cEvent.type = "press";
-                cEvent.target = button;
-                _this.executeEventAction(press, button, [cEvent]);
-            }
+            cEvent.type = "press";
+            cEvent.target = button;
+            if (button.hasEventListener('press'))
+                button.dispatchEvent(cEvent, this);
+            if (button.onPress)
+                button.onPress.call(button, cEvent);
 
-            onPress = button.onPress;
-            if (typeof onPress === "function") {
-                _this.executeEventAction(onPress, button);
-            }
+            button.getSprite().startSound();
 
-            var sprite = button.getSprite();
-            sprite.startSound();
-
-            button.addActions(_this);
-            _this.executeAction();
+            button.addActions(this);
+            this.executeAction();
 
             isRender = true;
         }
 
-        if (isRender) {
-            _this.touchRender();
-        }
-
+        if (isRender)
+            this.touchRender();
     }
 
     appendTextArea(textField: TextField, hitObj: ButtonHit): void {
-        var _this = this;
         textField.inputActive = true;
-        var element: any = document.getElementById(textField.getTagName());
-        if (!element) {
-            element = textField.input;
-            var variable = textField.getProperty("variable");
-            var text;
-            if (variable) {
-                var mc = textField.getParent();
-                text = mc.getProperty(variable);
-                if (text === undefined) {
-                    text = textField.getVariable("text");
-                }
-            }
-            if (text !== undefined) {
+
+        const found = document.getElementById(textField.getTagName());
+        if (found)
+            return;
+
+        const element = textField.input;
+
+        const variable = textField.getProperty("variable");
+        if (variable) {
+            const mc = textField.getParent();
+            let text = mc.getProperty(variable);
+            if (!text)
+                text = textField.getVariable("text");
+
+            if (text)
                 element.value = text;
-            }
+        }
 
-            var maxLength = textField.getVariable("maxChars");
-            if (maxLength) {
-                element.maxLength = maxLength;
-            }
-            var border = textField.getVariable("border");
-            if (border) {
-                element.style.border = "1px solid black";
-                var color = textField.getVariable("backgroundColor");
-                element.style.backgroundColor = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
-            }
+        const maxLength = textField.getVariable("maxChars");
+        if (maxLength)
+            element.maxLength = maxLength;
 
-            var scale = _this.getScale();
-            var left = hitObj.xMin;
-            var top = hitObj.yMin;
-            var width = hitObj.xMax - left;
-            var height = hitObj.yMax - top;
-            element.style.left = Math.ceil(left * scale) - 3 + "px";
-            element.style.top = Math.ceil(top * scale) - 3 + "px";
-            element.style.width = Math.ceil(width * scale) + 6 + "px";
-            element.style.height = Math.ceil(height * scale) + 6 + "px";
+        const border = textField.getVariable("border");
+        if (border) {
+            element.style.border = "1px solid black";
+            const color = textField.getVariable("backgroundColor");
+            element.style.backgroundColor = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
+        }
 
-            var div = document.getElementById(_this.getName());
-            if (div) {
-                div.appendChild(element);
-                element.focus();
-                var focus = function (el)
-                {
-                    return function ()
-                    {
-                        el.focus();
-                    };
-                };
-                setTimeout(focus(element), 10);
-            }
+        const scale = this.getScale();
+        const left = hitObj.xMin;
+        const top = hitObj.yMin;
+        const width = hitObj.xMax - left;
+        const height = hitObj.yMax - top;
+        element.style.left = Math.ceil(left * scale) - 3 + "px";
+        element.style.top = Math.ceil(top * scale) - 3 + "px";
+        element.style.width = Math.ceil(width * scale) + 6 + "px";
+        element.style.height = Math.ceil(height * scale) + 6 + "px";
+
+        const div = document.getElementById(this.getName());
+        if (div) {
+            div.appendChild(element);
+            element.focus();
+            setTimeout(() => element.focus(), 10);
         }
     }
 
@@ -1792,22 +1668,9 @@ export class Stage {
                         mc: DisplayObject,
                         status: ButtonStatus | "CondOverUpToIdle" | "CondIdleToOverUp"): void
     {
-        var _this = this;
-        var actions = button.getActions();
-        var length = actions.length;
-        if (length) {
-            for (var idx = 0; idx < length; idx++) {
-                if (!(idx in actions)) {
-                    continue;
-                }
-
-                var cond = actions[idx];
-                if (!cond[status]) {
-                    continue;
-                }
-
-                _this.buttonAction(mc, cond.ActionScript);
-            }
+        for (const cond of button.getActions()) {
+            if (cond[status])
+                this.buttonAction(mc, cond.ActionScript);
         }
     }
 
