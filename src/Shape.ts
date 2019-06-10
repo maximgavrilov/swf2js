@@ -12,6 +12,7 @@ import { ClipEvent } from './EventDispatcher';
 import { CLS, DisplayObject } from './DisplayObject';
 import { Graphics } from './Graphics';
 import { Stage } from './Stage';
+import { StyleObj } from './VectorToCanvas';
 import {
     Bounds, ColorTransform, Matrix,
     tmpContext,
@@ -24,7 +25,7 @@ type LinearGradientParams = [ number, number, number, number ];
 
 export class Shape extends DisplayObject {
     private bounds: Bounds = new Bounds();
-    private data: any;
+    private data: StyleObj[] = [];
     private _graphics: Graphics = new Graphics();
 
     get graphics(): Graphics {
@@ -43,11 +44,11 @@ export class Shape extends DisplayObject {
         return this._graphics;
     }
 
-    getData(): any {
+    getData(): StyleObj[] {
         return this.data;
     }
 
-    setData(data: any): void {
+    setData(data: StyleObj[]): void {
         this.data = data;
     }
 
@@ -88,29 +89,27 @@ export class Shape extends DisplayObject {
            stage: Stage,
            visible: boolean): string
     {
-        var _this = this;
-        stage.doneTags.unshift(_this);
+        stage.doneTags.unshift(this);
 
         // colorTransform
-        var rColorTransform = multiplicationColor(colorTransform, _this.getColorTransform());
-        var isVisible = _this.getVisible() && visible;
-        var alpha = rColorTransform[3] + (rColorTransform[7] / 255);
-        var stageClip = stage.clipMc || stage.isClipDepth;
-        if (!stageClip && (!alpha || !isVisible)) {
-            return "";
-        }
+        const rColorTransform = multiplicationColor(colorTransform, this.getColorTransform());
+        const isVisible = this.getVisible() && visible;
+        const alpha = rColorTransform[3] + (rColorTransform[7] / 255);
+        const stageClip = Boolean(stage.clipMc || stage.isClipDepth);
+
+        if (!stageClip && (!alpha || !isVisible))
+            return '';
 
         // matrix
-        var m2 = multiplicationMatrix(matrix, _this.getMatrix());
+        const m2 = multiplicationMatrix(matrix, this.getMatrix());
 
         // pre render
-        var obj = _this.preRender(ctx, m2, rColorTransform, stage, isVisible);
-        var cacheKey = obj.cacheKey;
-        var cache = null;
+        const obj = this.preRender(ctx, m2, rColorTransform, stage, isVisible);
+        let cacheKey = obj.cacheKey;
 
         // render
-        var m3 = multiplicationMatrix(stage.getMatrix(), obj.preMatrix);
-        var isClipDepth = _this.isClipDepth || stageClip;
+        const m3 = multiplicationMatrix(stage.getMatrix(), obj.preMatrix);
+        const isClipDepth = this.isClipDepth || stageClip;
         if (isClipDepth) {
             if (m3[0]===0) {
                 m3[0] = 0.00000000000001;
@@ -119,67 +118,58 @@ export class Shape extends DisplayObject {
                 m3[3] = 0.00000000000001;
             }
             ctx.setTransform(m3[0],m3[1],m3[2],m3[3],m3[4],m3[5]);
-            _this.executeRender(ctx, Math.min(m3[0], m3[3]), rColorTransform, isClipDepth, stage);
+            this.executeRender(ctx, Math.min(m3[0], m3[3]), rColorTransform, isClipDepth, stage);
         } else {
-            var xScale = Math.sqrt(m3[0] * m3[0] + m3[1] * m3[1]);
-            var yScale = Math.sqrt(m3[2] * m3[2] + m3[3] * m3[3]);
+            let xScale = Math.sqrt(m3[0] * m3[0] + m3[1] * m3[1]);
+            let yScale = Math.sqrt(m3[2] * m3[2] + m3[3] * m3[3]);
             xScale = Math.pow(Math.SQRT2, Math.ceil(Math.log(xScale) / LN2_2 - LOG1P));
             yScale = Math.pow(Math.SQRT2, Math.ceil(Math.log(yScale) / LN2_2 - LOG1P));
 
-            var bounds = _this.getBounds();
-            var xMax = bounds.xMax;
-            var xMin = bounds.xMin;
-            var yMax = bounds.yMax;
-            var yMin = bounds.yMin;
+            const { xMin, yMin, xMax, yMax } = this.getBounds();
 
-            var W = Math.abs(Math.ceil((xMax - xMin) * xScale));
-            var H = Math.abs(Math.ceil((yMax - yMin) * yScale));
-            if (W <= 0 || H <= 0) {
+            const W = Math.abs(Math.ceil((xMax - xMin) * xScale));
+            const H = Math.abs(Math.ceil((yMax - yMin) * yScale));
+
+            if (W <= 0 || H <= 0)
                 return cacheKey;
-            }
 
-            var canvas;
-            // var loadStage = _this.getStage();
-            var cacheId = '' + _this.getCharacterId(); //  + "_" + loadStage.getId();
-            if (_this.isMorphing()) {
-                cacheId += "_" + _this.getRatio();
-            }
+            const swfId = this.getStage().swftag.swfId;
+            let cacheId = swfId + '_' + this.getCharacterId();
+            if (this.isMorphing())
+                cacheId += "_" + this.getRatio();
 
             cacheKey = cacheStore.generateKey("Shape", cacheId, [xScale, yScale], rColorTransform);
-            cache = cacheStore.getCache(cacheKey);
+            let cache = cacheStore.getCache(cacheKey);
 
-            if (!cache &&
-                stage.getWidth() > W &&
-                stage.getHeight() > H
-            ) {
-                canvas = cacheStore.getCanvas();
+            if (!cache && stage.getWidth() > W && stage.getHeight() > H) {
+                const canvas = cacheStore.getCanvas();
                 canvas.width = W;
                 canvas.height = H;
+
                 cache = canvas.getContext("2d");
-                var cMatrix = [xScale, 0, 0, yScale, -xMin * xScale, -yMin * yScale];
-                cache.setTransform(cMatrix[0],cMatrix[1],cMatrix[2],cMatrix[3],cMatrix[4],cMatrix[5]);
-                cache = _this.executeRender(
+                cache.setTransform(xScale, 0, 0, yScale, -xMin * xScale, -yMin * yScale);
+                cache = this.executeRender(
                     cache, Math.min(xScale, yScale), rColorTransform, isClipDepth, stage
                 );
+
                 cacheStore.setCache(cacheKey, cache);
             }
 
-            var preCtx = obj.preCtx;
             if (cache) {
-                canvas = cache.canvas;
-                var sMatrix: Matrix = [1 / xScale, 0, 0, 1 / yScale, xMin, yMin];
-                var m4 = multiplicationMatrix(m3, sMatrix);
-                preCtx.setTransform(m4[0],m4[1],m4[2],m4[3],m4[4],m4[5]);
+                const canvas = cache.canvas;
+                const sMatrix: Matrix = [1 / xScale, 0, 0, 1 / yScale, xMin, yMin];
+                const m4 = multiplicationMatrix(m3, sMatrix);
+                obj.preCtx.setTransform(m4[0],m4[1],m4[2],m4[3],m4[4],m4[5]);
                 if (isAndroid4x && !isChrome) {
-                    preCtx.fillStyle = stage.context.createPattern(cache.canvas, "no-repeat");
-                    preCtx.fillRect(0, 0, W, H);
+                    obj.preCtx.fillStyle = stage.context.createPattern(cache.canvas, "no-repeat");
+                    obj.preCtx.fillRect(0, 0, W, H);
                 } else {
-                    preCtx.drawImage(canvas, 0, 0, W, H);
+                    obj.preCtx.drawImage(canvas, 0, 0, W, H);
                     (window as any).blended.push([W, H, m4]);
                 }
             } else {
-                preCtx.setTransform(m3[0],m3[1],m3[2],m3[3],m3[4],m3[5]);
-                _this.executeRender(preCtx, Math.min(m3[0], m3[3]), rColorTransform, isClipDepth, stage);
+                obj.preCtx.setTransform(m3[0],m3[1],m3[2],m3[3],m3[4],m3[5]);
+                this.executeRender(obj.preCtx, Math.min(m3[0], m3[3]), rColorTransform, isClipDepth, stage);
             }
         }
 
@@ -187,7 +177,7 @@ export class Shape extends DisplayObject {
         cacheKey += "_" + m3[4] + "_" + m3[5];
         if (obj.isFilter || obj.isBlend) {
             obj.cacheKey = cacheKey;
-            _this.postRender(ctx, matrix, rColorTransform, stage, obj);
+            this.postRender(ctx, matrix, rColorTransform, stage, obj);
         }
 
         return cacheKey;

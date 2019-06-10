@@ -28,16 +28,14 @@ import {
 } from './utils';
 
 
-
 let instanceId = 1;
 
 class AccessibilityProperties {
 }
 
-class Path {
-    constructor(readonly scope: DisplayObject,
-                readonly target: string)
-    { }
+type Path = {
+    scope: DisplayObject;
+    target: string;
 }
 
 type PreRenderResult = {
@@ -500,34 +498,32 @@ export class DisplayObject extends EventDispatcher {
         this._target = v;
     }
 
-    splitPath(path: string): Path {
-        var scope: DisplayObject = this;
-        var target = path;
-        var split;
-        var targetPath = "";
-        if (typeof path === "string") {
+    private splitPath(path: string): Path {
+        let scope: DisplayObject = this;
+        let target = path;
+        if (typeof path === 'string') {
+            let targetPath = '';
             if (path.indexOf("::") !== -1) {
                 scope = this;
                 target = path;
             } else if (path.indexOf(":") !== -1) {
-                split = path.split(":");
+                const split = path.split(":");
                 targetPath = split[0];
                 target = split[1];
             } else if (path.indexOf(".") !== -1) {
-                split = path.split(".");
+                const split = path.split(".");
                 target = split.pop();
                 targetPath += split.join(".");
             }
 
-            if (targetPath !== "") {
-                var mc = this.getDisplayObject(targetPath);
-                if (mc) {
+            if (targetPath !== '') {
+                const mc = this.getDisplayObject(targetPath);
+                if (mc)
                     scope = mc;
-                }
             }
         }
 
-        return new Path(scope, target);
+        return { scope, target };
     }
 
     getProperty(name: string | number, parse: boolean = true): any {
@@ -1408,50 +1404,43 @@ export class DisplayObject extends EventDispatcher {
               stage: Stage,
               visible: boolean): PreRenderResult
     {
-        var _this = this;
-        _this.isLoad = true;
+        this.isLoad = true;
 
-        var cacheKey = "";
-        var preCtx = ctx;
-        var preMatrix = matrix;
+        let preCtx = ctx;
+        let preMatrix = matrix;
 
-        var isFilter = false;
-        var isBlend = false;
-        var cache, rMatrix, xScale, yScale, xMin, yMin, xMax, yMax;
+        let isFilter = false;
+        let isBlend = false;
+        let rMatrix;
+        let xMin, yMin, xMax, yMax, xScale, yScale;
 
         // mask
-        var maskObj = _this.getMask();
-        if (maskObj) {
-            _this.renderMask(ctx, stage);
-        }
+        if (this.getMask())
+            this.renderMask(ctx, stage);
 
         // filter
         if (visible && !stage.clipMc) {
-            var filters = _this.getFilters();
-            if (filters !== null && filters.length) {
-                isFilter = true;
-            }
+            const filters = this.getFilters();
+            isFilter = Boolean(filters && filters.length);
 
             // blend
-            var blendMode = _this.getBlendMode();
-            if (blendMode && blendMode !== "normal") {
-                isBlend = true;
-            }
+            const blendMode = this.getBlendMode();
+            isBlend = Boolean(blendMode && blendMode !== "normal");
         }
 
         // filter or blend
         if (isFilter || isBlend) {
             rMatrix = multiplicationMatrix(stage.getMatrix(), matrix);
 
-            var bounds;
-            var twips = 1;
-            if (CLS.isShape(_this) || CLS.isStaticText(_this)) {
-                bounds = _this.getBounds();
+            let bounds;
+            let twips = 1;
+            if (CLS.isShape(this) || CLS.isStaticText(this)) {
+                bounds = this.getBounds();
                 xScale = Math.sqrt(rMatrix[0] * rMatrix[0] + rMatrix[1] * rMatrix[1]);
                 yScale = Math.sqrt(rMatrix[2] * rMatrix[2] + rMatrix[3] * rMatrix[3]);
             } else {
                 twips = 20;
-                bounds = _this.getBounds(matrix);
+                bounds = this.getBounds(matrix);
                 xScale = stage.getScale() * devicePixelRatio;
                 yScale = stage.getScale() * devicePixelRatio;
             }
@@ -1461,22 +1450,23 @@ export class DisplayObject extends EventDispatcher {
             xMax = bounds.xMax;
             yMax = bounds.yMax;
 
-            var width = Math.abs(Math.ceil((xMax - xMin) * xScale));
-            var height = Math.abs(Math.ceil((yMax - yMin) * yScale));
+            const width = Math.abs(Math.ceil((xMax - xMin) * xScale));
+            const height = Math.abs(Math.ceil((yMax - yMin) * yScale));
 
-            var canvas = cacheStore.getCanvas();
+            const canvas = cacheStore.getCanvas();
             canvas.width = width || 1;
             canvas.height = height || 1;
-            cache = canvas.getContext("2d");
+            const cache = canvas.getContext("2d");
             cache._offsetX = 0;
             cache._offsetY = 0;
 
-            var m2: Matrix = [1, 0, 0, 1, -xMin * twips, -yMin * twips];
-            var m3: Matrix = [matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]];
-            if (CLS.isShape(_this)) {
+            const m2: Matrix = [1, 0, 0, 1, -xMin * twips, -yMin * twips];
+            const m3: Matrix = [matrix[0], matrix[1], matrix[2], matrix[3], matrix[4], matrix[5]];
+            if (CLS.isShape(this)) {
                 m3[4] = 0;
                 m3[5] = 0;
             }
+
             preCtx = cache;
             preMatrix = multiplicationMatrix(m2, m3);
         }
@@ -1487,7 +1477,7 @@ export class DisplayObject extends EventDispatcher {
             isFilter,
             isBlend,
             rMatrix,
-            cacheKey,
+            cacheKey: '',
             xMin: xMin * xScale,
             yMin: yMin * yScale
         };
@@ -1508,17 +1498,13 @@ export class DisplayObject extends EventDispatcher {
                stage: Stage,
                obj: PreRenderResult): void
     {
-        var _this = this;
-        var cache = obj.preCtx;
-        var isFilter = obj.isFilter;
-        var cacheKey = obj.cacheKey;
-        if (isFilter && cacheKey !== "") {
-            cache = _this.renderFilter(cache, matrix, colorTransform, stage, cacheKey);
-        }
+        let cache = obj.preCtx;
+        if (obj.isFilter && obj.cacheKey !== '')
+            cache = this.renderFilter(cache, matrix, colorTransform, stage, obj.cacheKey);
 
-        var xMin = obj.xMin;
-        var yMin = obj.yMin;
-        if (CLS.isShape(_this)) {
+        let xMin = obj.xMin;
+        let yMin = obj.yMin;
+        if (CLS.isShape(this)) {
             xMin += obj.rMatrix[4];
             yMin += obj.rMatrix[5];
         }
@@ -1527,32 +1513,33 @@ export class DisplayObject extends EventDispatcher {
             yMin -= cache._offsetY;
         }
 
-        _this.renderBlend(ctx, cache, xMin, yMin, isFilter);
+        this.renderBlend(ctx, cache, xMin, yMin, obj.isFilter);
     }
 
 
     renderMask(ctx: CanvasRenderingContext2D, stage: Stage): void {
-        var _this = this;
-        var maskObj = _this.getMask();
-        if (maskObj) {
-            ctx.save();
-            ctx.beginPath();
-            stage.clipMc = true;
+        const maskObj = this.getMask();
+        if (!maskObj)
+            return;
 
-            var mc = maskObj;
-            var matrix: Matrix = [1,0,0,1,0,0];
-            while (true) {
-                var parent = mc.getParent();
-                if (!parent.getParent()) {
-                    break;
-                }
-                matrix = multiplicationMatrix(parent.getMatrix(), matrix);
-                mc = parent;
-            }
-            maskObj.render(ctx, matrix, [1,1,1,1,0,0,0,0], stage, true);
-            ctx.clip();
-            stage.clipMc = false;
+        ctx.save();
+        ctx.beginPath();
+        stage.clipMc = true;
+
+        let mc = maskObj;
+        let matrix: Matrix = [1, 0, 0, 1, 0, 0];
+        while (true) {
+            const parent = mc.getParent();
+            if (!parent.getParent())
+                break;
+
+            matrix = multiplicationMatrix(parent.getMatrix(), matrix);
+            mc = parent;
         }
+        maskObj.render(ctx, matrix, [1, 1, 1, 1, 0, 0, 0, 0], stage, true);
+
+        ctx.clip();
+        stage.clipMc = false;
     }
 
     getFilterKey(filters: BitmapFilter[]): string {

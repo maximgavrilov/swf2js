@@ -124,7 +124,7 @@ export class Swf2js {
         xmlHttpRequest.send(null);
     }
 
-    load(url: string, options: Partial<StageOptions>): void
+    load(url: string, options: Partial<StageOptions & { swfId: number; }>): void
     {
         // develop only
         if (url === "develop") {
@@ -157,6 +157,8 @@ export class Swf2js {
                             console.time('parse');
                             const bitio = new BitIO(data);
                             const swftag = new SwfTag(bitio);
+                            if (options.swfId)
+                                swftag.swfId = options.swfId;
                             stage.parse(swftag, url);
                             console.timeEnd('parse');
 

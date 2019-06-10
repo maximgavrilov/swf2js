@@ -654,6 +654,10 @@ type TagObj = {
 type Tags = { [frame: number]: TagObj };
 
 export class SwfTag {
+    private static swfId = 0;
+
+    swfId = SwfTag.swfId++;
+
     private currentPosition = { x: 0, y: 0 };
     private jpegTables?: Data;
 
