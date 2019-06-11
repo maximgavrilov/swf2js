@@ -213,8 +213,25 @@ type DefineMorphShape = ({ tagType: TAG.DefineMorphShape; } & DefineMorphShape_1
 });
 
 type DefineScalingGrid = any;
-type DefineSceneAndFrameLabelData = any;
-type DefineShape = any;
+type DefineSceneAndFrameLabelData = {
+    SceneCount: number;
+    sceneInfo: Array<{
+        offset: number;
+        name: string;
+    }>;
+
+    FrameLabelCount: number;
+    frameInfo: Array<{
+        num: number;
+        label: string;
+    }>;
+};
+const enum SoundRate {
+    snd5_5khz = 0,
+    snd11khz = 1,
+    snd22khz = 2,
+    snd44khz = 3
+};
 const enum SoundSize {
     snd8Bit = 0,
     snd16Bit = 1
@@ -324,6 +341,12 @@ export type RemoveObject = {
 type PlaceObjectTag_1 = {
     CharacterId: number;
     Depth: number;
+
+    PlaceFlagHasClipActions: false;
+    PlaceFlagHasClipDepth: false;
+    PlaceFlagHasName: false;
+    PlaceFlagHasRatio: false;
+    PlaceFlagMove: false;
 };
 
 type PlaceObjectTag_23 = {
@@ -354,7 +377,7 @@ type PlaceObjectTag_3 = {
     BackgroundColor: Color;
 }>;
 
-type PlaceObjectTag = ({ tagType: TAG.PlaceObject; } & PlaceObjectData & PlaceObjectTag_1)
+export type PlaceObjectTag = ({ tagType: TAG.PlaceObject; } & PlaceObjectData & PlaceObjectTag_1)
                     | ({ tagType: TAG.PlaceObject2; } & PlaceObjectData & PlaceObjectTag_23)
                     | ({ tagType: TAG.PlaceObject3; } & PlaceObjectData & PlaceObjectTag_23 & PlaceObjectTag_3);
 
@@ -392,7 +415,21 @@ export type SoundInfo = {
         RightLevel: number;
     }>;
 }>;
-type SoundStreamHead = any;
+type SoundStreamHead = {
+    tagType: TAG_SoundStreamHead;
+    PlaybackSoundRate: SoundRate;
+    PlaybackSoundSize: SoundSize;
+    PlaybackSoundType: SoundType;
+
+    StreamSoundCompression: SoundFormat;
+    StreamSoundRate: SoundRate;
+    StreamSoundSize: SoundSize;
+    StreamSoundType: SoundType;
+    StreamSoundSampleCount: number;
+
+    LatencySeek?: number;
+};
+
 type SoundStreamBlock = any;
 export type StartSound = {
     tagType: TAG.StartSound;
@@ -524,6 +561,7 @@ type TAG_DefineShape = TAG.DefineShape
                      | TAG.DefineShape4;
 type TAG_DefineText = TAG.DefineText | TAG.DefineText2;
 type TAG_PlaceObject = TAG.PlaceObject | TAG.PlaceObject2 | TAG.PlaceObject3;
+type TAG_SoundStreamHead = TAG.SoundStreamHead | TAG.SoundStreamHead2;
 type TAG_StartSound = TAG.StartSound | TAG.StartSound2;
 
 type ActionScript3 = () => any;
@@ -642,8 +680,18 @@ export type StartSoundTag = {
     SoundId: number;
     Audio: HTMLAudioElement;
 };
-export type Tag = StartSoundTag | any;
+
+export type Tag = ActionScript
+                | DefineButton
+                | DefineSceneAndFrameLabelData
+                | FrameLabel
+                | PlaceObjectTag
+                | RemoveObject
+                | SoundStreamHead
+                | StartSoundTag;
+
 type TagObj = {
+    characterId: number;
     frame: number;
     cTags: PlaceObjectTag[];
     actionScript: ActionScript[];
@@ -915,7 +963,7 @@ export class SwfTag {
         }
     }
 
-    public buildObject(stage: Stage, tag: Tag, parent: DisplayObject, isCopy: boolean = false, frame?: number): DisplayObject | undefined
+    public buildObject(stage: Stage, tag: PlaceObjectTag, parent: DisplayObject, isCopy: boolean = false, frame?: number): DisplayObject | undefined
     {
         var _this = this;
         var char = this.getCharacter<any>(tag.CharacterId);
@@ -950,6 +998,7 @@ export class SwfTag {
                     break;
                 case TAG.DefineMorphShape: // DefineMorphShape
                 case TAG.DefineMorphShape2: // DefineMorphShape2
+                    if (!tag.PlaceFlagHasRatio) throw new Error('No Ratio');
                     var MorphShape = _this.buildMorphShape(char.tagType, char, tag.Ratio);
                     obj = _this.buildShape(tag, MorphShape);
                     break;
@@ -963,7 +1012,7 @@ export class SwfTag {
             obj.setParent(parent);
             obj.setStage(stage);
             obj.setCharacterId(tag.CharacterId);
-            obj.setRatio(tag.Ratio || 0);
+            obj.setRatio(tag.PlaceFlagHasRatio ? tag.Ratio || 0 : 0);
             obj.setLevel(tag.Depth);
         }
 
@@ -995,7 +1044,7 @@ export class SwfTag {
     }
 
 
-    private buildMovieClip(stage: Stage, tag: Tag, character: DefineSpriteCharacter, parent: DisplayObject): MovieClip
+    private buildMovieClip(stage: Stage, tag: PlaceObjectTag, character: DefineSpriteCharacter, parent: DisplayObject): MovieClip
     {
         var mc = new MovieClip();
         mc.setStage(stage);
@@ -1031,7 +1080,7 @@ export class SwfTag {
         return mc;
     }
 
-    private buildTextField(stage: Stage, tag: Tag, character: DefineEditTextCharacter, parent: DisplayObject): TextField
+    private buildTextField(stage: Stage, tag: PlaceObjectTag, character: DefineEditTextCharacter, parent: DisplayObject): TextField
     {
         var textField = new TextField();
         textField.setStage(stage);
@@ -1147,7 +1196,7 @@ export class SwfTag {
         return textField;
     }
 
-    private buildText(tag: Tag, character: DefineTextCharacter): StaticText
+    private buildText(tag: PlaceObjectTag, character: DefineTextCharacter): StaticText
     {
         var staticText = new StaticText();
         staticText.setTagType(character.tagType);
@@ -1210,7 +1259,7 @@ export class SwfTag {
         return staticText;
     }
 
-    private buildShape(tag: Tag,
+    private buildShape(tag: PlaceObjectTag,
                        character: DefineShapeCharacter | MorphShape): Shape
     {
         var shape = new Shape();
@@ -1222,7 +1271,7 @@ export class SwfTag {
 
     private buildButton(stage: Stage,
                         character: DefineButtonCharacter,
-                        tag: Tag,
+                        tag: PlaceObjectTag,
                         parent: DisplayObject): SimpleButton
     {
         var _this = this;
@@ -1309,7 +1358,7 @@ export class SwfTag {
         return button;
     }
 
-    private generateDefaultTagObj(frame: number, characterId: number): Tag
+    private generateDefaultTagObj(frame: number, characterId: number): TagObj
     {
         return {
             frame: frame,
@@ -1375,7 +1424,7 @@ export class SwfTag {
             }
 
             if (tag)
-                this.addTag(tags, tagType, tag, frame);
+                this.addTag(tags[frame], tagType, tag, frame);
 
             bitio.bit_offset = 0;
         }
@@ -1641,9 +1690,9 @@ export class SwfTag {
         return obj;
     }
 
-    private addTag(tags: Tags, tagType: number, tag: Tag, frame: number): void
+    private addTag(tagObj: TagObj, tagType: Tag['tagType'], tag: Tag, frame: number): void
     {
-        const tagObj= tags[frame];
+        if (tag.tagType !== tagType) throw new Error('Different tagType');
 
         switch (tagType) {
             case TAG.PlaceObject:
@@ -1673,7 +1722,7 @@ export class SwfTag {
         }
     }
 
-    private parseDefineShape(tagType: TAG_DefineShape): DefineShape
+    private parseDefineShape(tagType: TAG_DefineShape): void
     {
         var _this = this;
         var bitio = _this.bitio;
@@ -3942,7 +3991,7 @@ export class SwfTag {
         return obj;
     }
 
-    private parseSoundStreamHead(tagType: number): SoundStreamHead
+    private parseSoundStreamHead(tagType: TAG_SoundStreamHead): SoundStreamHead
     {
         var obj = {} as SoundStreamHead;
         obj.tagType = tagType;

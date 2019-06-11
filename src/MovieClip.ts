@@ -14,7 +14,7 @@ import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { PlaceObject } from './PlaceObject';
 import { Sprite } from './Sprite';
 import { Stage } from './Stage';
-import { DefineSpriteCharacter, RemoveObject, StartSound, StartSoundTag } from './SwfTag';
+import { DefineSpriteCharacter, PlaceObjectTag, RemoveObject, StartSound, StartSoundTag, TAG } from './SwfTag';
 import { TextField } from './TextField';
 import { CAP, JOIN } from './VectorToCanvas';
 import {
@@ -769,11 +769,12 @@ export class MovieClip extends Sprite {
                 cloneMc.setCharacterId(targetMc.characterId);
                 stage.swftag.build(char, cloneMc, stage);
             } else {
-                var tag = {
+                const tag  = {
+                    tagType: TAG.PlaceObject,
                     CharacterId: targetMc.characterId,
-                    Ratio: 0,
+                    // Ratio: 0,
                     Depth: depth
-                };
+                } as PlaceObjectTag;
                 cloneMc = stage.swftag.buildObject(stage, tag, parent);
             }
 
