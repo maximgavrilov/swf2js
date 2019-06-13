@@ -214,6 +214,7 @@ type DefineMorphShape = ({ tagType: TAG.DefineMorphShape; } & DefineMorphShape_1
 
 type DefineScalingGrid = any;
 type DefineSceneAndFrameLabelData = {
+    tagType: TAG.DefineSceneAndFrameLabelData;
     SceneCount: number;
     sceneInfo: Array<{
         offset: number;
@@ -334,7 +335,11 @@ type FrameLabel = {
     frame: number;
 };
 export type RemoveObject = {
-    CharacterId?: number;
+    tagType: TAG.RemoveObject;
+    CharacterId: number;
+    Depth: number;
+} | {
+    tagType: TAG.RemoveObject2;
     Depth: number;
 };
 
@@ -561,6 +566,7 @@ type TAG_DefineShape = TAG.DefineShape
                      | TAG.DefineShape4;
 type TAG_DefineText = TAG.DefineText | TAG.DefineText2;
 type TAG_PlaceObject = TAG.PlaceObject | TAG.PlaceObject2 | TAG.PlaceObject3;
+type TAG_RemoveObject = TAG.RemoveObject | TAG.RemoveObject2;
 type TAG_SoundStreamHead = TAG.SoundStreamHead | TAG.SoundStreamHead2;
 type TAG_StartSound = TAG.StartSound | TAG.StartSound2;
 
@@ -998,8 +1004,8 @@ export class SwfTag {
                     break;
                 case TAG.DefineMorphShape: // DefineMorphShape
                 case TAG.DefineMorphShape2: // DefineMorphShape2
-                    if (!tag.PlaceFlagHasRatio) throw new Error('No Ratio');
-                    var MorphShape = _this.buildMorphShape(char.tagType, char, tag.Ratio);
+                    const ratio = tag.PlaceFlagHasRatio ? tag.Ratio : 0;
+                    var MorphShape = _this.buildMorphShape(char.tagType, char, ratio);
                     obj = _this.buildShape(tag, MorphShape);
                     break;
                 case TAG.DefineButton: // DefineButton
@@ -1584,7 +1590,7 @@ export class SwfTag {
                 break;
 
             case TAG.DefineSceneAndFrameLabelData: // DefineSceneAndFrameLabelData
-                obj = _this.parseDefineSceneAndFrameLabelData();
+                obj = _this.parseDefineSceneAndFrameLabelData(tagType);
                 break;
 
             case TAG.SoundStreamHead: // SoundStreamHead
@@ -1692,7 +1698,7 @@ export class SwfTag {
 
     private addTag(tagObj: TagObj, tagType: Tag['tagType'], tag: Tag, frame: number): void
     {
-        if (tag.tagType !== tagType) throw new Error('Different tagType');
+        if (tag.tagType !== tagType) throw new Error(`Different tagType: ${tag.tagType} !== ${tagType}`);
 
         switch (tagType) {
             case TAG.PlaceObject:
@@ -3291,17 +3297,26 @@ export class SwfTag {
         };
     }
 
-    private parseRemoveObject(tagType: number): RemoveObject
+    private parseRemoveObject(tagType: TAG_RemoveObject): RemoveObject
     {
         var bitio = this.bitio;
-        if (tagType === 5) {
-            console.log("RemoveObject");
-            return {
-                CharacterId: bitio.getUI16(),
-                Depth: bitio.getUI16()
-            };
+        switch (tagType) {
+            case TAG.RemoveObject:
+                return {
+                    tagType,
+                    CharacterId: bitio.getUI16(),
+                    Depth: bitio.getUI16()
+                };
+
+            case TAG.RemoveObject2:
+                return {
+                    tagType,
+                    Depth: bitio.getUI16()
+                };
+
+            default:
+                ((x: never) => {})(tagType);
         }
-        return {Depth: bitio.getUI16()};
     }
 
     private parseDefineButton(tagType: TAG_DefineButton, length: number): DefineButton
@@ -3966,11 +3981,11 @@ export class SwfTag {
         });
     }
 
-    private parseDefineSceneAndFrameLabelData(): DefineSceneAndFrameLabelData
+    private parseDefineSceneAndFrameLabelData(tagType: TAG.DefineSceneAndFrameLabelData): DefineSceneAndFrameLabelData
     {
         var i;
         var bitio = this.bitio;
-        var obj = {} as DefineSceneAndFrameLabelData;
+        var obj = { tagType } as DefineSceneAndFrameLabelData;
         obj.SceneCount = bitio.getU30();
         obj.sceneInfo = [];
         for (i = 0; i < obj.SceneCount; i++) {
