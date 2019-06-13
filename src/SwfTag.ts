@@ -63,7 +63,7 @@ type DefineButton = {
 });
 
 type ButtonCharacters = { [depth: number]: ButtonRecord[] };
-type ButtonRecord = PlaceObjectTag & {
+type ButtonRecord = PlaceObjectTag & { // ANY: should be PlaceObjectData
     ButtonStateHitTest: BitBoolean;
     ButtonStateDown: BitBoolean;
     ButtonStateOver: BitBoolean;
@@ -382,9 +382,10 @@ type PlaceObjectTag_3 = {
     BackgroundColor: Color;
 }>;
 
-export type PlaceObjectTag = ({ tagType: TAG.PlaceObject; } & PlaceObjectData & PlaceObjectTag_1)
-                    | ({ tagType: TAG.PlaceObject2; } & PlaceObjectData & PlaceObjectTag_23)
-                    | ({ tagType: TAG.PlaceObject3; } & PlaceObjectData & PlaceObjectTag_23 & PlaceObjectTag_3);
+export type PlaceObjectTag = any & PlaceObjectData & // ANY: for speed up compilation
+    (({ tagType: TAG.PlaceObject; } & PlaceObjectTag_1)
+  | ({ tagType: TAG.PlaceObject2; } & PlaceObjectTag_23)
+  | ({ tagType: TAG.PlaceObject3; } & PlaceObjectTag_23 & PlaceObjectTag_3));
 
 type PlaceObjectData = {
 } & BitFlagU<'PlaceFlagHasMatrix', {
