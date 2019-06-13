@@ -6,3 +6,7 @@ interface CanvasRenderingContext2D {
 interface HTMLMediaElement {
     loopCount: number;
 }
+
+interface Window {
+    drawCall?(canvas: HTMLCanvasElement): void;
+}

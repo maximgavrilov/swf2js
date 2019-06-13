@@ -331,6 +331,7 @@ type DoABC = any;
     type Trait = any;
 type FileAttributes = any;
 type FrameLabel = {
+    tagType: TAG.FrameLabel;
     name: string;
     frame: number;
 };
@@ -1527,7 +1528,7 @@ export class SwfTag {
                 break;
 
             case TAG.FrameLabel: // FrameLabel
-                obj = _this.parseFrameLabel();
+                obj = _this.parseFrameLabel(tagType);
                 break;
 
             case TAG.DefineFontName: // DefineFontName
@@ -3290,9 +3291,10 @@ export class SwfTag {
         };
     }
 
-    private parseFrameLabel(): FrameLabel
+    private parseFrameLabel(tagType: TAG.FrameLabel): FrameLabel
     {
         return {
+            tagType,
             name: this.bitio.getDataUntil("\0"),
             frame: 0
         };
@@ -3620,53 +3622,30 @@ export class SwfTag {
 
     private getFilterList(): BitmapFilter[] | null
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var result: BitmapFilter[] = [];
-        var _getFilter = _this.getFilter;
-        var NumberOfFilters = bitio.getUI8();
-        for (var i = 0; i < NumberOfFilters; i++) {
-            var filter = _getFilter.call(_this);
-            if (filter) {
-                result[result.length] = filter;
-            }
+        const result: BitmapFilter[] = [];
+        const NumberOfFilters = this.bitio.getUI8();
+        for (let i = 0; i < NumberOfFilters; i++) {
+            const filter = this.getFilter();
+            if (filter)
+                result.push(filter);
         }
         return (result.length) ? result : null;
     }
 
-    private getFilter(): BitmapFilter
+    private getFilter(): BitmapFilter | undefined
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var filterId = bitio.getUI8();
-        var filter;
+        const filterId = this.bitio.getUI8();
         switch (filterId) {
-            case 0:
-                filter = _this.dropShadowFilter();
-                break;
-            case 1:
-                filter = _this.blurFilter();
-                break;
-            case 2:
-                filter = _this.glowFilter();
-                break;
-            case 3:
-                filter = _this.bevelFilter();
-                break;
-            case 4:
-                filter = _this.gradientGlowFilter();
-                break;
-            case 5:
-                filter = _this.convolutionFilter();
-                break;
-            case 6:
-                filter = _this.colorMatrixFilter();
-                break;
-            case 7:
-                filter = _this.gradientBevelFilter();
-                break;
+            case 0: return this.dropShadowFilter();
+            case 1: return this.blurFilter();
+            case 2: return this.glowFilter();
+            case 3: return this.bevelFilter();
+            case 4: return this.gradientGlowFilter();
+            case 5: return this.convolutionFilter();
+            case 6: return this.colorMatrixFilter();
+            case 7: return this.gradientBevelFilter();
         }
-        return filter;
+        return undefined;
     }
 
     private dropShadowFilter(): DropShadowFilter
