@@ -664,6 +664,7 @@ export type LineStyle = {
     NoHScaleFlag: BitBoolean;
     NoVScaleFlag: BitBoolean;
     PixelHintingFlag: BitBoolean;
+    _Reserved: number;
     NoClose: BitBoolean;
     EndCapStyle: CapStyle;
 
@@ -691,6 +692,7 @@ type MorphLineStyle = {
     NoHScaleFlag: BitBoolean;
     NoVScaleFlag: BitBoolean;
     PixelHintingFlag: BitBoolean;
+    _Reserved: number;
     NoClose: BitBoolean;
     EndCapStyle: CapStyle;
 
@@ -2152,84 +2154,69 @@ export class SwfTag {
     private lineStyle(tagType: TAG_DefineShape): LineStyle
     {
         const bitio = this.bitio;
-        const obj = {
-            type: tagType === TAG.DefineShape4 ? LineStyleType.Type2 : LineStyleType.Type1,
-        } as LineStyle;
 
-        if (obj.type === LineStyleType.Type2) {
-            obj.Width = bitio.getUI16();
-            obj.StartCapStyle = bitio.getUIBits(2);
-            obj.JoinStyle = bitio.getUIBits(2);
-            obj.HasFillFlag = bitio.getUIBit();
-            obj.NoHScaleFlag = bitio.getUIBit();
-            obj.NoVScaleFlag = bitio.getUIBit();
-            obj.PixelHintingFlag = bitio.getUIBit();
-            bitio.getUIBits(5); // Reserved
-            obj.NoClose = bitio.getUIBit();
-            obj.EndCapStyle = bitio.getUIBits(2);
+        if (tagType !== TAG.DefineShape4) {
+            return {
+                type: LineStyleType.Type1,
+                Width: bitio.getUI16(),
+                Color: (tagType === TAG.DefineShape3) ? this.rgba() : this.rgb()
+            };
+        } else {
+            let JoinStyle, HasFillFlag;
 
-            if (obj.JoinStyle === 2) {
-                obj.MiterLimitFactor = bitio.getUI16();
-            }
-
-            if (obj.HasFillFlag) {
-                obj.FillType = this.fillStyle(tagType);
-            } else {
-                obj.Color = this.rgba();
-            }
-        } else if (obj.type ===  LineStyleType.Type1) {
-            obj.Width = bitio.getUI16();
-            if (tagType === TAG.DefineShape3) {
-                // DefineShape3
-                obj.Color = this.rgba();
-            } else {
-                // DefineShape1 | DefineShape2
-                obj.Color = this.rgb();
-            }
+            return {
+                type: LineStyleType.Type2,
+                Width: bitio.getUI16(),
+                StartCapStyle: bitio.getUIBits(2),
+                JoinStyle: (JoinStyle = bitio.getUIBits(2)),
+                HasFillFlag: (HasFillFlag = bitio.getUIBit()),
+                NoHScaleFlag: bitio.getUIBit(),
+                NoVScaleFlag: bitio.getUIBit(),
+                PixelHintingFlag: bitio.getUIBit(),
+                _Reserved: bitio.getUIBits(5),
+                NoClose: bitio.getUIBit(),
+                EndCapStyle: bitio.getUIBits(2),
+                MiterLimitFactor: (JoinStyle === 2) ? bitio.getUI16() : undefined,
+                FillType: HasFillFlag ? this.fillStyle(tagType) : undefined,
+                Color: HasFillFlag ? undefined : this.rgba()
+            };
         }
-
-        return obj;
     }
 
     private morphLineStyle(tagType: TAG_DefineMorphShape): MorphLineStyle
     {
         const bitio = this.bitio;
-        const obj = {
-            type: (tagType === TAG.DefineMorphShape) ? LineStyleType.Type1 : LineStyleType.Type2
-        } as MorphLineStyle;
 
-        if (obj.type === LineStyleType.Type1) {
-            obj.StartWidth = bitio.getUI16();
-            obj.EndWidth = bitio.getUI16();
-            obj.StartColor = this.rgba();
-            obj.EndColor = this.rgba();
-        } else if (obj.type === LineStyleType.Type2) {
-            obj.StartWidth = bitio.getUI16();
-            obj.EndWidth = bitio.getUI16();
+        if (tagType === TAG.DefineMorphShape) {
+            return {
+                type: LineStyleType.Type1,
+                StartWidth: bitio.getUI16(),
+                EndWidth: bitio.getUI16(),
+                StartColor: this.rgba(),
+                EndColor: this.rgba()
+            };
+        } else {
+            let JoinStyle, HasFillFlag;
+            return {
+                type: LineStyleType.Type2,
+                StartWidth: bitio.getUI16(),
+                EndWidth: bitio.getUI16(),
 
-            obj.StartCapStyle = bitio.getUIBits(2);
-            obj.JoinStyle = bitio.getUIBits(2);
-            obj.HasFillFlag = bitio.getUIBit();
-            obj.NoHScaleFlag = bitio.getUIBit();
-            obj.NoVScaleFlag = bitio.getUIBit();
-            obj.PixelHintingFlag = bitio.getUIBit();
-            bitio.getUIBits(5); // Reserved
-            obj.NoClose = bitio.getUIBit();
-            obj.EndCapStyle = bitio.getUIBits(2);
-
-            if (obj.JoinStyle === 2) {
-                obj.MiterLimitFactor = bitio.getUI16();
-            }
-
-            if (obj.HasFillFlag) {
-                obj.FillType = this.morphFillStyle();
-            } else {
-                obj.StartColor = this.rgba();
-                obj.EndColor = this.rgba();
-            }
+                StartCapStyle: bitio.getUIBits(2),
+                JoinStyle: (JoinStyle = bitio.getUIBits(2)),
+                HasFillFlag: (HasFillFlag = bitio.getUIBit()),
+                NoHScaleFlag: bitio.getUIBit(),
+                NoVScaleFlag: bitio.getUIBit(),
+                PixelHintingFlag: bitio.getUIBit(),
+                _Reserved: bitio.getUIBits(5),
+                NoClose: bitio.getUIBit(),
+                EndCapStyle: bitio.getUIBits(2),
+                MiterLimitFactor: (JoinStyle === 2) ? bitio.getUI16() : undefined,
+                FillType: HasFillFlag ? this.morphFillStyle() : undefined,
+                StartColor: HasFillFlag ? undefined : this.rgba(),
+                EndColor: HasFillFlag ? undefined : this.rgba()
+            };
         }
-
-        return obj;
     }
 
     private shapeWithStyle(tagType: TAG_DefineShape): ShapeWithStyle
@@ -2291,8 +2278,8 @@ export class SwfTag {
     {
         const bitio = this.bitio;
 
-        let DeltaX = 0;
-        let DeltaY = 0;
+        let DeltaX;
+        let DeltaY;
         const GeneralLineFlag = bitio.getUIBit();
         if (GeneralLineFlag) {
             DeltaX = bitio.getSIBits(numBits + 2);
@@ -2308,39 +2295,32 @@ export class SwfTag {
             }
         }
 
-        const AnchorX = DeltaX;
-        const AnchorY = DeltaY;
-
         return {
             isChange: false,
             isCurved: false,
             ControlX: 0,
             ControlY: 0,
-            AnchorX,
-            AnchorY
+            AnchorX: DeltaX,
+            AnchorY: DeltaY
         };
     }
 
     private curvedEdgeRecord(numBits: number): CurvedEdgeRecord
     {
         const bitio = this.bitio;
+
         const controlDeltaX = bitio.getSIBits(numBits + 2);
         const controlDeltaY = bitio.getSIBits(numBits + 2);
         const anchorDeltaX = bitio.getSIBits(numBits + 2);
         const anchorDeltaY = bitio.getSIBits(numBits + 2);
 
-        const ControlX = controlDeltaX;
-        const ControlY = controlDeltaY;
-        const AnchorX = anchorDeltaX + ControlX;
-        const AnchorY = anchorDeltaY + ControlY;
-
         return {
             isChange: false,
             isCurved: true,
-            ControlX,
-            ControlY,
-            AnchorX,
-            AnchorY
+            ControlX: controlDeltaX,
+            ControlY: controlDeltaY,
+            AnchorX: anchorDeltaX + controlDeltaX,
+            AnchorY: anchorDeltaY + controlDeltaY
         };
     }
 

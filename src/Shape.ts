@@ -250,12 +250,11 @@ export class Shape extends DisplayObject {
 
         const stageClip = stage.clipMc || stage.isClipDepth;
         let canvas;
+
         for (const { obj, cache } of shapes) {
-            let styleObj;
-            if (isLineStyle(obj))
-                styleObj = (obj.type === LineStyleType.Type2 && obj.HasFillFlag) ? obj.FillType : undefined;
-            else
-                styleObj = obj;
+            const styleObj = isLineStyle(obj)
+                           ? (obj.type === LineStyleType.Type2 && obj.HasFillFlag) ? obj.FillType : undefined
+                           : obj;
 
             if (isClipDepth) {
                 if (isLineStyle(obj))
