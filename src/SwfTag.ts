@@ -199,10 +199,10 @@ type DefineMorphShape_12 = {
     CharacterId: number;
     StartBounds: Bounds;
     EndBounds: Bounds;
-    MorphFillStyles: FillStyleArray;
+    MorphFillStyles: MorphFillStyle[];
     MorphLineStyles: LineStyleArray;
-    StartEdges: ShapeWithStyle;
-    EndEdges: ShapeWithStyle;
+    StartEdges: ShapeRecord[];
+    EndEdges: ShapeRecord[];
 };
 type DefineMorphShape = ({ tagType: TAG.DefineMorphShape; } & DefineMorphShape_12)
 | ({ tagType: TAG.DefineMorphShape2; } & DefineMorphShape_12 & {
@@ -579,33 +579,93 @@ type MorphShape = {
     bounds: Bounds;
 };
 
-type FillStyle = any;
-type FillStyleArray = {
-    fillStyleCount: number;
-    fillStyles: FillStyle;
+const enum FillStyleType {
+    Solid = 0x00,
+    LinearGradient = 0x10,
+    RadialGradient = 0x12,
+    FocalRadialGradient = 0x13,
+    RepeatingBitmap = 0x40,
+    ClippedBitmap = 0x41,
+    NonSmoothedRepeatingBitmap = 0x42,
+    NonSmoothedClippedBitmap = 0x43
 };
+
+type FillStyle = {
+    type: FillStyleType.Solid;
+    Color: Color;
+} | {
+    type: FillStyleType.LinearGradient | FillStyleType.RadialGradient;
+    gradientMatrix: Matrix;
+    gradient: Gradient;
+} | {
+    type: FillStyleType.FocalRadialGradient;
+    gradientMatrix: Matrix;
+    gradient: FocalGradient;
+} | {
+    type: FillStyleType.RepeatingBitmap
+        | FillStyleType.ClippedBitmap
+        | FillStyleType.NonSmoothedRepeatingBitmap
+        | FillStyleType.NonSmoothedClippedBitmap;
+    bitmapId: number;
+    bitmapMatrix: Matrix;
+};
+
+type MorphFillStyle = {
+    type: FillStyleType.Solid;
+    StartColor: Color;
+    EndColor: Color;
+} | {
+    type: FillStyleType.LinearGradient | FillStyleType.RadialGradient;
+    startGradientMatrix: Matrix;
+    endGradientMatrix: Matrix;
+    gradient: MorphGradient;
+} | {
+    type: FillStyleType.FocalRadialGradient;
+    dump: never;
+} | {
+    type: FillStyleType.RepeatingBitmap
+        | FillStyleType.ClippedBitmap
+        | FillStyleType.NonSmoothedRepeatingBitmap
+        | FillStyleType.NonSmoothedClippedBitmap;
+    bitmapId: number;
+    startBitmapMatrix: Matrix;
+    endBitmapMatrix: Matrix;
+};
+
 type LineStyle = any;
 type LineStyleArray = {
     lineStyleCount: number;
     lineStyles: LineStyle[];
 };
 
-type StyleRecord = {
+export type CurvedEdgeRecord = {
     isChange: false;
+    isCurved: true;
 
     ControlX: number;
     ControlY: number;
     AnchorX: number;
     AnchorY: number;
-    isCurved: boolean;
 };
 
-type StyleChangeRecord = {
+export type StraightEdgeRecord = {
+    isChange: false;
+    isCurved: false;
+
+    ControlX: 0;
+    ControlY: 0;
+    AnchorX: number;
+    AnchorY: number;
+};
+
+export type StyleChangeRecord = {
     isChange: true;
 
     StateLineStyle: BitBoolean;
     StateFillStyle1: BitBoolean;
     StateFillStyle0: BitBoolean;
+    StateMoveTo: BitBoolean;
+    StateNewStyles: BitBoolean;
 
     FillStyle0: number;
     FillStyle1: number;
@@ -613,39 +673,44 @@ type StyleChangeRecord = {
 
     NumFillBits: number;
     NumLineBits: number;
-} & BitFlag<'StateMoveTo', {
+
     MoveX: number;
     MoveY: number;
-}> & BitFlag<'StateNewStyles', {
-    FillStyles: FillStyleArray;
-    LineStyles: LineStyleArray;
-}>;
 
-type ShapeRecord = StyleRecord | StyleChangeRecord;
+    FillStyles: FillStyle[];
+    LineStyles: LineStyleArray;
+};
+
+export type ShapeRecord = CurvedEdgeRecord | StraightEdgeRecord | StyleChangeRecord;
 
 export type ShapeWithStyle = {
-    fillStyles: FillStyleArray;
+    fillStyles: FillStyle[];
     lineStyles: LineStyleArray;
     ShapeRecords: ShapeRecord[];
 };
 
-type GradientRecord = {
-    StartRatio: number;
-    StartColor: Color;
-    EndRatio: number;
-    EndColor: Color;
-} | {
+type GradRecord = {
     Ratio: number;
     Color: Color;
 };
 type Gradient = {
     SpreadMode: number;
     InterpolationMode: number;
-    GradientRecords: GradientRecord[];
+    GradientRecords: GradRecord[];
 };
 
 type FocalGradient = Gradient & {
     FocalPoint: number;
+};
+
+type MorphGradRecord = {
+    StartRatio: number;
+    StartColor: Color;
+    EndRatio: number;
+    EndColor: Color;
+};
+type MorphGradient = {
+    GradientRecords: MorphGradRecord[];
 };
 
 type GlyphEntry = {
@@ -714,7 +779,6 @@ export class SwfTag {
 
     swfId = SwfTag.swfId++;
 
-    private currentPosition = { x: 0, y: 0 };
     private jpegTables?: Data;
 
     // Stage
@@ -1732,143 +1796,143 @@ export class SwfTag {
 
     private parseDefineShape(tagType: TAG_DefineShape): void
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var characterId = bitio.getUI16();
-        var bounds = _this.rect();
+        const characterId = this.bitio.getUI16();
+        const bounds = this.rect();
 
         if (tagType === TAG.DefineShape4) {
-            var obj = {} as any;
-            obj.EdgeBounds = _this.rect();
-            bitio.getUIBits(5); // Reserved
-            obj.UsesFillWindingRule = bitio.getUIBits(1);
-            obj.UsesNonScalingStrokes = bitio.getUIBits(1);
-            obj.UsesScalingStrokes = bitio.getUIBits(1);
+            this.rect();        // EdgeBounds
+            this.bitio.getUIBits(5); // Reserved
+            this.bitio.getUIBits(1); // UsesFillWindingRule
+            this.bitio.getUIBits(1); // UsesNonScalingStrokes
+            this.bitio.getUIBits(1); // UsesScalingStrokes
         }
 
-        var shapes = _this.shapeWithStyle(tagType);
+        const shapes = this.shapeWithStyle(tagType);
+        const data = vtc.convert(shapes, false);
 
-        const shapeTag: DefineShapeCharacter = {
-            tagType: tagType,
-            data: vtc.convert(shapes, false),
-            bounds: bounds
-        };
-       this.setCharacter<DefineShapeCharacter>(characterId, shapeTag);
+        this.setCharacter<DefineShapeCharacter>(characterId, { tagType, data, bounds });
     }
 
     public rect(): Bounds
     {
-        var bitio = this.bitio;
-        bitio.byteAlign();
+        this.bitio.byteAlign();
 
-        var nBits = bitio.getUIBits(5);
-        const xMin = bitio.getSIBits(nBits);
-        const xMax = bitio.getSIBits(nBits);
-        const yMin = bitio.getSIBits(nBits);
-        const yMax = bitio.getSIBits(nBits);
+        const nBits = this.bitio.getUIBits(5);
+        const xMin = this.bitio.getSIBits(nBits);
+        const xMax = this.bitio.getSIBits(nBits);
+        const yMin = this.bitio.getSIBits(nBits);
+        const yMax = this.bitio.getSIBits(nBits);
         return new Bounds(xMin, yMin, xMax, yMax);
     }
 
-    private shapeWithStyle(tagType: TAG_DefineShape | TAG_DefineMorphShape): ShapeWithStyle
+    private fillStyleArray(tagType: TAG_DefineShape): FillStyle[]
     {
-        let fillStyles;
-        let lineStyles;
+        let fillStyleCount = this.bitio.getUI8();
+        if (tagType !== TAG.DefineShape && fillStyleCount === 0xff)
+            fillStyleCount = this.bitio.getUI16();
 
-        if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
-            fillStyles = {fillStyleCount: 0, fillStyles: []};
-            lineStyles = {lineStyleCount: 0, lineStyles: []};
-        } else {
-            fillStyles = this.fillStyleArray(tagType);
-            lineStyles = this.lineStyleArray(tagType);
-        }
+        const fillStyles: FillStyle[] = [];
+        while (fillStyleCount--)
+            fillStyles.push(this.fillStyle(tagType));
 
-        const numBits = this.bitio.getUI8();
-        const ShapeRecords = this.shapeRecords(tagType, {
-            FillBits: numBits >> 4,
-            LineBits: numBits & 0x0f
-        });
-
-        return {
-            fillStyles: fillStyles,
-            lineStyles: lineStyles,
-            ShapeRecords: ShapeRecords
-        };
+        return fillStyles;
     }
 
-    private fillStyleArray(tagType: TAG_DefineShape | TAG_DefineMorphShape): FillStyleArray
+    private morphFillStyleArray(): MorphFillStyle[]
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var fillStyleCount = bitio.getUI8();
-        if ((tagType > 2) && (fillStyleCount === 0xff)) {
-            fillStyleCount = bitio.getUI16();
-        }
+        let fillStyleCount = this.bitio.getUI8();
+        if (fillStyleCount === 0xff)
+            fillStyleCount = this.bitio.getUI16();
 
-        var fillStyles = [];
-        for (var i = fillStyleCount; i--;) {
-            fillStyles[fillStyles.length] = _this.fillStyle(tagType);
-        }
+        const fillStyles: MorphFillStyle[] = [];
+        while (fillStyleCount--)
+            fillStyles.push(this.morphFillStyle());
 
-        return {
-            fillStyleCount: fillStyleCount,
-            fillStyles: fillStyles
-        };
+        return fillStyles;
     }
 
-    private fillStyle(tagType: TAG_DefineShape | TAG_DefineMorphShape): FillStyle
+    private fillStyle(tagType: TAG_DefineShape): FillStyle
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var obj = {} as FillStyle;
-        var bitType = bitio.getUI8();
-        obj.fillStyleType = bitType;
-        switch (bitType) {
-            case 0x00:
-                if (tagType === TAG.DefineShape3 || tagType === TAG.DefineShape4) {
-                    obj.Color = _this.rgba();
-                } else if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
-                    obj.StartColor = _this.rgba();
-                    obj.EndColor = _this.rgba();
-                } else {
-                    obj.Color = _this.rgb();
-                }
-                break;
+        const type = this.bitio.getUI8() as FillStyleType;
+        switch (type) {
+            case FillStyleType.Solid:
+                if (tagType === TAG.DefineShape3 || tagType === TAG.DefineShape4)
+                    return { type, Color: this.rgba() };
 
-            case 0x10:
-            case 0x12:
-                if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
-                    obj.startGradientMatrix = _this.matrix();
-                    obj.endGradientMatrix = _this.matrix();
-                    obj.gradient = _this.gradient(tagType);
-                } else {
-                    obj.gradientMatrix = _this.matrix();
-                    obj.gradient = _this.gradient(tagType);
-                }
-                break;
+                return { type, Color: this.rgb() };
 
-            case 0x13:
-                obj.gradientMatrix = _this.matrix();
-                obj.gradient = _this.focalGradient(tagType);
-                break;
-            case 0x40:
-            case 0x41:
-            case 0x42:
-            case 0x43:
-                obj.bitmapId = bitio.getUI16();
-                if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
-                    obj.startBitmapMatrix = _this.matrix();
-                    obj.endBitmapMatrix = _this.matrix();
-                } else {
-                    obj.bitmapMatrix = _this.matrix();
-                }
-                break;
+            case FillStyleType.LinearGradient:
+            case FillStyleType.RadialGradient:
+                return {
+                    type,
+                    gradientMatrix: this.matrix(),
+                    gradient: this.gradient(tagType)
+                };
+
+            case FillStyleType.FocalRadialGradient:
+                return {
+                    type,
+                    gradientMatrix: this.matrix(),
+                    gradient: this.focalGradient(tagType)
+                };
+
+            case FillStyleType.RepeatingBitmap:
+            case FillStyleType.ClippedBitmap:
+            case FillStyleType.NonSmoothedRepeatingBitmap:
+            case FillStyleType.NonSmoothedClippedBitmap:
+                return {
+                    type,
+                    bitmapId: this.bitio.getUI16(),
+                    bitmapMatrix: this.matrix()
+                };
+
+            default:
+                ((x: never) => {})(type);
         }
-        return obj;
+    }
+
+    private morphFillStyle(): MorphFillStyle
+    {
+        const type = this.bitio.getUI8() as FillStyleType;
+        switch (type) {
+            case FillStyleType.Solid:
+                return {
+                    type,
+                    StartColor: this.rgba(),
+                    EndColor: this.rgba()
+                };
+
+            case FillStyleType.LinearGradient:
+            case FillStyleType.RadialGradient:
+                return {
+                    type,
+                    startGradientMatrix: this.matrix(),
+                    endGradientMatrix: this.matrix(),
+                    gradient: this.morphGradient(),
+                };
+
+            case FillStyleType.RepeatingBitmap:
+            case FillStyleType.ClippedBitmap:
+            case FillStyleType.NonSmoothedRepeatingBitmap:
+            case FillStyleType.NonSmoothedClippedBitmap:
+                return {
+                    type,
+                    bitmapId: this.bitio.getUI16(),
+                    startBitmapMatrix: this.matrix(),
+                    endBitmapMatrix: this.matrix()
+                };
+
+            case FillStyleType.FocalRadialGradient:
+                throw new Error('FocalRadialGradient in morphFillStyle');
+
+            default:
+                ((x: never) => {})(type);
+        }
     }
 
     private rgb(): Color
     {
-        var bitio = this.bitio;
+        const bitio = this.bitio;
         return {
             R: bitio.getUI8(),
             G: bitio.getUI8(),
@@ -1879,7 +1943,8 @@ export class SwfTag {
 
     private rgba(): Color
     {
-        var bitio = this.bitio;
+        const bitio = this.bitio;
+
         return {
             R: bitio.getUI8(),
             G: bitio.getUI8(),
@@ -1890,98 +1955,104 @@ export class SwfTag {
 
     private matrix(): Matrix
     {
-        var bitio = this.bitio;
+        const bitio = this.bitio;
+        const result: Matrix = [1, 0, 0, 1, 0, 0];
+
         bitio.byteAlign();
 
-        var result: Matrix = [1, 0, 0, 1, 0, 0];
-        if (bitio.getUIBit()) {
-            var nScaleBits = bitio.getUIBits(5);
+        if (this.bitio.getUIBit()) {
+            const nScaleBits = bitio.getUIBits(5);
             result[0] = bitio.getSIBits(nScaleBits) / 0x10000;
             result[3] = bitio.getSIBits(nScaleBits) / 0x10000;
         }
 
         if (bitio.getUIBit()) {
-            var nRotateBits = bitio.getUIBits(5);
+            const nRotateBits = bitio.getUIBits(5);
             result[1] = bitio.getSIBits(nRotateBits) / 0x10000;
             result[2] = bitio.getSIBits(nRotateBits) / 0x10000;
         }
 
-        var nTranslateBits = bitio.getUIBits(5);
+        const nTranslateBits = bitio.getUIBits(5);
         result[4] = bitio.getSIBits(nTranslateBits);
         result[5] = bitio.getSIBits(nTranslateBits);
 
         return result;
     }
 
-    private gradient(tagType: TAG_DefineShape | TAG_DefineMorphShape): Gradient
+    private gradient(tagType: TAG_DefineShape): Gradient
     {
-        var _this = this;
-        var SpreadMode = 0;
-        var InterpolationMode = 0;
-        var NumGradients;
-        var bitio = this.bitio;
+        const bitio = this.bitio;
 
         bitio.byteAlign();
 
-        if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
-            NumGradients = bitio.getUI8();
-        } else {
-            SpreadMode = bitio.getUIBits(2);
-            InterpolationMode = bitio.getUIBits(2);
-            NumGradients = bitio.getUIBits(4);
-        }
+        const SpreadMode = bitio.getUIBits(2);
+        const InterpolationMode = bitio.getUIBits(2);
+        let NumGradients = bitio.getUIBits(4);
 
-        var GradientRecords = [];
-        for (var i = NumGradients; i--;) {
-            GradientRecords[GradientRecords.length] = _this.gradientRecord(tagType);
+        const GradientRecords: GradRecord[] = [];
+        while (NumGradients--)
+            GradientRecords.push(this.gradRecord(tagType));
+
+        return { SpreadMode, InterpolationMode, GradientRecords };
+    }
+
+    private gradRecord(tagType: TAG_DefineShape): GradRecord
+    {
+        if (tagType === TAG.DefineShape || tagType === TAG.DefineShape2) {
+            return {
+                Ratio: this.bitio.getUI8() / 255,
+                Color: this.rgb()
+            };
         }
 
         return {
-            SpreadMode: SpreadMode,
-            InterpolationMode: InterpolationMode,
-            GradientRecords: GradientRecords
+            Ratio: this.bitio.getUI8() / 255,
+            Color: this.rgba()
         };
     }
 
-    private gradientRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape): GradientRecord
+    private focalGradient(tagType: TAG_DefineShape): FocalGradient
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        if (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2) {
-            return {
-                StartRatio: bitio.getUI8() / 255,
-                StartColor: _this.rgba(),
-                EndRatio: bitio.getUI8() / 255,
-                EndColor: _this.rgba()
-            };
-        } else {
-            var Ratio = bitio.getUI8();
-            var Color = (tagType < 32) ? _this.rgb() : _this.rgba();
-            return {Ratio: Ratio / 255, Color: Color};
-        }
+        const bitio = this.bitio;
+
+        bitio.byteAlign();
+
+        const SpreadMode = bitio.getUIBits(2);
+        const InterpolationMode = bitio.getUIBits(2);
+        let numGradients = bitio.getUIBits(4);
+
+        const GradientRecords: GradRecord[] = [];
+        while (numGradients--)
+            GradientRecords.push(this.gradRecord(tagType));
+
+        const FocalPoint = bitio.getFloat16();
+
+        return { SpreadMode, InterpolationMode, GradientRecords, FocalPoint };
     }
 
-    private focalGradient(tagType: TAG_DefineShape | TAG_DefineMorphShape): FocalGradient
+    private morphGradient(): MorphGradient
     {
-        var bitio = this.bitio;
+        const bitio = this.bitio;
+
         bitio.byteAlign();
-        var _this = this;
-        var SpreadMode = bitio.getUIBits(2);
-        var InterpolationMode = bitio.getUIBits(2);
-        var numGradients = bitio.getUIBits(4);
 
-        var gradientRecords = [];
-        for (var i = numGradients; i--;) {
-            gradientRecords[gradientRecords.length] =
-                _this.gradientRecord(tagType);
-        }
-        var FocalPoint = bitio.getFloat16();
+        let NumGradients = bitio.getUI8();
 
+        const GradientRecords: MorphGradRecord[] = [];
+        while (NumGradients--)
+            GradientRecords.push(this.morphGradRecord());
+
+        return { GradientRecords };
+    }
+
+    private morphGradRecord(): MorphGradRecord
+    {
+        const bitio = this.bitio;
         return {
-            SpreadMode: SpreadMode,
-            InterpolationMode: InterpolationMode,
-            GradientRecords: gradientRecords,
-            FocalPoint: FocalPoint
+            StartRatio: bitio.getUI8() / 255,
+            StartColor: this.rgba(),
+            EndRatio: bitio.getUI8() / 255,
+            EndColor: this.rgba()
         };
     }
 
@@ -2038,7 +2109,7 @@ export class SwfTag {
             }
 
             if (obj.HasFillFlag) {
-                obj.FillType = _this.fillStyle(tagType);
+                obj.FillType = _this.morphFillStyle();
             } else {
                 obj.StartColor = _this.rgba();
                 obj.EndColor = _this.rgba();
@@ -2078,7 +2149,27 @@ export class SwfTag {
         return obj;
     }
 
-    private shapeRecords(tagType: TAG_DefineShape | TAG_DefineMorphShape,
+    private shapeWithStyle(tagType: TAG_DefineShape): ShapeWithStyle
+    {
+        return {
+            fillStyles: this.fillStyleArray(tagType),
+            lineStyles: this.lineStyleArray(tagType),
+            ShapeRecords: this.shape(tagType)
+        };
+    }
+
+    private shape(tagType: TAG_DefineShape): ShapeRecord[]
+    {
+        const numBits = this.bitio.getUI8();
+        const currentNumBits = {
+            FillBits: numBits >> 4,
+            LineBits: numBits & 0x0f
+        };
+
+        return this.shapeRecords(tagType, currentNumBits);
+    }
+
+    private shapeRecords(tagType: TAG_DefineShape,
                          currentNumBits: {
                             FillBits: number;
                             LineBits: number;
@@ -2086,7 +2177,6 @@ export class SwfTag {
     {
         const bitio = this.bitio;
         const shapeRecords = [];
-        this.currentPosition = {x: 0, y: 0};
 
         while (true) {
             const first6Bits = bitio.getUIBits(6);
@@ -2115,90 +2205,74 @@ export class SwfTag {
     }
 
     private straightEdgeRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape,
-                               numBits: number): StyleRecord
+                               numBits: number): StraightEdgeRecord
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var deltaX = 0;
-        var deltaY = 0;
-        var GeneralLineFlag = bitio.getUIBit();
+        const bitio = this.bitio;
+
+        let DeltaX = 0;
+        let DeltaY = 0;
+        const GeneralLineFlag = bitio.getUIBit();
         if (GeneralLineFlag) {
-            deltaX = bitio.getSIBits(numBits + 2);
-            deltaY = bitio.getSIBits(numBits + 2);
+            DeltaX = bitio.getSIBits(numBits + 2);
+            DeltaY = bitio.getSIBits(numBits + 2);
         } else {
-            var VertLineFlag = bitio.getUIBit();
+            const VertLineFlag = bitio.getUIBit();
             if (VertLineFlag) {
-                deltaX = 0;
-                deltaY = bitio.getSIBits(numBits + 2);
+                DeltaX = 0;
+                DeltaY = bitio.getSIBits(numBits + 2);
             } else {
-                deltaX = bitio.getSIBits(numBits + 2);
-                deltaY = 0;
+                DeltaX = bitio.getSIBits(numBits + 2);
+                DeltaY = 0;
             }
         }
 
-        var AnchorX = deltaX;
-        var AnchorY = deltaY;
-        if (tagType !== TAG.DefineMorphShape && tagType !== TAG.DefineMorphShape2) {
-            AnchorX = _this.currentPosition.x + deltaX;
-            AnchorY = _this.currentPosition.y + deltaY;
-            _this.currentPosition.x = AnchorX;
-            _this.currentPosition.y = AnchorY;
-        }
+        const AnchorX = DeltaX;
+        const AnchorY = DeltaY;
 
         return {
+            isChange: false,
+            isCurved: false,
             ControlX: 0,
             ControlY: 0,
-            AnchorX: AnchorX,
-            AnchorY: AnchorY,
-            isCurved: false,
-            isChange: false
+            AnchorX,
+            AnchorY
         };
     }
 
     private curvedEdgeRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape,
-                             numBits: number): StyleRecord
+                             numBits: number): CurvedEdgeRecord
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var controlDeltaX = bitio.getSIBits(numBits + 2);
-        var controlDeltaY = bitio.getSIBits(numBits + 2);
-        var anchorDeltaX = bitio.getSIBits(numBits + 2);
-        var anchorDeltaY = bitio.getSIBits(numBits + 2);
+        const bitio = this.bitio;
+        const controlDeltaX = bitio.getSIBits(numBits + 2);
+        const controlDeltaY = bitio.getSIBits(numBits + 2);
+        const anchorDeltaX = bitio.getSIBits(numBits + 2);
+        const anchorDeltaY = bitio.getSIBits(numBits + 2);
 
-        var ControlX = controlDeltaX;
-        var ControlY = controlDeltaY;
-        var AnchorX = anchorDeltaX;
-        var AnchorY = anchorDeltaY;
-        if (tagType !== TAG.DefineMorphShape && tagType !== TAG.DefineMorphShape2) {
-            ControlX = _this.currentPosition.x + controlDeltaX;
-            ControlY = _this.currentPosition.y + controlDeltaY;
-            AnchorX = ControlX + anchorDeltaX;
-            AnchorY = ControlY + anchorDeltaY;
-
-            _this.currentPosition.x = AnchorX;
-            _this.currentPosition.y = AnchorY;
-        }
+        const ControlX = controlDeltaX;
+        const ControlY = controlDeltaY;
+        const AnchorX = anchorDeltaX + ControlX;
+        const AnchorY = anchorDeltaY + ControlY;
 
         return {
-            ControlX: ControlX,
-            ControlY: ControlY,
-            AnchorX: AnchorX,
-            AnchorY: AnchorY,
+            isChange: false,
             isCurved: true,
-            isChange: false
+            ControlX,
+            ControlY,
+            AnchorX,
+            AnchorY
         };
     }
 
-    private styleChangeRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape,
+    private styleChangeRecord(tagType: TAG_DefineShape,
                               changeFlag: number,
                               currentNumBits: {
                                 FillBits: number;
                                 LineBits: number;
                               }): StyleChangeRecord
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var obj = {} as StyleChangeRecord;
+        const bitio = this.bitio;
+        const obj = { isChange: true } as StyleChangeRecord;
+
         obj.StateNewStyles = ((changeFlag >> 4) & 1) as BitBoolean;
         obj.StateLineStyle = ((changeFlag >> 3) & 1) as BitBoolean;
         obj.StateFillStyle1 = ((changeFlag >> 2) & 1) as BitBoolean;
@@ -2206,36 +2280,31 @@ export class SwfTag {
         obj.StateMoveTo = (changeFlag & 1) as BitBoolean;
 
         if (obj.StateMoveTo) {
-            var moveBits = bitio.getUIBits(5);
+            const moveBits = bitio.getUIBits(5);
             obj.MoveX = bitio.getSIBits(moveBits);
             obj.MoveY = bitio.getSIBits(moveBits);
-            _this.currentPosition.x = obj.MoveX;
-            _this.currentPosition.y = obj.MoveY;
         }
 
         obj.FillStyle0 = 0;
-        if (obj.StateFillStyle0) {
+        if (obj.StateFillStyle0)
             obj.FillStyle0 = bitio.getUIBits(currentNumBits.FillBits);
-        }
 
         obj.FillStyle1 = 0;
-        if (obj.StateFillStyle1) {
+        if (obj.StateFillStyle1)
             obj.FillStyle1 = bitio.getUIBits(currentNumBits.FillBits);
-        }
 
         obj.LineStyle = 0;
-        if (obj.StateLineStyle) {
+        if (obj.StateLineStyle)
             obj.LineStyle = bitio.getUIBits(currentNumBits.LineBits);
-        }
 
         if (obj.StateNewStyles) {
-            obj.FillStyles = _this.fillStyleArray(tagType);
-            obj.LineStyles = _this.lineStyleArray(tagType);
-            var numBits = bitio.getUI8();
+            obj.FillStyles = this.fillStyleArray(tagType);
+            obj.LineStyles = this.lineStyleArray(tagType);
+
+            const numBits = bitio.getUI8();
             currentNumBits.FillBits = obj.NumFillBits = numBits >> 4;
             currentNumBits.LineBits = obj.NumLineBits = numBits & 0x0f;
         }
-        obj.isChange = true;
         return obj;
     }
 
@@ -2557,17 +2626,8 @@ export class SwfTag {
             for (i = 0; i < numGlyphs; i++) {
                 bitio.setOffset(OffsetTable[i] + offset, 0);
 
-                var numBits = bitio.getUI8();
-                var NumFillBits = numBits >> 4;
-                var NumLineBits = numBits & 0x0f;
-
-                var currentNumBits = {
-                    FillBits: NumFillBits,
-                    LineBits: NumLineBits
-                };
-
                 var shapes = {} as ShapeWithStyle;
-                shapes.ShapeRecords = _this.shapeRecords(obj.tagType as any, currentNumBits);
+                shapes.ShapeRecords = _this.shape(TAG.DefineShape);
                 shapes.lineStyles = {
                     lineStyleCount: 1,
                     lineStyles: [{
@@ -2575,13 +2635,10 @@ export class SwfTag {
                         lineStyleType: 0
                     }]
                 };
-                shapes.fillStyles = {
-                    fillStyleCount: 1,
-                    fillStyles: [{
-                        Color: {R: 0, G: 0, B: 0, A: 1},
-                        fillStyleType: 0
-                    }]
-                };
+                shapes.fillStyles = [{
+                    type: FillStyleType.Solid,
+                    Color: {R: 0, G: 0, B: 0, A: 1}
+                }];
 
                 GlyphShapeTable.push(shapes);
             }
@@ -2931,21 +2988,21 @@ export class SwfTag {
         var offset = bitio.getUI32();
         var endOffset = bitio.byte_offset + offset;
 
-        obj.MorphFillStyles = _this.fillStyleArray(tagType);
+        obj.MorphFillStyles = _this.morphFillStyleArray();
         obj.MorphLineStyles = _this.lineStyleArray(tagType);
 
-        obj.StartEdges = _this.shapeWithStyle(tagType);
+        obj.StartEdges = _this.shape(tagType as any);
         if (bitio.byte_offset !== endOffset) {
             bitio.byte_offset = endOffset;
         }
 
-        obj.EndEdges = _this.shapeWithStyle(tagType);
+        obj.EndEdges = _this.shape(tagType as any);
 
         // fill1 control
         var startPosition = {x: 0, y: 0};
         var endPosition = {x: 0, y: 0};
-        var StartRecords = obj.StartEdges.ShapeRecords;
-        var EndRecords = obj.EndEdges.ShapeRecords;
+        var StartRecords = obj.StartEdges;
+        var EndRecords = obj.EndEdges;
         var StartRecordLength = StartRecords.length;
         var EndRecordLength = EndRecords.length;
         var length = Math.max(StartRecordLength, EndRecordLength);
@@ -3036,7 +3093,7 @@ export class SwfTag {
 
         var FillType = 0;
         var FillStyle = 0;
-        length = obj.StartEdges.ShapeRecords.length;
+        length = obj.StartEdges.length;
         for (i = 0; i < length; i++) {
             var record = StartRecords[i];
             if (!record || !record.isChange) {
@@ -3079,29 +3136,24 @@ export class SwfTag {
         var lineStyles = morphLineStyles.lineStyles;
         var lineStyleCount = morphLineStyles.lineStyleCount;
 
-        var morphFillStyles = char.MorphFillStyles;
-        var fillStyles = morphFillStyles.fillStyles;
-        var fillStyleCount = morphFillStyles.fillStyleCount;
+        var fillStyles = char.MorphFillStyles;
+        var fillStyleCount = fillStyles.length;
 
         var StartEdges = char.StartEdges;
-        var StartShapeRecords = StartEdges.ShapeRecords;
+        var StartShapeRecords = StartEdges;
 
         var EndEdges = char.EndEdges;
-        var EndShapeRecords = EndEdges.ShapeRecords;
+        var EndShapeRecords = EndEdges;
 
-        var shapes = {
+        const shapes: ShapeWithStyle = {
             lineStyles: {
                 lineStyleCount: lineStyleCount,
                 lineStyles: []
             },
-            fillStyles: {
-                fillStyleCount: fillStyleCount,
-                fillStyles: []
-            },
+            fillStyles: new Array(fillStyleCount),
             ShapeRecords: []
         };
 
-        var position = {x: 0, y: 0};
         var len = StartShapeRecords.length;
         for (var i = 0; i < len; i++) {
             var StartRecord = StartShapeRecords[i];
@@ -3121,8 +3173,6 @@ export class SwfTag {
 
                     MoveX = StartRecord.MoveX * startPer + EndRecord.MoveX * per;
                     MoveY = StartRecord.MoveY * startPer + EndRecord.MoveY * per;
-                    position.x = MoveX;
-                    position.y = MoveY;
                 }
 
                 newRecord = {
@@ -3138,9 +3188,9 @@ export class SwfTag {
                     StateNewStyles: StartRecord.StateNewStyles,
                     isChange: true
                 };
-            } else if (StartRecord.isChange === false) {
-                if (!(EndRecord.isChange === false))
-                    throw new Error('Should be StyleRecord');
+            } else {
+                if (StartRecord.isChange !== false || EndRecord.isChange !== false)
+                    throw new Error('Should be edge records');
 
                 var AnchorX = 0;
                 var AnchorY = 0;
@@ -3172,13 +3222,10 @@ export class SwfTag {
                     }
                 }
 
-                ControlX = startControlX * startPer + endControlX * per + position.x;
-                ControlY = startControlY * startPer + endControlY * per + position.y;
-                AnchorX = startAnchorX * startPer + endAnchorX * per + ControlX;
-                AnchorY = startAnchorY * startPer + endAnchorY * per + ControlY;
-
-                position.x = AnchorX;
-                position.y = AnchorY;
+                ControlX = startControlX * startPer + endControlX * per;
+                ControlY = startControlY * startPer + endControlY * per;
+                AnchorX = startAnchorX * startPer + endAnchorX * per;
+                AnchorY = startAnchorY * startPer + endAnchorY * per;
 
                 newRecord = {
                     AnchorX: AnchorX,
@@ -3220,9 +3267,8 @@ export class SwfTag {
 
         for (i = 0; i < fillStyleCount; i++) {
             var fillStyle = fillStyles[i];
-            var fillStyleType = fillStyle.fillStyleType;
 
-            if (fillStyleType === 0x00) {
+            if (fillStyle.type === FillStyleType.Solid) {
                 EndColor = fillStyle.EndColor;
                 StartColor = fillStyle.StartColor;
                 color = {
@@ -3232,14 +3278,18 @@ export class SwfTag {
                     A: StartColor.A * startPer + EndColor.A * per
                 };
 
-                shapes.fillStyles.fillStyles[i] = {
-                    Color: color,
-                    fillStyleType: fillStyleType
+                shapes.fillStyles[i] = {
+                    type: fillStyle.type,
+                    Color: color
                 };
             } else {
+                if (fillStyle.type !== FillStyleType.LinearGradient &&
+                    fillStyle.type !== FillStyleType.RadialGradient)
+                        throw new Error(`Unknown fill style type: ${fillStyle.type}`);
+
                 var EndGradientMatrix = fillStyle.endGradientMatrix;
                 var StartGradientMatrix = fillStyle.startGradientMatrix;
-                var matrix = [
+                const matrix: Matrix = [
                     StartGradientMatrix[0] * startPer + EndGradientMatrix[0] * per,
                     StartGradientMatrix[1] * startPer + EndGradientMatrix[1] * per,
                     StartGradientMatrix[2] * startPer + EndGradientMatrix[2] * per,
@@ -3248,7 +3298,7 @@ export class SwfTag {
                     StartGradientMatrix[5] * startPer + EndGradientMatrix[5] * per
                 ];
 
-                var gRecords = [];
+                const gRecords: GradRecord[] = [];
                 var gradient = fillStyle.gradient;
                 var GradientRecords = gradient.GradientRecords;
                 var gLen = GradientRecords.length;
@@ -3269,10 +3319,14 @@ export class SwfTag {
                     };
                 }
 
-                shapes.fillStyles.fillStyles[i] = {
-                    gradient: {GradientRecords: gRecords},
-                    gradientMatrix: matrix,
-                    fillStyleType: fillStyleType
+                shapes.fillStyles[i] = {
+                    type: fillStyle.type,
+                    gradient: {
+                        SpreadMode: 0,
+                        InterpolationMode: 0,
+                        GradientRecords: gRecords
+                    },
+                    gradientMatrix: matrix
                 };
             }
         }

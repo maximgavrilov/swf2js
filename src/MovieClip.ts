@@ -1113,7 +1113,7 @@ export class MovieClip extends Sprite {
         this.sounds[frame].push(obj);
     }
 
-    getSounds(): StartSoundTag[] {
+    getSounds(): StartSoundTag[] | undefined {
         return this.sounds[this.getCurrentFrame()];
     }
 

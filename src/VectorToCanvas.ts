@@ -8,26 +8,7 @@
  */
 
 import { ColorTransform } from './utils';
-import { ShapeWithStyle } from './SwfTag';
-
-function cloneDeep(src: any, obj: any): void {
-    for (const prop in src) {
-        if (!src.hasOwnProperty(prop)) {
-            continue;
-        }
-
-        const value = src[prop];
-        if (value instanceof Array) {
-            obj[prop] = [];
-            cloneDeep(value, obj[prop]);
-        } else if (value instanceof Object) {
-            obj[prop] = {};
-            cloneDeep(value, obj[prop]);
-        } else {
-            obj[prop] = value;
-        }
-    }
-}
+import { CurvedEdgeRecord, StraightEdgeRecord, ShapeWithStyle } from './SwfTag';
 
 export const enum CAP {
     ROUND = 0,
@@ -80,20 +61,39 @@ export type StyleObj = {
     cmd: CommandF
 };
 
-class VectorToCanvas {
-    clone(src: any): any {
-        const obj: any = {};
-        cloneDeep(src, obj);
-        return obj;
+function clone(src: CurvedEdgeRecord | StraightEdgeRecord,
+              posX: number,
+              posY: number): CurvedEdgeRecord | StraightEdgeRecord
+{
+    if (src.isCurved) {
+        return {
+            isChange: false,
+            isCurved: true,
+            ControlX: src.ControlX + posX,
+            ControlY: src.ControlY + posY,
+            AnchorX: src.AnchorX + posX,
+            AnchorY: src.AnchorY + posY
+        };
     }
 
+    return {
+        isChange: false,
+        isCurved: false,
+        ControlX: 0,
+        ControlY: 0,
+        AnchorX: src.AnchorX + posX,
+        AnchorY: src.AnchorY + posY
+    };
+}
+
+class VectorToCanvas {
     convert(shapes: ShapeWithStyle, isMorph: boolean = false): StyleObj[] {
         var lineStyles = shapes.lineStyles.lineStyles;
-        var fillStyles = shapes.fillStyles.fillStyles;
+        var fillStyles = shapes.fillStyles;
         var records = shapes.ShapeRecords;
         var idx = 0;
         var obj = {} as any;
-        var cache = [];
+        var cache  = [];
         var AnchorX = 0;
         var AnchorY = 0;
         var MoveX = 0;
@@ -109,6 +109,7 @@ class VectorToCanvas {
         var stack = [];
         var depth = 0;
         var length = records.length;
+        var position = {x: 0, y: 0};
         for (var i = 0; i < length; i++) {
             var record = records[i];
             if (!record) {
@@ -129,7 +130,7 @@ class VectorToCanvas {
                     lines = [];
 
                     if (record.NumFillBits) {
-                        fillStyles = record.FillStyles.fillStyles;
+                        fillStyles = record.FillStyles;
                     }
                     if (record.NumLineBits) {
                         lineStyles = record.LineStyles.lineStyles;
@@ -141,6 +142,8 @@ class VectorToCanvas {
                 if (record.StateMoveTo) {
                     MoveX = record.MoveX;
                     MoveY = record.MoveY;
+                    position.x = MoveX;
+                    position.y = MoveY;
                 }
                 LineX = MoveX;
                 LineY = MoveY;
@@ -154,17 +157,17 @@ class VectorToCanvas {
                 if (record.StateLineStyle) {
                     LineStyle = record.LineStyle;
                 }
+
                 continue;
             }
 
             if (!(record.isChange === false))
-                throw new Error('Should be StyleRecord');
+                throw new Error('Should be edge record');
 
-            AnchorX = record.AnchorX;
-            AnchorY = record.AnchorY;
-            var ControlX = record.ControlX;
-            var ControlY = record.ControlY;
-            var isCurved = record.isCurved;
+            const recordClone = clone(record, position.x, position.y);
+            position.x = AnchorX = recordClone.AnchorX;
+            position.y = AnchorY = recordClone.AnchorY;
+
             if (FillStyle0) {
                 idx = FillStyle0 - 1;
                 if (!(idx in fills0)) {
@@ -184,7 +187,7 @@ class VectorToCanvas {
 
                 obj = fills0[idx][depth];
                 cache = obj.cache;
-                cache[cache.length] = this.clone(record);
+                cache[cache.length] = recordClone;
                 obj.endX = AnchorX;
                 obj.endY = AnchorY;
             }
@@ -208,7 +211,7 @@ class VectorToCanvas {
 
                 obj = fills1[idx][depth];
                 cache = obj.cache;
-                cache[cache.length] = this.clone(record);
+                cache[cache.length] = recordClone;
                 obj.endX = AnchorX;
                 obj.endY = AnchorY;
             }
@@ -225,9 +228,9 @@ class VectorToCanvas {
                 obj = lines[idx];
                 cache = obj.cache;
                 cache[cache.length] = [0, LineX, LineY];
-                var code = [2, AnchorX, AnchorY];
-                if (isCurved) {
-                    code = [1, ControlX, ControlY, AnchorX, AnchorY];
+                var code = [2, recordClone.AnchorX, recordClone.AnchorY];
+                if (recordClone.isCurved) {
+                    code = [1, recordClone.ControlX, recordClone.ControlY, recordClone.AnchorX, recordClone.AnchorY];
                 }
                 cache[cache.length] = code;
             }

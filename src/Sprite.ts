@@ -240,40 +240,28 @@ export class Sprite extends DisplayObjectContainer {
            stage: Stage,
            visible: boolean): string
     {
-        var _this = this;
-        if (_this.removeFlag) {
-            return "";
-        }
+        if (this.removeFlag)
+            return '';
 
-        _this.isLoad = true;
-        stage.doneTags.unshift(_this);
+        this.isLoad = true;
+        stage.doneTags.unshift(this);
 
         // sound
-        if (CLS.isMovieClip(_this) && !_this.soundStopFlag) {
-            const mc = _this;
-            var sounds = mc.getSounds();
-            if (sounds !== undefined) {
-                var sLen = sounds.length;
-                for (var idx = 0; idx < sLen; idx++) {
-                    if (!(idx in sounds)) {
-                        continue;
-                    }
-                    var sound = sounds[idx];
-                    mc.startSound_mc(sound);
-                }
-            }
+        if (CLS.isMovieClip(this) && !this.soundStopFlag) {
+            const sounds = this.getSounds() || [];
+            for (const sound of sounds)
+                this.startSound_mc(sound);
         }
 
         // matrix & colorTransform
-        var rMatrix = multiplicationMatrix(matrix, _this.getMatrix());
-        var rColorTransform = multiplicationColor(colorTransform, _this.getColorTransform());
-        var isVisible = _this.getVisible() && visible;
+        const rMatrix = multiplicationMatrix(matrix, this.getMatrix());
+        const rColorTransform = multiplicationColor(colorTransform, this.getColorTransform());
+        const isVisible = this.getVisible() && visible;
 
         // pre render
-        var obj = _this.preRender(ctx, rMatrix, rColorTransform, stage, visible);
-        var cacheKey = obj.cacheKey;
-        var preCtx = obj.preCtx;
-        var preMatrix = obj.preMatrix;
+        const obj = this.preRender(ctx, rMatrix, rColorTransform, stage, visible);
+        const { preCtx, preMatrix } = obj;
+        let { cacheKey } = obj;
 
         // graphics
         if (visible && this.graphics && this.graphics.isDraw)
@@ -281,67 +269,58 @@ export class Sprite extends DisplayObjectContainer {
 
 
         // render
-        var clips = [];
-        var container = _this.getTags();
-        var length = container.length;
-        var maskObj = _this.getMask();
+        const clips = [];
+        const container = this.getTags() || {};
+        const maskObj = this.getMask();
+        const myStage = this.getStage();
 
-        if (length) {
-            var myStage = _this.getStage();
-            for (var depth in container) {
-                if (!container.hasOwnProperty(depth)) {
-                    continue;
+        for (let depth in container) {
+            const instanceId = container[depth];
+            const instance = myStage.getInstance(instanceId);
+
+            if (!instance)
+                continue;
+
+            // mask end
+            for (let cIdx = 0; cIdx < clips.length; cIdx++) {
+                const cDepth = clips[cIdx];
+                if (depth > cDepth) {
+                    clips.splice(cIdx, 1);
+                    ctx.restore();
+                    break;
                 }
+            }
 
-                var instanceId = container[depth];
-                var instance = myStage.getInstance(instanceId);
-                if (!instance) {
-                    continue;
+            // mask start
+            if (instance.isClipDepth) {
+                ctx.save();
+                ctx.beginPath();
+                clips.push(instance.clipDepth);
+                if (CLS.isMovieClip(instance)) {
+                    stage.isClipDepth = true;
                 }
+            }
 
-                // mask end
-                var cLen = clips.length;
-                for (var cIdx = 0; cIdx < cLen; cIdx++) {
-                    var cDepth = clips[cIdx];
-                    if (depth > cDepth) {
-                        clips.splice(cIdx, 1);
-                        ctx.restore();
-                        break;
-                    }
-                }
+            if (isVisible)
+                instance.setHitRange(rMatrix, stage, visible);
 
-                // mask start
-                if (instance.isClipDepth) {
-                    ctx.save();
-                    ctx.beginPath();
-                    clips[clips.length] = instance.clipDepth;
-                    if (CLS.isMovieClip(instance)) {
-                        stage.isClipDepth = true;
-                    }
-                }
+            // mask
+            if (instance.isMask)
+                continue;
 
-                if (isVisible)
-                    instance.setHitRange(rMatrix, stage, visible);
+            if (instance.isClipDepth) {
+                if (preMatrix[0] === 0)
+                    preMatrix[0] = 0.00000000000001;
 
-                // mask
-                if (instance.isMask) {
-                    continue;
-                }
+                if (preMatrix[3] === 0)
+                    preMatrix[3] = 0.00000000000001;
+            }
 
-                if (instance.isClipDepth) {
-                    if (preMatrix[0] === 0) {
-                        preMatrix[0] = 0.00000000000001;
-                    }
-                    if (preMatrix[3] === 0) {
-                        preMatrix[3] = 0.00000000000001;
-                    }
-                }
+            cacheKey += instance.render(preCtx, preMatrix, rColorTransform, stage, isVisible);
 
-                cacheKey += instance.render(preCtx, preMatrix, rColorTransform, stage, isVisible);
-                if (stage.isClipDepth) {
-                    preCtx.clip();
-                    stage.isClipDepth = false;
-                }
+            if (stage.isClipDepth) {
+                preCtx.clip();
+                stage.isClipDepth = false;
             }
         }
 
@@ -352,7 +331,7 @@ export class Sprite extends DisplayObjectContainer {
         // post render
         if (obj.isFilter || obj.isBlend) {
             obj.cacheKey = cacheKey;
-            _this.postRender(ctx, rMatrix, rColorTransform, stage, obj);
+            this.postRender(ctx, rMatrix, rColorTransform, stage, obj);
         }
 
         return cacheKey;

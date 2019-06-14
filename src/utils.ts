@@ -158,6 +158,10 @@ export function generateColorTransform(color: Color, data: ColorTransform): Colo
     };
 }
 
+export function colorCSS(color: Color): string {
+    return `rgba(${color.R}, ${color.G}, ${color.B}, ${color.A})`;
+}
+
 export function intToRGBA(int: number, alpha: number = 100): Color {
     return {
         R: (int & 0xff0000) >> 16,

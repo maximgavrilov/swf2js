@@ -18,7 +18,7 @@ import {
     tmpContext,
     isAndroid, isAndroid4x, isChrome,
     LN2_2, LOG1P,
-    generateColorTransform, multiplicationColor, multiplicationMatrix
+    colorCSS, generateColorTransform, multiplicationColor, multiplicationMatrix
 } from './utils';
 
 type LinearGradientParams = [ number, number, number, number ];
@@ -245,28 +245,20 @@ export class Shape extends DisplayObject {
                           isClipDepth: boolean,
                           stage: Stage): CanvasRenderingContext2D
     {
-        var _this = this;
-        var shapes = _this.getData();
-        if (!shapes) {
+        const shapes = this.getData();
+        if (!shapes)
             return ctx;
-        }
 
-        var stageClip = stage.clipMc || stage.isClipDepth;
-        var length = shapes.length;
-        var color;
-        var css;
-        var canvas;
-        for (var idx = 0; idx < length; idx++) {
-            var data = shapes[idx];
-            var obj = data.obj;
-            var styleObj = (!obj.HasFillFlag) ? obj : obj.FillType;
-            var cmd = data.cmd;
-            var isStroke = (obj.Width !== undefined);
+        const stageClip = stage.clipMc || stage.isClipDepth;
+        let canvas;
+        for (const { obj, cmd } of shapes) {
+            const styleObj = obj.HasFillFlag ? obj.FillType : obj;
+            const isStroke = (obj.Width !== undefined);
 
             if (isClipDepth) {
-                if (isStroke) {
+                if (isStroke)
                     continue;
-                }
+
                 cmd(ctx);
                 continue;
             }
@@ -274,12 +266,11 @@ export class Shape extends DisplayObject {
             ctx.beginPath();
             cmd(ctx);
 
-            var styleType = styleObj.fillStyleType;
+            const styleType = styleObj.type;
             switch (styleType) {
-                case 0x00:
-                    color = styleObj.Color;
-                    color = generateColorTransform(color, colorTransform);
-                    css = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
+                case 0x00: {
+                    const color = generateColorTransform(styleObj.Color, colorTransform);
+                    const css = colorCSS(color);
                     if (isStroke) {
                         ctx.strokeStyle = css;
                         ctx.lineWidth = Math.max(obj.Width, 1 / minScale);
@@ -292,19 +283,20 @@ export class Shape extends DisplayObject {
                     }
 
                     break;
+                }
 
                 // gradient
                 case 0x10:
                 case 0x12:
-                case 0x13:
-                    var m = styleObj.gradientMatrix;
-                    var type = styleObj.fillStyleType;
-                    if (type !== 16) {
+                case 0x13: {
+                    const m = styleObj.gradientMatrix;
+                    let css;
+                    if (styleType !== 0x10) {
                         ctx.save();
                         ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
                         css = ctx.createRadialGradient(0, 0, 0, 0, 0, 16384);
                     } else {
-                        var xy = _this.linearGradientXY(m);
+                        const xy = this.linearGradientXY(m);
                         if (!isNaN(xy[0]) && !isNaN(xy[1])) {
                             css = ctx.createLinearGradient(xy[0], xy[1], xy[2], xy[3]);
                         } else {
@@ -313,14 +305,10 @@ export class Shape extends DisplayObject {
                         }
                     }
 
-                    var records = styleObj.gradient.GradientRecords;
-                    var rLength = records.length;
-                    for (var rIdx = 0; rIdx < rLength; rIdx++) {
-                        var record = records[rIdx];
-                        color = record.Color;
-                        color = generateColorTransform(color, colorTransform);
-                        var rgba = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
-                        css.addColorStop(record.Ratio, rgba);
+                    const records = styleObj.gradient.GradientRecords;
+                    for (const record of records) {
+                        const color = generateColorTransform(record.Color, colorTransform);
+                        css.addColorStop(record.Ratio, colorCSS(color));
                     }
 
                     if (isStroke) {
@@ -334,66 +322,66 @@ export class Shape extends DisplayObject {
                         ctx.fill();
                     }
 
-                    if (type !== 16) {
+                    if (styleType !== 0x10)
                         ctx.restore();
-                    }
 
                     break;
+                }
 
                 // bitmap
                 case 0x40:
                 case 0x41:
                 case 0x42:
-                case 0x43:
-                    var width;
-                    var height;
-                    var loadStage = _this.getStage();
-                    var bitmapId = styleObj.bitmapId;
-                    var bMatrix = styleObj.bitmapMatrix;
-                    var repeat = (styleType === 0x40 || styleType === 0x42) ? "repeat" : "no-repeat";
-                    var bitmapCacheKey = cacheStore.generateKey(
+                case 0x43: {
+                    const loadStage = this.getStage();
+                    const bitmapId = styleObj.bitmapId;
+                    const bMatrix = styleObj.bitmapMatrix;
+                    const repeat = (styleType === 0x40 || styleType === 0x42) ? "repeat" : "no-repeat";
+                    const bitmapCacheKey = cacheStore.generateKey(
                         "Bitmap",
-                        bitmapId + "_" + loadStage.getId() + "_" + repeat,
+                        bitmapId + "_" + loadStage.swftag.swfId + "_" + repeat,
                         undefined,
                         colorTransform
                     );
 
-                    var image = cacheStore.getCache(bitmapCacheKey);
+                    let image = cacheStore.getCache(bitmapCacheKey);
                     if (!image) {
                         image = loadStage.swftag.getCharacter<CanvasRenderingContext2D>(bitmapId);
-                        if (!image) {
-                            break;
-                        }
 
-                        if (colorTransform[0] !== 1 ||
-                            colorTransform[1] !== 1 ||
-                            colorTransform[2] !== 1 ||
-                            colorTransform[4] ||
-                            colorTransform[5] ||
-                            colorTransform[6]
+                        if (!image)
+                            break;
+
+                        if (colorTransform[0] === 1 &&
+                            colorTransform[1] === 1 &&
+                            colorTransform[2] === 1 &&
+                            !colorTransform[4] &&
+                            !colorTransform[5] &&
+                            !colorTransform[6]
                         ) {
-                            var imgCanvas = image.canvas;
-                            width = imgCanvas.width;
-                            height = imgCanvas.height;
+                            ctx.globalAlpha = Math.max(0, Math.min((255 * colorTransform[3]) + colorTransform[7], 255)) / 255;
+                        } else {
+                            const imgCanvas = image.canvas;
+                            const width = imgCanvas.width;
+                            const height = imgCanvas.height;
                             if (width > 0 && height > 0) {
                                 canvas = cacheStore.getCanvas();
                                 canvas.width = width;
                                 canvas.height = height;
-                                var imageContext = canvas.getContext("2d");
+
+                                const imageContext = canvas.getContext("2d");
                                 imageContext.drawImage(image.canvas, 0, 0, width, height);
-                                image = _this.generateImageTransform(imageContext, colorTransform);
+                                image = this.generateImageTransform(imageContext, colorTransform);
                                 cacheStore.setCache(bitmapCacheKey, image);
                             }
-                        } else {
-                            ctx.globalAlpha = Math.max(0, Math.min((255 * colorTransform[3]) + colorTransform[7], 255)) / 255;
                         }
                     }
 
                     if (image) {
                         ctx.save();
+
                         canvas = image.canvas;
-                        width = canvas.width;
-                        height = canvas.height;
+                        const width = canvas.width;
+                        const height = canvas.height;
                         if (width > 0 && height > 0) {
                             if (styleType === 0x41 || styleType === 0x43) {
                                 ctx.clip();
@@ -409,6 +397,7 @@ export class Shape extends DisplayObject {
                     }
 
                     break;
+                }
             }
         }
 
@@ -420,10 +409,10 @@ export class Shape extends DisplayObject {
                     canvas = ctx.canvas;
                 }
 
-                var cWidth = canvas.width;
-                var cHeight = canvas.height;
+                const cWidth = canvas.width;
+                const cHeight = canvas.height;
 
-                var tmpCanvas = tmpContext.canvas;
+                const tmpCanvas = tmpContext.canvas;
                 canvas = ctx.canvas;
                 tmpCanvas.width = cWidth;
                 tmpCanvas.height = cHeight;
@@ -441,7 +430,7 @@ export class Shape extends DisplayObject {
             }
         }
 
-        var resetCss = "rgba(0,0,0,1)";
+        const resetCss = "rgba(0,0,0,1)";
         ctx.strokeStyle = resetCss;
         ctx.fillStyle = resetCss;
         ctx.globalAlpha = 1;
