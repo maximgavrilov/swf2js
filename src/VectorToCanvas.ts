@@ -99,7 +99,7 @@ function transform(src: ShapeRecord | undefined, posX: number, posY: number): Sh
 class VectorToCanvas {
     convert(shapes: ShapeWithStyle, isMorph: boolean = false): StyleObj[]
     {
-        var lineStyles = shapes.lineStyles.lineStyles;
+        var lineStyles = shapes.lineStyles;
         var fillStyles = shapes.fillStyles;
         var records = shapes.ShapeRecords;
         var AnchorX = 0;
@@ -141,7 +141,7 @@ class VectorToCanvas {
                         fillStyles = record.FillStyles;
                     }
                     if (record.NumLineBits) {
-                        lineStyles = record.LineStyles.lineStyles;
+                        lineStyles = record.LineStyles;
                     }
                 }
 

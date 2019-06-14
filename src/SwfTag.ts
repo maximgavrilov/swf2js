@@ -200,7 +200,7 @@ type DefineMorphShape_12 = {
     StartBounds: Bounds;
     EndBounds: Bounds;
     MorphFillStyles: MorphFillStyle[];
-    MorphLineStyles: LineStyleArray;
+    MorphLineStyles: MorphLineStyle[];
     StartEdges: ShapeRecord[];
     EndEdges: ShapeRecord[];
 };
@@ -632,10 +632,73 @@ type MorphFillStyle = {
     endBitmapMatrix: Matrix;
 };
 
-type LineStyle = any;
-type LineStyleArray = {
-    lineStyleCount: number;
-    lineStyles: LineStyle[];
+const enum LineStyleType {
+   Type1 = 1,
+   Type2 = 2
+};
+
+const enum CapStyle {
+    Round = 0,
+    No = 1,
+    Square = 2
+};
+
+const enum JoinStyle {
+    Round = 0,
+    Bevel = 1,
+    Miter = 2
+};
+
+type LineStyle = {
+    type: LineStyleType.Type1;
+
+    Width: number;
+    Color: Color;
+} | {
+    type: LineStyleType.Type2;
+
+    Width: number;
+    StartCapStyle: CapStyle;
+    JoinStyle: JoinStyle;
+    HasFillFlag: BitBoolean;
+    NoHScaleFlag: BitBoolean;
+    NoVScaleFlag: BitBoolean;
+    PixelHintingFlag: BitBoolean;
+    NoClose: BitBoolean;
+    EndCapStyle: CapStyle;
+
+    MiterLimitFactor?: number;
+    FillType?: FillStyle;
+    Color?: Color;
+};
+
+type MorphLineStyle = {
+    type: LineStyleType.Type1;
+
+    StartWidth: number;
+    EndWidth: number;
+    StartColor: Color;
+    EndColor: Color;
+} | {
+    type: LineStyleType.Type2;
+
+    StartWidth: number;
+    EndWidth: number;
+
+    StartCapStyle: CapStyle;
+    JoinStyle: JoinStyle;
+    HasFillFlag: BitBoolean;
+    NoHScaleFlag: BitBoolean;
+    NoVScaleFlag: BitBoolean;
+    PixelHintingFlag: BitBoolean;
+    NoClose: BitBoolean;
+    EndCapStyle: CapStyle;
+
+    MiterLimitFactor?: number;
+
+    FillType?: MorphFillStyle;
+    StartColor?: Color;
+    EndColor?: Color;
 };
 
 export type CurvedEdgeRecord = {
@@ -678,14 +741,14 @@ export type StyleChangeRecord = {
     MoveY: number;
 
     FillStyles: FillStyle[];
-    LineStyles: LineStyleArray;
+    LineStyles: LineStyle[];
 };
 
 export type ShapeRecord = CurvedEdgeRecord | StraightEdgeRecord | StyleChangeRecord;
 
 export type ShapeWithStyle = {
     fillStyles: FillStyle[];
-    lineStyles: LineStyleArray;
+    lineStyles: LineStyle[];
     ShapeRecords: ShapeRecord[];
 };
 
@@ -2056,41 +2119,91 @@ export class SwfTag {
         };
     }
 
-    private lineStyleArray(tagType: TAG_DefineShape | TAG_DefineMorphShape): LineStyleArray
+    private lineStyleArray(tagType: TAG_DefineShape): LineStyle[]
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var lineStyleCount = bitio.getUI8();
-        if ((tagType > 2) && (lineStyleCount === 0xff)) {
-            lineStyleCount = bitio.getUI16();
-        }
+        const bitio = this.bitio;
 
-        var array = [];
-        for (var i = lineStyleCount; i--;) {
-            array[array.length] = _this.lineStyle(tagType);
-        }
+        let LineStyleCount = bitio.getUI8();
+        if ((tagType !== TAG.DefineShape) && (LineStyleCount === 0xff))
+            LineStyleCount = bitio.getUI16();
 
-        return {
-            lineStyleCount: lineStyleCount,
-            lineStyles: array
-        };
+        const LineStyles = [];
+        while (LineStyleCount--)
+            LineStyles.push(this.lineStyle(tagType));
+
+        return LineStyles;
     }
 
-    private lineStyle(tagType: TAG_DefineShape | TAG_DefineMorphShape): LineStyle
+    private morphLineStyleArray(tagType: TAG_DefineMorphShape): MorphLineStyle[]
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var obj = {} as LineStyle;
+        const bitio = this.bitio;
 
-        obj.fillStyleType = 0;
-        if (tagType === TAG.DefineMorphShape) {
-            obj = {
-                StartWidth: bitio.getUI16(),
-                EndWidth: bitio.getUI16(),
-                StartColor: _this.rgba(),
-                EndColor: _this.rgba()
-            };
-        } else if (tagType === TAG.DefineMorphShape2) {
+        let LineStyleCount = bitio.getUI8();
+        if (LineStyleCount === 0xff)
+            LineStyleCount = bitio.getUI16();
+
+        const LineStyles = [];
+        while (LineStyleCount--)
+            LineStyles.push(this.morphLineStyle(tagType));
+
+        return LineStyles;
+    }
+
+    private lineStyle(tagType: TAG_DefineShape): LineStyle
+    {
+        const bitio = this.bitio;
+        const obj = {
+            type: tagType === TAG.DefineShape4 ? LineStyleType.Type2 : LineStyleType.Type1,
+        } as LineStyle;
+
+        if (obj.type === LineStyleType.Type2) {
+            obj.Width = bitio.getUI16();
+            obj.StartCapStyle = bitio.getUIBits(2);
+            obj.JoinStyle = bitio.getUIBits(2);
+            obj.HasFillFlag = bitio.getUIBit();
+            obj.NoHScaleFlag = bitio.getUIBit();
+            obj.NoVScaleFlag = bitio.getUIBit();
+            obj.PixelHintingFlag = bitio.getUIBit();
+            bitio.getUIBits(5); // Reserved
+            obj.NoClose = bitio.getUIBit();
+            obj.EndCapStyle = bitio.getUIBits(2);
+
+            if (obj.JoinStyle === 2) {
+                obj.MiterLimitFactor = bitio.getUI16();
+            }
+
+            if (obj.HasFillFlag) {
+                obj.FillType = this.fillStyle(tagType);
+            } else {
+                obj.Color = this.rgba();
+            }
+        } else if (obj.type ===  LineStyleType.Type1) {
+            obj.Width = bitio.getUI16();
+            if (tagType === TAG.DefineShape3) {
+                // DefineShape3
+                obj.Color = this.rgba();
+            } else {
+                // DefineShape1 | DefineShape2
+                obj.Color = this.rgb();
+            }
+        }
+
+        return obj;
+    }
+
+    private morphLineStyle(tagType: TAG_DefineMorphShape): MorphLineStyle
+    {
+        const bitio = this.bitio;
+        const obj = {
+            type: (tagType === TAG.DefineMorphShape) ? LineStyleType.Type1 : LineStyleType.Type2
+        } as MorphLineStyle;
+
+        if (obj.type === LineStyleType.Type1) {
+            obj.StartWidth = bitio.getUI16();
+            obj.EndWidth = bitio.getUI16();
+            obj.StartColor = this.rgba();
+            obj.EndColor = this.rgba();
+        } else if (obj.type === LineStyleType.Type2) {
             obj.StartWidth = bitio.getUI16();
             obj.EndWidth = bitio.getUI16();
 
@@ -2109,40 +2222,10 @@ export class SwfTag {
             }
 
             if (obj.HasFillFlag) {
-                obj.FillType = _this.morphFillStyle();
+                obj.FillType = this.morphFillStyle();
             } else {
-                obj.StartColor = _this.rgba();
-                obj.EndColor = _this.rgba();
-            }
-        } else {
-            obj.Width = bitio.getUI16();
-            if (tagType === TAG.DefineShape4) {
-                // DefineShape4
-                obj.StartCapStyle = bitio.getUIBits(2);
-                obj.JoinStyle = bitio.getUIBits(2);
-                obj.HasFillFlag = bitio.getUIBit();
-                obj.NoHScaleFlag = bitio.getUIBit();
-                obj.NoVScaleFlag = bitio.getUIBit();
-                obj.PixelHintingFlag = bitio.getUIBit();
-                bitio.getUIBits(5); // Reserved
-                obj.NoClose = bitio.getUIBit();
-                obj.EndCapStyle = bitio.getUIBits(2);
-
-                if (obj.JoinStyle === 2) {
-                    obj.MiterLimitFactor = bitio.getUI16();
-                }
-
-                if (obj.HasFillFlag) {
-                    obj.FillType = _this.fillStyle(tagType);
-                } else {
-                    obj.Color = _this.rgba();
-                }
-            } else if (tagType === TAG.DefineShape3) {
-                // DefineShape3
-                obj.Color = _this.rgba();
-            } else {
-                // DefineShape1or2
-                obj.Color = _this.rgb();
+                obj.StartColor = this.rgba();
+                obj.EndColor = this.rgba();
             }
         }
 
@@ -2626,13 +2709,11 @@ export class SwfTag {
 
                 var shapes = {} as ShapeWithStyle;
                 shapes.ShapeRecords = _this.shape(TAG.DefineShape);
-                shapes.lineStyles = {
-                    lineStyleCount: 1,
-                    lineStyles: [{
-                        Color: {R: 0, G: 0, B: 0, A: 1},
-                        lineStyleType: 0
-                    }]
-                };
+                shapes.lineStyles = [{
+                    type: LineStyleType.Type1,
+                    Color: {R: 0, G: 0, B: 0, A: 1},
+                    Width: 0
+                }];
                 shapes.fillStyles = [{
                     type: FillStyleType.Solid,
                     Color: {R: 0, G: 0, B: 0, A: 1}
@@ -2987,7 +3068,7 @@ export class SwfTag {
         var endOffset = bitio.byte_offset + offset;
 
         obj.MorphFillStyles = _this.morphFillStyleArray();
-        obj.MorphLineStyles = _this.lineStyleArray(tagType);
+        obj.MorphLineStyles = _this.morphLineStyleArray(tagType);
 
         obj.StartEdges = _this.shape(tagType as any);
         if (bitio.byte_offset !== endOffset) {
@@ -3131,8 +3212,8 @@ export class SwfTag {
         var newShapeRecords = [];
 
         var morphLineStyles = char.MorphLineStyles;
-        var lineStyles = morphLineStyles.lineStyles;
-        var lineStyleCount = morphLineStyles.lineStyleCount;
+        var lineStyles = morphLineStyles;
+        var lineStyleCount = morphLineStyles.length;
 
         var fillStyles = char.MorphFillStyles;
         var fillStyleCount = fillStyles.length;
@@ -3144,10 +3225,7 @@ export class SwfTag {
         var EndShapeRecords = EndEdges;
 
         const shapes: ShapeWithStyle = {
-            lineStyles: {
-                lineStyleCount: lineStyleCount,
-                lineStyles: []
-            },
+            lineStyles: new Array(lineStyleCount),
             fillStyles: new Array(fillStyleCount),
             ShapeRecords: []
         };
@@ -3256,10 +3334,10 @@ export class SwfTag {
 
             var EndWidth = lineStyles[i].EndWidth;
             var StartWidth = lineStyles[i].StartWidth;
-            shapes.lineStyles.lineStyles[i] = {
+            shapes.lineStyles[i] = {
+                type: LineStyleType.Type1,
                 Width: Math.floor(StartWidth * startPer + EndWidth * per),
-                Color: color,
-                fillStyleType: 0
+                Color: color
             };
         }
 
