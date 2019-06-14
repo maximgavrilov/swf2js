@@ -12,7 +12,8 @@ import { ClipEvent } from './EventDispatcher';
 import { CLS, DisplayObject } from './DisplayObject';
 import { Graphics } from './Graphics';
 import { Stage } from './Stage';
-import { StyleObj, vtc } from './VectorToCanvas';
+import { isLineStyle, StyleObj, vtc } from './VectorToCanvas';
+import { FillStyleType, LineStyleType } from './SwfTag';
 import {
     Bounds, ColorTransform, Matrix,
     tmpContext,
@@ -211,12 +212,11 @@ export class Shape extends DisplayObject {
         for (var idx = 0; idx < length; idx++) {
             var data = shapes[idx];
             var obj = data.obj;
-            var isStroke = (obj.Width !== undefined);
 
             ctx.beginPath();
             vtc.execute(data.cache, ctx);
 
-            if (isStroke) {
+            if (isLineStyle(obj)) {
                 ctx.lineWidth = Math.max(obj.Width, 1 / minScale);
                 ctx.lineCap = "round";
                 ctx.lineJoin = "round";
@@ -251,11 +251,14 @@ export class Shape extends DisplayObject {
         const stageClip = stage.clipMc || stage.isClipDepth;
         let canvas;
         for (const { obj, cache } of shapes) {
-            const styleObj = obj.HasFillFlag ? obj.FillType : obj;
-            const isStroke = (obj.Width !== undefined);
+            let styleObj;
+            if (isLineStyle(obj))
+                styleObj = (obj.type === LineStyleType.Type2 && obj.HasFillFlag) ? obj.FillType : undefined;
+            else
+                styleObj = obj;
 
             if (isClipDepth) {
-                if (isStroke)
+                if (isLineStyle(obj))
                     continue;
 
                 vtc.execute(cache, ctx);
@@ -265,12 +268,12 @@ export class Shape extends DisplayObject {
             ctx.beginPath();
             vtc.execute(cache, ctx);
 
-            const styleType = styleObj.type;
-            switch (styleType) {
-                case 0x00: {
+            switch (styleObj.type) {
+                case FillStyleType.Solid:
+                {
                     const color = generateColorTransform(styleObj.Color, colorTransform);
                     const css = colorCSS(color);
-                    if (isStroke) {
+                    if (isLineStyle(obj)) {
                         ctx.strokeStyle = css;
                         ctx.lineWidth = Math.max(obj.Width, 1 / minScale);
                         ctx.lineCap = "round";
@@ -285,12 +288,13 @@ export class Shape extends DisplayObject {
                 }
 
                 // gradient
-                case 0x10:
-                case 0x12:
-                case 0x13: {
+                case FillStyleType.LinearGradient:
+                case FillStyleType.RadialGradient:
+                case FillStyleType.FocalRadialGradient:
+                {
                     const m = styleObj.gradientMatrix;
                     let css;
-                    if (styleType !== 0x10) {
+                    if (styleObj.type !== FillStyleType.LinearGradient) {
                         ctx.save();
                         ctx.transform(m[0], m[1], m[2], m[3], m[4], m[5]);
                         css = ctx.createRadialGradient(0, 0, 0, 0, 0, 16384);
@@ -310,7 +314,7 @@ export class Shape extends DisplayObject {
                         css.addColorStop(record.Ratio, colorCSS(color));
                     }
 
-                    if (isStroke) {
+                    if (isLineStyle(obj)) {
                         ctx.strokeStyle = css;
                         ctx.lineWidth = Math.max(obj.Width, 1 / minScale);
                         ctx.lineCap = "round";
@@ -321,21 +325,25 @@ export class Shape extends DisplayObject {
                         ctx.fill();
                     }
 
-                    if (styleType !== 0x10)
+                    if (styleObj.type !== FillStyleType.LinearGradient)
                         ctx.restore();
 
                     break;
                 }
 
                 // bitmap
-                case 0x40:
-                case 0x41:
-                case 0x42:
-                case 0x43: {
+                case FillStyleType.RepeatingBitmap:
+                case FillStyleType.ClippedBitmap:
+                case FillStyleType.NonSmoothedRepeatingBitmap:
+                case FillStyleType.NonSmoothedClippedBitmap:
+                {
                     const loadStage = this.getStage();
                     const bitmapId = styleObj.bitmapId;
                     const bMatrix = styleObj.bitmapMatrix;
-                    const repeat = (styleType === 0x40 || styleType === 0x42) ? "repeat" : "no-repeat";
+                    const repeat = (styleObj.type === FillStyleType.RepeatingBitmap
+                                || styleObj.type === FillStyleType.NonSmoothedRepeatingBitmap)
+                                 ? "repeat"
+                                 : "no-repeat";
                     const bitmapCacheKey = cacheStore.generateKey(
                         "Bitmap",
                         bitmapId + "_" + loadStage.swftag.swfId + "_" + repeat,
@@ -382,7 +390,9 @@ export class Shape extends DisplayObject {
                         const width = canvas.width;
                         const height = canvas.height;
                         if (width > 0 && height > 0) {
-                            if (styleType === 0x41 || styleType === 0x43) {
+                            if (styleObj.type === FillStyleType.ClippedBitmap ||
+                                styleObj.type === FillStyleType.NonSmoothedClippedBitmap)
+                            {
                                 ctx.clip();
                                 ctx.transform(bMatrix[0], bMatrix[1], bMatrix[2], bMatrix[3], bMatrix[4], bMatrix[5]);
                                 ctx.drawImage(canvas, 0, 0, width, height);

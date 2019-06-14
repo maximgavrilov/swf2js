@@ -579,7 +579,7 @@ type MorphShape = {
     bounds: Bounds;
 };
 
-const enum FillStyleType {
+export const enum FillStyleType {
     Solid = 0x00,
     LinearGradient = 0x10,
     RadialGradient = 0x12,
@@ -632,7 +632,7 @@ type MorphFillStyle = {
     endBitmapMatrix: Matrix;
 };
 
-const enum LineStyleType {
+export const enum LineStyleType {
    Type1 = 1,
    Type2 = 2
 };
@@ -649,7 +649,7 @@ const enum JoinStyle {
     Miter = 2
 };
 
-type LineStyle = {
+export type LineStyle = {
     type: LineStyleType.Type1;
 
     Width: number;

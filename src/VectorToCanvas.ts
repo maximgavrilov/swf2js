@@ -8,7 +8,7 @@
  */
 
 import { ColorTransform } from './utils';
-import { FillStyle, ShapeRecord, ShapeWithStyle, StyleChangeRecord } from './SwfTag';
+import { FillStyle, LineStyle, ShapeRecord, ShapeWithStyle, StyleChangeRecord } from './SwfTag';
 
 export const enum CAP {
     ROUND = 0,
@@ -66,9 +66,13 @@ type FillData = {
 type Fills = FillData[][]; // [idx: number][depth: number] => FillData
 
 export type StyleObj = {
-    obj: FillData | any;
+    obj: FillStyle | LineStyle;
     cache: Command[];
 };
+
+export function isLineStyle(obj: FillStyle | LineStyle): obj is LineStyle {
+    return (obj as any).Width !== undefined;
+}
 
 function transform(src: ShapeRecord | undefined, posX: number, posY: number): ShapeRecord
 {
@@ -347,7 +351,7 @@ class VectorToCanvas {
 
                     var fill = array.shift();
                     if (fill.startX === fill.endX && fill.startY === fill.endY) {
-                        adjustment[adjustment.length] = fill;
+                        adjustment.push(fill);
                         continue;
                     }
 
@@ -366,7 +370,7 @@ class VectorToCanvas {
                             var cache1 = comparison.cache;
                             var cLen = cache1.length;
                             for (var cIdx = 0; cIdx < cLen; cIdx++) {
-                                cache0[cache0.length] = cache1[cIdx];
+                                cache0.push(cache1[cIdx]);
                             }
                             array.splice(mLen, 1);
                             array.unshift(fill);
@@ -402,7 +406,7 @@ class VectorToCanvas {
                 }
             }
 
-            result[i] = { cache, obj };
+            result[i] = { cache, obj: obj as any };
         }
         return result;
     }
