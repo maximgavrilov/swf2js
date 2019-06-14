@@ -12,7 +12,7 @@ import { ClipEvent } from './EventDispatcher';
 import { CLS, DisplayObject } from './DisplayObject';
 import { Graphics } from './Graphics';
 import { Stage } from './Stage';
-import { StyleObj } from './VectorToCanvas';
+import { StyleObj, vtc } from './VectorToCanvas';
 import {
     Bounds, ColorTransform, Matrix,
     tmpContext,
@@ -214,8 +214,7 @@ export class Shape extends DisplayObject {
             var isStroke = (obj.Width !== undefined);
 
             ctx.beginPath();
-            var cmd = data.cmd;
-            cmd(ctx);
+            vtc.execute(data.cache, ctx);
 
             if (isStroke) {
                 ctx.lineWidth = Math.max(obj.Width, 1 / minScale);
@@ -251,7 +250,7 @@ export class Shape extends DisplayObject {
 
         const stageClip = stage.clipMc || stage.isClipDepth;
         let canvas;
-        for (const { obj, cmd } of shapes) {
+        for (const { obj, cache } of shapes) {
             const styleObj = obj.HasFillFlag ? obj.FillType : obj;
             const isStroke = (obj.Width !== undefined);
 
@@ -259,12 +258,12 @@ export class Shape extends DisplayObject {
                 if (isStroke)
                     continue;
 
-                cmd(ctx);
+                vtc.execute(cache, ctx);
                 continue;
             }
 
             ctx.beginPath();
-            cmd(ctx);
+            vtc.execute(cache, ctx);
 
             const styleType = styleObj.type;
             switch (styleType) {

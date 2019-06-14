@@ -9,7 +9,7 @@
 
 import { cacheStore } from './CacheStore';
 import { Stage } from './Stage';
-import { CAP, CMD, JOIN, Command, CommandF, vtc } from './VectorToCanvas';
+import { CAP, CMD, JOIN, Command, vtc } from './VectorToCanvas';
 import {
     Bounds, Matrix, ColorTransform,
     isAndroid4x, isChrome,
@@ -24,7 +24,7 @@ export class Graphics {
 
     private bounds: Bounds = new Bounds();
     public maxWidth: number;
-    private cmd?: CommandF;
+    private cmd?: Command[];
     private isFillDraw: boolean;
     private isLineDraw: boolean;
     private cacheKey: string;
@@ -410,26 +410,16 @@ export class Graphics {
                   colorTransform: ColorTransform,
                   isClip: boolean): CanvasRenderingContext2D
     {
-        var recodes = this.recodes;
-        var length = recodes.length;
-        var lineRecodes = this.lineRecodes;
+        if (this.recodes.length || this.lineRecodes) {
+            if (!this.cmd) {
+                for (const recode of this.lineRecodes)
+                    this.recodes.push(recode);
 
-        if (length || lineRecodes) {
-            var cmd = this.cmd;
-            if (!cmd) {
-                var lLen = lineRecodes.length;
-                if (lLen) {
-                    for (var i = 0; i < lLen; i++) {
-                        recodes[recodes.length] = lineRecodes[i];
-                    }
-                    this.lineRecodes = [];
-                }
-                cmd = vtc.buildCommand(recodes);
-                this.cmd = cmd;
+                this.cmd = this.recodes;
             }
 
             ctx.beginPath();
-            cmd(ctx, colorTransform, isClip);
+            vtc.execute(this.cmd, ctx, colorTransform, isClip);
             if (isClip) {
                 ctx.clip();
             } else {
@@ -456,18 +446,14 @@ export class Graphics {
                   x: number,
                   y: number): boolean
     {
-        var cmd = this.cmd;
-        if (!cmd) {
-            var recodes = this.recodes;
-            cmd = vtc.buildCommand(recodes);
-            this.cmd = cmd;
-        }
+        if (!this.cmd)
+            this.cmd = this.recodes;
 
         var rMatrix = multiplicationMatrix(stage.getMatrix(), matrix);
         ctx.setTransform(rMatrix[0],rMatrix[1],rMatrix[2],rMatrix[3],rMatrix[4],rMatrix[5]);
 
         ctx.beginPath();
-        cmd(ctx, [1,1,1,1,0,0,0,0], true);
+        vtc.execute(this.cmd, ctx, [1,1,1,1,0,0,0,0], true);
 
         var hit = ctx.isPointInPath(x, y);
         if (hit) {

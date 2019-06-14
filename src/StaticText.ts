@@ -9,7 +9,7 @@
 
 import { cacheStore } from './CacheStore';
 import { CLS, DisplayObject } from './DisplayObject';
-import { StyleObj } from './VectorToCanvas';
+import { StyleObj, vtc } from './VectorToCanvas';
 import { Stage } from './Stage';
 import {
     Bounds, Color, ColorTransform, Matrix,
@@ -183,13 +183,12 @@ export class StaticText extends DisplayObject {
             ctx.fillStyle = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
             for (var idx = 0; idx < shapeLength; idx++) {
                 var styleObj = shapes[idx];
-                var cmd = styleObj.cmd;
                 if (!isClipDepth) {
                     ctx.beginPath();
-                    cmd(ctx);
+                    vtc.execute(styleObj.cache, ctx);
                     ctx.fill();
                 } else {
-                    cmd(ctx);
+                    vtc.execute(styleObj.cache, ctx);
                 }
             }
         }
@@ -230,9 +229,8 @@ export class StaticText extends DisplayObject {
             ctx.setTransform(m4[0],m4[1],m4[2],m4[3],m4[4],m4[5]);
             for (var idx = 0; idx < shapeLength; idx++) {
                 var styleObj = shapes[idx];
-                var cmd = styleObj.cmd;
                 ctx.beginPath();
-                cmd(ctx);
+                vtc.execute(styleObj.cache, ctx);
 
                 hit = ctx.isPointInPath(x, y);
                 if (hit) {

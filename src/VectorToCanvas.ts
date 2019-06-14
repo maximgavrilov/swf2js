@@ -54,8 +54,6 @@ export type Command = [ CMD.MOVE_TO, number, number ]
                     | [ CMD.MITER_LIMIT, number ]
                     | [ CMD.BEGIN_PATH ];
 
-export type CommandF = (ctx: CanvasRenderingContext2D, ct?: ColorTransform, isClip?: boolean) => void;
-
 type FillData = {
     obj: FillStyle;
     startX: number;
@@ -65,11 +63,11 @@ type FillData = {
     cache: Exclude<ShapeRecord, StyleChangeRecord>[];
 };
 
-type Fills = FillData[][];
+type Fills = FillData[][]; // [idx: number][depth: number] => FillData
 
 export type StyleObj = {
-    obj: FillData | any,
-    cmd: CommandF
+    obj: FillData | any;
+    cache: Command[];
 };
 
 function transform(src: ShapeRecord | undefined, posX: number, posY: number): ShapeRecord
@@ -99,13 +97,11 @@ function transform(src: ShapeRecord | undefined, posX: number, posY: number): Sh
 }
 
 class VectorToCanvas {
-    convert(shapes: ShapeWithStyle, isMorph: boolean = false): StyleObj[] {
+    convert(shapes: ShapeWithStyle, isMorph: boolean = false): StyleObj[]
+    {
         var lineStyles = shapes.lineStyles.lineStyles;
         var fillStyles = shapes.fillStyles;
         var records = shapes.ShapeRecords;
-        var idx = 0;
-        var obj = {} as FillData;
-        var cache  = [];
         var AnchorX = 0;
         var AnchorY = 0;
         var MoveX = 0;
@@ -115,9 +111,9 @@ class VectorToCanvas {
         var FillStyle0 = 0;
         var FillStyle1 = 0;
         var LineStyle = 0;
-        var fills0 = [];
-        var fills1 = [];
-        var lines = [];
+        var fills0: Fills = [];
+        var fills1: Fills = [];
+        var lines: StyleObj[] = [];
         var stack = [];
         var depth = 0;
         var length = records.length;
@@ -130,7 +126,7 @@ class VectorToCanvas {
                 break;
             }
 
-            if (record.isChange) {
+            if (record.isChange !== false) {
                 depth++;
                 if (record.StateNewStyles) {
                     AnchorX = 0;
@@ -173,14 +169,11 @@ class VectorToCanvas {
                 continue;
             }
 
-            if (!(record.isChange === false))
-                throw new Error('Should be edge record');
-
             position.x = AnchorX = record.AnchorX;
             position.y = AnchorY = record.AnchorY;
 
             if (FillStyle0) {
-                idx = FillStyle0 - 1;
+                const idx = FillStyle0 - 1;
                 if (!(idx in fills0)) {
                     fills0[idx] = [];
                 }
@@ -196,15 +189,14 @@ class VectorToCanvas {
                     };
                 }
 
-                obj = fills0[idx][depth];
-                cache = obj.cache;
-                cache[cache.length] = record;
+                const obj = fills0[idx][depth];
+                obj.cache.push(record);
                 obj.endX = AnchorX;
                 obj.endY = AnchorY;
             }
 
             if (FillStyle1) {
-                idx = FillStyle1 - 1;
+                const idx = FillStyle1 - 1;
                 if (!(idx in fills1)) {
                     fills1[idx] = [];
                 }
@@ -220,15 +212,14 @@ class VectorToCanvas {
                     };
                 }
 
-                obj = fills1[idx][depth];
-                cache = obj.cache;
-                cache[cache.length] = record;
+                const obj = fills1[idx][depth];
+                obj.cache.push(record);
                 obj.endX = AnchorX;
                 obj.endY = AnchorY;
             }
 
             if (LineStyle) {
-                idx = LineStyle - 1;
+                const idx = LineStyle - 1;
                 if (!(idx in lines)) {
                     lines[idx] = {
                         obj: lineStyles[idx],
@@ -236,14 +227,13 @@ class VectorToCanvas {
                     };
                 }
 
-                obj = lines[idx];
-                cache = obj.cache;
-                cache[cache.length] = [0, LineX, LineY];
-                var code = [2, record.AnchorX, record.AnchorY];
+                const obj = lines[idx];
+                obj.cache.push([CMD.MOVE_TO, LineX, LineY]);
                 if (record.isCurved) {
-                    code = [1, record.ControlX, record.ControlY, record.AnchorX, record.AnchorY];
+                    obj.cache.push([CMD.CURVE_TO, record.ControlX, record.ControlY, record.AnchorX, record.AnchorY]);
+                } else {
+                    obj.cache.push([CMD.LINE_TO, record.AnchorX, record.AnchorY]);
                 }
-                cache[cache.length] = code;
             }
 
             LineX = AnchorX;
@@ -253,7 +243,8 @@ class VectorToCanvas {
         return stack;
     }
 
-    fillMerge(fills0: Fills, fills1: Fills, isMorph: boolean): StyleObj[] {
+    private fillMerge(fills0: Fills, fills1: Fills, isMorph: boolean): StyleObj[]
+    {
         fills0 = this.fillReverse(fills0);
         for (var i in fills0) {
             if (!fills0.hasOwnProperty(i)) {
@@ -275,7 +266,8 @@ class VectorToCanvas {
         return this.coordinateAdjustment(fills1, isMorph);
     }
 
-    fillReverse(fills0: Fills): Fills {
+    private fillReverse(fills0: Fills): Fills
+    {
         if (!fills0.length) {
             return fills0;
         }
@@ -329,8 +321,9 @@ class VectorToCanvas {
         return fills0;
     }
 
-    coordinateAdjustment(fills1: Fills, isMorph: boolean): StyleObj[] {
-        const result = [];
+    private coordinateAdjustment(fills1: Fills, isMorph: boolean): StyleObj[]
+    {
+        const result: StyleObj[] = [];
         for (var i in fills1) {
             if (!fills1.hasOwnProperty(i)) {
                 continue;
@@ -391,51 +384,39 @@ class VectorToCanvas {
             }
 
             var aLen = adjustment.length;
-            var cache = [];
+            const cache: Command[] = [];
             var obj = {};
             for (var idx = 0; idx < aLen; idx++) {
                 var data = adjustment[idx];
                 obj = data.obj;
                 var caches = data.cache;
                 var cacheLength = caches.length;
-                cache[cache.length] = [0, data.startX, data.startY];
+                cache.push([CMD.MOVE_TO, data.startX, data.startY]);
                 for (var compIdx = 0; compIdx < cacheLength; compIdx++) {
                     var r = caches[compIdx];
-                    var code = [2, r.AnchorX, r.AnchorY];
                     if (r.isCurved) {
-                        code = [1, r.ControlX, r.ControlY, r.AnchorX, r.AnchorY];
+                        cache.push([CMD.CURVE_TO, r.ControlX, r.ControlY, r.AnchorX, r.AnchorY]);
+                    } else {
+                        cache.push([CMD.LINE_TO, r.AnchorX, r.AnchorY]);
                     }
-                    cache[cache.length] = code;
                 }
             }
 
-            result[i] = {cache: cache, obj: obj};
+            result[i] = { cache, obj };
         }
         return result;
     }
 
-    setStack(stack: StyleObj[], array: any[]): StyleObj[] {
-        if (!array.length)
-            return stack;
-
-        for (const data of array) {
-            if (!data)
-                continue;
-
-            stack.push({
-                obj: data.obj,
-                cmd: this.buildCommand(data.cache)
-            });
-        }
+    private setStack(stack: StyleObj[], array: StyleObj[]): StyleObj[]
+    {
+        for (const k in array)
+            stack.push(array[k]);
 
         return stack;
     }
 
-    buildCommand(cache: Command[]): CommandF {
-        return this.executeCanvas2D.bind(this, cache);
-    }
-
-    executeCanvas2D(cache: Command[], ctx: CanvasRenderingContext2D, ct: ColorTransform, isClip: boolean): void {
+    execute(cache: Command[], ctx: CanvasRenderingContext2D, ct?: ColorTransform, isClip?: boolean): void
+    {
         var length = cache.length;
         var i = 0;
         while (i < length) {

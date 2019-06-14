@@ -2183,11 +2183,11 @@ export class SwfTag {
 
             let shape;
             if (first6Bits & 0x20) {
-                var numBits = first6Bits & 0x0f;
+                const numBits = first6Bits & 0x0f;
                 if (first6Bits & 0x10) {
-                    shape = this.straightEdgeRecord(tagType, numBits);
+                    shape = this.straightEdgeRecord(numBits);
                 } else {
-                    shape = this.curvedEdgeRecord(tagType, numBits);
+                    shape = this.curvedEdgeRecord(numBits);
                 }
             } else if (first6Bits) {
                 shape = this.styleChangeRecord(tagType, first6Bits, currentNumBits);
@@ -2204,8 +2204,7 @@ export class SwfTag {
         return shapeRecords;
     }
 
-    private straightEdgeRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape,
-                               numBits: number): StraightEdgeRecord
+    private straightEdgeRecord(numBits: number): StraightEdgeRecord
     {
         const bitio = this.bitio;
 
@@ -2239,8 +2238,7 @@ export class SwfTag {
         };
     }
 
-    private curvedEdgeRecord(tagType: TAG_DefineShape | TAG_DefineMorphShape,
-                             numBits: number): CurvedEdgeRecord
+    private curvedEdgeRecord(numBits: number): CurvedEdgeRecord
     {
         const bitio = this.bitio;
         const controlDeltaX = bitio.getSIBits(numBits + 2);
