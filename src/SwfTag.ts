@@ -590,7 +590,7 @@ const enum FillStyleType {
     NonSmoothedClippedBitmap = 0x43
 };
 
-type FillStyle = {
+export type FillStyle = {
     type: FillStyleType.Solid;
     Color: Color;
 } | {

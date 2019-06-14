@@ -8,7 +8,7 @@
  */
 
 import { ColorTransform } from './utils';
-import { CurvedEdgeRecord, StraightEdgeRecord, ShapeWithStyle } from './SwfTag';
+import { FillStyle, ShapeRecord, ShapeWithStyle, StyleChangeRecord } from './SwfTag';
 
 export const enum CAP {
     ROUND = 0,
@@ -56,15 +56,27 @@ export type Command = [ CMD.MOVE_TO, number, number ]
 
 export type CommandF = (ctx: CanvasRenderingContext2D, ct?: ColorTransform, isClip?: boolean) => void;
 
+type FillData = {
+    obj: FillStyle;
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    cache: Exclude<ShapeRecord, StyleChangeRecord>[];
+};
+
+type Fills = FillData[][];
+
 export type StyleObj = {
-    obj: any,
+    obj: FillData | any,
     cmd: CommandF
 };
 
-function clone(src: CurvedEdgeRecord | StraightEdgeRecord,
-              posX: number,
-              posY: number): CurvedEdgeRecord | StraightEdgeRecord
+function transform(src: ShapeRecord | undefined, posX: number, posY: number): ShapeRecord
 {
+    if (!src || src.isChange !== false)
+        return src;
+
     if (src.isCurved) {
         return {
             isChange: false,
@@ -74,16 +86,16 @@ function clone(src: CurvedEdgeRecord | StraightEdgeRecord,
             AnchorX: src.AnchorX + posX,
             AnchorY: src.AnchorY + posY
         };
+    } else {
+        return {
+            isChange: false,
+            isCurved: false,
+            ControlX: 0,
+            ControlY: 0,
+            AnchorX: src.AnchorX + posX,
+            AnchorY: src.AnchorY + posY
+        };
     }
-
-    return {
-        isChange: false,
-        isCurved: false,
-        ControlX: 0,
-        ControlY: 0,
-        AnchorX: src.AnchorX + posX,
-        AnchorY: src.AnchorY + posY
-    };
 }
 
 class VectorToCanvas {
@@ -92,7 +104,7 @@ class VectorToCanvas {
         var fillStyles = shapes.fillStyles;
         var records = shapes.ShapeRecords;
         var idx = 0;
-        var obj = {} as any;
+        var obj = {} as FillData;
         var cache  = [];
         var AnchorX = 0;
         var AnchorY = 0;
@@ -111,7 +123,7 @@ class VectorToCanvas {
         var length = records.length;
         var position = {x: 0, y: 0};
         for (var i = 0; i < length; i++) {
-            var record = records[i];
+            var record = transform(records[i], position.x, position.y);
             if (!record) {
                 stack = this.setStack(stack, this.fillMerge(fills0, fills1, isMorph));
                 stack = this.setStack(stack, lines);
@@ -164,9 +176,8 @@ class VectorToCanvas {
             if (!(record.isChange === false))
                 throw new Error('Should be edge record');
 
-            const recordClone = clone(record, position.x, position.y);
-            position.x = AnchorX = recordClone.AnchorX;
-            position.y = AnchorY = recordClone.AnchorY;
+            position.x = AnchorX = record.AnchorX;
+            position.y = AnchorY = record.AnchorY;
 
             if (FillStyle0) {
                 idx = FillStyle0 - 1;
@@ -187,7 +198,7 @@ class VectorToCanvas {
 
                 obj = fills0[idx][depth];
                 cache = obj.cache;
-                cache[cache.length] = recordClone;
+                cache[cache.length] = record;
                 obj.endX = AnchorX;
                 obj.endY = AnchorY;
             }
@@ -211,7 +222,7 @@ class VectorToCanvas {
 
                 obj = fills1[idx][depth];
                 cache = obj.cache;
-                cache[cache.length] = recordClone;
+                cache[cache.length] = record;
                 obj.endX = AnchorX;
                 obj.endY = AnchorY;
             }
@@ -228,9 +239,9 @@ class VectorToCanvas {
                 obj = lines[idx];
                 cache = obj.cache;
                 cache[cache.length] = [0, LineX, LineY];
-                var code = [2, recordClone.AnchorX, recordClone.AnchorY];
-                if (recordClone.isCurved) {
-                    code = [1, recordClone.ControlX, recordClone.ControlY, recordClone.AnchorX, recordClone.AnchorY];
+                var code = [2, record.AnchorX, record.AnchorY];
+                if (record.isCurved) {
+                    code = [1, record.ControlX, record.ControlY, record.AnchorX, record.AnchorY];
                 }
                 cache[cache.length] = code;
             }
@@ -242,31 +253,29 @@ class VectorToCanvas {
         return stack;
     }
 
-    fillMerge(fills0: any[], fills1: any[], isMorph: boolean): any[] {
+    fillMerge(fills0: Fills, fills1: Fills, isMorph: boolean): StyleObj[] {
         fills0 = this.fillReverse(fills0);
-        if (fills0.length) {
-            for (var i in fills0) {
-                if (!fills0.hasOwnProperty(i)) {
-                    continue;
-                }
-                var fills = fills0[i];
-                if (i in fills1) {
-                    var fill1 = fills1[i];
-                    for (var depth in fills) {
-                        if (!fills.hasOwnProperty(depth)) {
-                            continue;
-                        }
-                        fill1[fill1.length] = fills[depth];
+        for (var i in fills0) {
+            if (!fills0.hasOwnProperty(i)) {
+                continue;
+            }
+            var fills = fills0[i];
+            if (i in fills1) {
+                var fill1 = fills1[i];
+                for (var depth in fills) {
+                    if (!fills.hasOwnProperty(depth)) {
+                        continue;
                     }
-                } else {
-                    fills1[i] = fills;
+                    fill1[fill1.length] = fills[depth];
                 }
+            } else {
+                fills1[i] = fills;
             }
         }
         return this.coordinateAdjustment(fills1, isMorph);
     }
 
-    fillReverse(fills0: any[]): any[] {
+    fillReverse(fills0: Fills): Fills {
         if (!fills0.length) {
             return fills0;
         }
@@ -320,7 +329,8 @@ class VectorToCanvas {
         return fills0;
     }
 
-    coordinateAdjustment(fills1: any[], isMorph: boolean): any[] {
+    coordinateAdjustment(fills1: Fills, isMorph: boolean): StyleObj[] {
+        const result = [];
         for (var i in fills1) {
             if (!fills1.hasOwnProperty(i)) {
                 continue;
@@ -399,9 +409,9 @@ class VectorToCanvas {
                 }
             }
 
-            fills1[i] = {cache: cache, obj: obj};
+            result[i] = {cache: cache, obj: obj};
         }
-        return fills1;
+        return result;
     }
 
     setStack(stack: StyleObj[], array: any[]): StyleObj[] {
