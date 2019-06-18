@@ -200,16 +200,12 @@ export class Swf2js {
         stage.reload(url, options);
     }
 
-    createRootMovieClip(width: number,
-                        height: number,
-                        fps: number,
-                        options: Partial<StageOptions>): DisplayObject
+    createRootMovieClip(width: number = 240,
+                        height: number = 240,
+                        fps: number = 60,
+                        options: Partial<StageOptions> = {}): DisplayObject
     {
         var stage = new Stage();
-        width = width || 240;
-        height = height || 240;
-        fps = fps || 60;
-
         stage.setBaseWidth(width);
         stage.setBaseHeight(height);
         stage.setFrameRate(fps);

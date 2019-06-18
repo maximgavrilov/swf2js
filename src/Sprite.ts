@@ -274,7 +274,7 @@ export class Sprite extends DisplayObjectContainer {
         const maskObj = this.getMask();
         const myStage = this.getStage();
 
-        for (let depth in container) {
+        for (const depth in container) {
             const instanceId = container[depth];
             const instance = myStage.getInstance(instanceId);
 

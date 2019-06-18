@@ -133,8 +133,6 @@ export class Stage {
 
     // params
     private matrix: Matrix = [1,0,0,1,0,0];
-    private _matrix: Matrix = [1,0,0,1,0,0];
-    private _colorTransform: ColorTransform = [1,1,1,1,0,0,0,0];
     buttonHits: ButtonHit[] = [];
     downEventHits: Action[] = [];
     moveEventHits: Action[] = [];
@@ -599,15 +597,16 @@ export class Stage {
 
         const backgroundColor = this.getBackgroundColor();
         if (!backgroundColor || backgroundColor === "transparent") {
-            const canvas = this.context.canvas;
-            this.context.clearRect(0, 0, canvas.width + 1, canvas.height + 1);
+            this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
         } else {
             this.context.fillStyle = backgroundColor;
-            this.context.fillRect(0, 0, this.getWidth() + 1, this.getHeight() + 1);
+            this.context.fillRect(0, 0, this.canvas.width, this.canvas.height);
         }
 
         const mc = this.getParent();
-        mc.render(this.context, this._matrix, this._colorTransform, this, true);
+        const matrix: Matrix = [1,0,0,1,0,0];
+        const colorTransform: ColorTransform = [1,1,1,1,0,0,0,0];
+        mc.render(this.context, matrix, colorTransform, this, true);
     }
 
     executeAction(): void {
