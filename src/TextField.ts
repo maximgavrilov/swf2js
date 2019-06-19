@@ -34,7 +34,7 @@ export class TextFormat {
     public blockIndent = 0;
     public bold = false;
     public bullet = false;
-    public color: Color = {R: 0, G: 0, B: 0, A: 1};
+    public color: Color = [0, 0, 0, 1];
     public font: string = "sans-serif";
     public indent = 0;
     public italic = false;
@@ -222,9 +222,9 @@ export class TextField extends InteractiveObject {
         // this.antiAliasType = null;
         this.autoSize = "none";
         this.background = false;
-        this.backgroundColor = {R: 255, G: 255, B: 255, A: 1};
+        this.backgroundColor = [255, 255, 255, 1];
         this.border = false;
-        this.borderColor = {R: 0, G: 0, B: 0, A: 1};
+        this.borderColor = [0, 0, 0, 1];
         // this.condenseWhite = 0;
         this.htmlText = '';
         // this.password = 0;
@@ -235,7 +235,7 @@ export class TextField extends InteractiveObject {
         this.multiline = false;
         // this.selectable = 0;
         // this.sharpness = 0;
-        this.textColor = {R: 0, G: 0, B: 0, A: 1};
+        this.textColor = [0, 0, 0, 1];
         // this.thickness = 0;
         this.type = "dynamic";
         this.wordWrap = false;

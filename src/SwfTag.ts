@@ -920,7 +920,8 @@ export class SwfTag {
                 stage.backgroundColor = stage.bgcolor;
             } else {
                 const c = this.header.bgcolor;
-                stage.setBackgroundColor(c.R, c.G, c.B);
+                const [R, G, B] = c;
+                stage.setBackgroundColor(R, G, B);
             }
 
             for (const f of this.stageInit)
@@ -1600,12 +1601,7 @@ export class SwfTag {
                 break;
 
             case TAG.SetBackgroundColor: // BackgroundColor
-                this.header.bgcolor = {
-                    R: bitio.getUI8(),
-                    G: bitio.getUI8(),
-                    B: bitio.getUI8(),
-                    A: 1
-                };
+                this.header.bgcolor = this.rgb();
                 break;
 
             case TAG.DefineFont: // DefineFont
@@ -1998,24 +1994,24 @@ export class SwfTag {
     private rgb(): Color
     {
         const bitio = this.bitio;
-        return {
-            R: bitio.getUI8(),
-            G: bitio.getUI8(),
-            B: bitio.getUI8(),
-            A: 1
-        };
+        return [
+            bitio.getUI8(),
+            bitio.getUI8(),
+            bitio.getUI8(),
+            1
+        ];
     }
 
     private rgba(): Color
     {
         const bitio = this.bitio;
 
-        return {
-            R: bitio.getUI8(),
-            G: bitio.getUI8(),
-            B: bitio.getUI8(),
-            A: bitio.getUI8() / 255
-        };
+        return [
+            bitio.getUI8(),
+            bitio.getUI8(),
+            bitio.getUI8(),
+            bitio.getUI8() / 255
+        ];
     }
 
     private matrix(): Matrix
@@ -2691,12 +2687,12 @@ export class SwfTag {
                 shapes.ShapeRecords = _this.shape(TAG.DefineShape);
                 shapes.lineStyles = [{
                     type: LineStyleType.Type1,
-                    Color: {R: 0, G: 0, B: 0, A: 1},
+                    Color: [0, 0, 0, 1],
                     Width: 0
                 }];
                 shapes.fillStyles = [{
                     type: FillStyleType.Solid,
-                    Color: {R: 0, G: 0, B: 0, A: 1}
+                    Color: [0, 0, 0, 1]
                 }];
 
                 GlyphShapeTable.push(shapes);
@@ -3763,8 +3759,9 @@ export class SwfTag {
         var _this = this;
         var bitio = _this.bitio;
         var rgba = _this.rgba();
-        var alpha = rgba.A;
-        var color = rgba.R << 16 | rgba.G << 8 | rgba.B;
+        const [R, G, B, A] = rgba;
+        var alpha = A;
+        var color = R << 16 | G << 8 | B;
         var blurX = bitio.getUI32() / 0x10000;
         var blurY = bitio.getUI32() / 0x10000;
         var angle = bitio.getUI32() / 0x10000 * 180 / Math.PI;
@@ -3801,8 +3798,9 @@ export class SwfTag {
         var _this = this;
         var bitio = _this.bitio;
         var rgba = _this.rgba();
-        var alpha = rgba.A;
-        var color = rgba.R << 16 | rgba.G << 8 | rgba.B;
+        const [R, G, B, A] = rgba;
+        var alpha = A;
+        var color = R << 16 | G << 8 | B;
         var blurX = bitio.getUI32() / 0x10000;
         var blurY = bitio.getUI32() / 0x10000;
         var strength = bitio.getFloat16() / 256;
@@ -3875,9 +3873,9 @@ export class SwfTag {
         var colors = [];
         var alphas = [];
         for (i = 0; i < NumColors; i++) {
-            var rgba = _this.rgba();
-            alphas[alphas.length] = rgba.A;
-            colors[colors.length] = rgba.R << 16 | rgba.G << 8 | rgba.B;
+            const [R, G, B, A] = _this.rgba();
+            alphas[alphas.length] = A;
+            colors[colors.length] = R << 16 | G << 8 | B;
         }
 
         var ratios = [];
@@ -3950,9 +3948,9 @@ export class SwfTag {
         var colors = [];
         var alphas = [];
         for (i = 0; i < NumColors; i++) {
-            var rgba = _this.rgba();
-            alphas[alphas.length] = rgba.A;
-            colors[colors.length] = rgba.R << 16 | rgba.G << 8 | rgba.B;
+            const [R, G, B, A] = _this.rgba();
+            alphas[alphas.length] = A;
+            colors[colors.length] = R << 16 | G << 8 | B;
         }
 
         var ratios = [];

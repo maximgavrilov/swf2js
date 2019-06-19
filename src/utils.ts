@@ -134,12 +134,7 @@ export const Bounds = (class {
     }
 });
 
-export type Color = {
-    R: number;
-    G: number;
-    B: number;
-    A: number;
-};
+export type Color = [ number, number, number, number ]; // RGBA
 
 export type ColorTransform = [
     number, number, number, number,
@@ -160,25 +155,27 @@ export type Matrix = [
 ];
 
 export function generateColorTransform(color: Color, data: ColorTransform): Color {
-    return {
-        R: Math.max(0, Math.min((color.R * data[0]) + data[4], 255))|0,
-        G: Math.max(0, Math.min((color.G * data[1]) + data[5], 255))|0,
-        B: Math.max(0, Math.min((color.B * data[2]) + data[6], 255))|0,
-        A: Math.max(0, Math.min((color.A * 255 * data[3]) + data[7], 255)) / 255
-    };
+    const [R, G, B, A] = color;
+    return [
+        Math.max(0, Math.min((R * data[0]) + data[4], 255))|0,
+        Math.max(0, Math.min((G * data[1]) + data[5], 255))|0,
+        Math.max(0, Math.min((B * data[2]) + data[6], 255))|0,
+        Math.max(0, Math.min((A * 255 * data[3]) + data[7], 255)) / 255
+    ];
 }
 
 export function colorCSS(color: Color): string {
-    return `rgba(${color.R}, ${color.G}, ${color.B}, ${color.A})`;
+    const [R, G, B, A] = color;
+    return `rgba(${R}, ${G}, ${B}, ${A})`;
 }
 
 export function intToRGBA(int: number, alpha: number = 100): Color {
-    return {
-        R: (int & 0xff0000) >> 16,
-        G: (int & 0x00ff00) >> 8,
-        B: (int & 0x0000ff),
-        A: (alpha / 100)
-    };
+    return [
+        (int & 0xff0000) >> 16,
+        (int & 0x00ff00) >> 8,
+        (int & 0x0000ff),
+        (alpha / 100)
+    ];
 }
 
 export function multiplicationMatrix(a: Matrix, b: Matrix): Matrix {

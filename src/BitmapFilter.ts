@@ -41,9 +41,7 @@ export abstract class BitmapFilter {
 
         var i = 0;
         var pxData = imgData.data;
-        var R = color.R;
-        var G = color.G;
-        var B = color.B;
+        const [ R, G, B ] = color;
         var length = pxData.length;
         for (; i < length; i += 4) {
             var aKey = i + 3;

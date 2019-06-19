@@ -180,7 +180,8 @@ export class StaticText extends DisplayObject {
             ctx.setTransform(m2[0],m2[1],m2[2],m2[3],m2[4],m2[5]);
             var color = record.getColor();
             color = generateColorTransform(color, colorTransform);
-            ctx.fillStyle = "rgba(" + color.R + "," + color.G + "," + color.B + "," + color.A + ")";
+            const [R, G, B, A] = color;
+            ctx.fillStyle = "rgba(" + R + "," + G + "," + B + "," + A + ")";
             for (var idx = 0; idx < shapeLength; idx++) {
                 var styleObj = shapes[idx];
                 if (!isClipDepth) {

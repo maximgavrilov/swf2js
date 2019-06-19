@@ -8,94 +8,60 @@
  */
 
 import { MovieClip } from './MovieClip';
-
 import {
     ColorTransform,
     intToRGBA, multiplicationColor
 } from './utils';
 
-/**
- * @param mc
- * @constructor
- */
-export var Color = function (mc)
-{
-    var _this = this;
-    _this.movieClip = mc;
-    _this.variables = {};
-};
+export class Color {
+    private variables = {};
 
-/**
- *
- * @param name
- * @returns {*}
- */
-Color.prototype.getProperty = function (name)
-{
-    return this.variables[name];
-};
+    constructor(private mc: MovieClip) {
+    }
 
-/**
- * @param name
- * @param value
- */
-Color.prototype.setProperty = function (name, value)
-{
-    this.variables[String(name)] = value;
-};
+    getProperty(name: string): any
+    {
+        return this.variables[name];
+    }
+
+    setProperty(name: string, value: any): void
+    {
+        this.variables[String(name)] = value;
+    }
 
 
-/**
- * @param offset
- */
-Color.prototype.setRGB = function (offset)
-{
-    var _this = this;
-    var mc = _this.movieClip;
-    if (mc instanceof MovieClip) {
-        mc = mc as any;
+    setRGB(offset: number): void
+    {
+        if (!(this.mc instanceof MovieClip))
+            return;
 
-        offset |= 0;
-        var obj = intToRGBA(offset);
-        var colorTransform = mc.getOriginColorTransform();
+        const [R, G, B, A] = intToRGBA(offset | 0);
+        const colorTransform = this.mc.getOriginColorTransform();
         if (colorTransform) {
-            const multiColor: ColorTransform = [obj.R, obj.G, obj.B, obj.A * 255, 0, 0, 0, 0];
+            const multiColor: ColorTransform = [R, G, B, A * 255, 0, 0, 0, 0];
             const color = multiplicationColor(colorTransform, multiColor);
-            mc.setColorTransform(color);
+            this.mc.setColorTransform(color);
         }
     }
-};
 
-/**
- * @returns {*[]|*}
- */
-Color.prototype.getTransform = function ()
-{
-    var _this = this;
-    var mc = _this.movieClip;
-    if (mc instanceof MovieClip) {
-        mc = mc as any;
-        return mc.getColorTransform();
+    getTransform(): ColorTransform | undefined
+    {
+        if (this.mc instanceof MovieClip)
+            return this.mc.getColorTransform();
+        return undefined;
     }
-    return undefined;
-};
 
-/**
- * @param obj
- */
-Color.prototype.setTransform = function (obj)
-{
-    var _this = this;
-    var mc = _this.movieClip;
-    if (mc instanceof MovieClip) {
-        mc = mc as any;
-        var colorTransform = mc.getOriginColorTransform();
-        var multiColor: ColorTransform = [
+    setTransform(obj: any): void
+    {
+        if (!(this.mc instanceof MovieClip))
+            return;
+
+        const colorTransform = this.mc.getOriginColorTransform();
+        const multiColor: ColorTransform = [
             obj.rb, obj.gb, obj.bb, obj.ab,
             obj.ra, obj.ga, obj.ba, obj.aa
         ];
-        var color = multiplicationColor(colorTransform, multiColor);
-        mc.setColorTransform(color);
+        const color = multiplicationColor(colorTransform, multiColor);
+        this.mc.setColorTransform(color);
     }
-};
-
+}

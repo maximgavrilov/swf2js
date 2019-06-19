@@ -78,7 +78,8 @@ export class Graphics {
         if (!this.isFillDraw)
             this.recodes.push([CMD.BEGIN_PATH]);
 
-        this.recodes.push([CMD.FILL_STYLE, color.R, color.G, color.B, color.A]);
+        const [R, G, B, A] = color;
+        this.recodes.push([CMD.FILL_STYLE, R, G, B, A]);
 
         this.addCacheKey(rgb, alpha);
         this.isFillDraw = true;
@@ -113,7 +114,8 @@ export class Graphics {
             if (this.isLineDraw)
                 this.lineRecodes.push([CMD.STROKE]);
             this.lineRecodes.push([CMD.BEGIN_PATH]);
-            this.lineRecodes.push([CMD.STROKE_STYLE, color.R, color.G, color.B, color.A]);
+            const [R, G, B, A] = color;
+            this.lineRecodes.push([CMD.STROKE_STYLE, R, G, B, A]);
             this.lineRecodes.push([CMD.LINE_WIDTH, width]);
             this.lineRecodes.push([CMD.LINE_CAP, capsStyle]);
             this.lineRecodes.push([CMD.LINE_JOIN, jointStyle]);
