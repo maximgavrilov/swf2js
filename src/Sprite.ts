@@ -11,6 +11,7 @@ import { CLS, DisplayObject, HitObject } from './DisplayObject';
 import { DisplayObjectContainer } from './DisplayObjectContainer';
 import { ClipEvent } from './EventDispatcher';
 import { Graphics } from './Graphics';
+import { MovieClip } from './MovieClip';
 import { Shape } from './Shape';
 import { StaticText } from './StaticText';
 import { SoundTransform } from './SoundTransform';
@@ -337,7 +338,7 @@ export class Sprite extends DisplayObjectContainer {
         return cacheKey;
     }
 
-    putFrame(stage: Stage, clipEvent: ClipEvent): void {
+    putFrame(stage: Stage, clipEvent: ClipEvent, newTags: MovieClip[]): void {
         this.active = true;
         this.dispatchEvent(clipEvent, stage);
     }

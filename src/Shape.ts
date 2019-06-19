@@ -11,6 +11,7 @@ import { cacheStore } from './CacheStore';
 import { ClipEvent } from './EventDispatcher';
 import { CLS, DisplayObject } from './DisplayObject';
 import { Graphics } from './Graphics';
+import { MovieClip } from './MovieClip';
 import { Stage } from './Stage';
 import { isLineStyle, StyleObj, vtc } from './VectorToCanvas';
 import { FillStyleType, LineStyleType } from './SwfTag';
@@ -36,7 +37,7 @@ export class Shape extends DisplayObject {
     addActions(): void {
     }
 
-    putFrame(stage: Stage, clipEvent: ClipEvent): void {
+    putFrame(stage: Stage, clipEvent: ClipEvent, newTags: MovieClip[]): void {
         this.active = true;
         this.dispatchEvent(clipEvent, stage);
     }

@@ -9,7 +9,7 @@
 
 import { cacheStore } from './CacheStore';
 import { DisplayObjectContainer } from './DisplayObjectContainer';
-import { EventDispatcher } from './EventDispatcher';
+import { ClipEvent, EventDispatcher } from './EventDispatcher';
 import { BitmapFilter } from './BitmapFilter';
 import { keyClass } from './Key';
 import { MovieClip } from './MovieClip';
@@ -1886,6 +1886,9 @@ export class DisplayObject extends EventDispatcher {
     }
 
     addActions(stage: Stage): void {
+    }
+
+    putFrame(stage: Stage, clipEvent: ClipEvent, newTags: MovieClip[]): void {
     }
 
     getTags(): any {

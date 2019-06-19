@@ -140,7 +140,7 @@ export class Stage {
     keyDownEventHits: Action[] = [];
     keyUpEventHits: Action[] = [];
     actions: Action[] = [];
-    private instances = [];
+    private instances: { [id: number]: DisplayObject } = {};
     readonly placeObjects: {
         [instanceId: number]: {
             [frame: number]: {
@@ -166,8 +166,7 @@ export class Stage {
     private parent: MovieClip;
 
     // render
-    doneTags = [];
-    newTags = [];
+    doneTags: DisplayObject[] = [];
 
     constructor() {
         const mc = new MovieClip();
@@ -408,7 +407,7 @@ export class Stage {
         // reset mc
         const mc = this.getParent();
         mc.resetContainer();
-        mc.instances = [];
+        mc.instances = {};
 
         // build
         swftag.buildStage(this, name);
@@ -569,22 +568,24 @@ export class Stage {
         if (mouseEvents.onMouseUp)
             this.upEventHits.push({as: mouseEvents.onMouseUp, mc });
 
-        this.putFrame();
-        this.addActions();
+        const newTags = this.putFrame();
+        this.addActions(newTags);
         this.executeAction();
         this.render();
     }
 
-    putFrame(): void {
-        this.newTags = [];
+    putFrame(): MovieClip[] {
+        const newTags: MovieClip[] = [];
 
         clipEvent.type = "enterFrame";
         for (const tag of this.doneTags)
-            tag.putFrame(this, clipEvent);
+            tag.putFrame(this, clipEvent, newTags);
+
+        return newTags;
     }
 
-    addActions(): void {
-        for (const tag of this.newTags)
+    addActions(newTags: MovieClip[]): void {
+        for (const tag of newTags)
             tag.addActions(this);
     }
 

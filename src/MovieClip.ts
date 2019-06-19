@@ -898,80 +898,69 @@ export class MovieClip extends Sprite {
         }
     }
 
-    putFrame(stage: Stage, clipEvent: ClipEvent): void {
-        var _this = this;
-        var myStage = _this.getStage();
-        var prevTags;
-        var stopFlag = _this.stopFlag;
-        if (!stopFlag && _this.active) {
-            var frame = _this.getCurrentFrame();
-            var totalFrames = _this.getTotalFrames();
+    putFrame(stage: Stage, clipEvent: ClipEvent, newTags: MovieClip[]): void {
+        const myStage = this.getStage();
+        let prevTags;
+        if (!this.stopFlag && this.active) {
+            let frame = this.getCurrentFrame();
+            const totalFrames = this.getTotalFrames();
             if (totalFrames > 1) {
-                if (_this.isLoad) {
-                    prevTags = _this.getTags();
+                if (this.isLoad) {
+                    prevTags = this.getTags();
                     frame++;
                 }
                 if (frame > totalFrames) {
                     frame = 1;
-                    _this.resetCheck();
+                    this.resetCheck();
                 }
 
-                _this.setCurrentFrame(frame);
-                _this.remove(stage);
-                _this.isAction = true;
-                _this.soundStopFlag = false;
+                this.setCurrentFrame(frame);
+                this.remove(stage);
+                this.isAction = true;
+                this.soundStopFlag = false;
             }
         }
 
-        if (_this.removeFlag) {
+        if (this.removeFlag)
             return;
-        }
 
-        _this.active = true;
+        this.active = true;
         if (prevTags !== undefined) {
-            if (_this.isSwap) {
-                _this.resetSwap();
-            }
+            if (this.isSwap)
+                this.resetSwap();
 
-            var tags = _this.getTags();
-            var length = tags.length;
-            if (length && tags.toString() !== prevTags.toString()) {
-                for (var depth in tags) {
-                    if (!tags.hasOwnProperty(depth)) {
+            const tags = this.getTags();
+            if (tags.length && tags.toString() !== prevTags.toString()) {
+                for (const depth in tags) {
+                    if (tags.hasOwnProperty(depth))
                         continue;
-                    }
 
-                    var instanceId = tags[depth];
-                    if (depth in prevTags && instanceId === prevTags[depth]) {
+                    const instanceId = tags[depth];
+                    if (depth in prevTags && instanceId === prevTags[depth])
                         continue;
-                    }
 
-                    var instance = myStage.getInstance(instanceId);
-                    if (instance && instance instanceof MovieClip) {
-                        stage.newTags.unshift(instance);
-                    }
+                    const instance = myStage.getInstance(instanceId);
+                    if (instance && instance instanceof MovieClip)
+                        newTags.unshift(instance);
                 }
             }
         }
 
-        if (_this.isLoad) {
-            clipEvent.type = "enterFrame";
-            _this.dispatchEvent(clipEvent, stage);
-            _this.dispatchOnEvent("onEnterFrame", stage);
-            _this.addTouchEvent(stage);
-            if (_this.isAction) {
-                _this.isAction = false;
-                var as = _this.getActions(_this.getCurrentFrame());
-                if (as) {
-                    _this.setActionQueue(as, stage);
-                }
+        if (this.isLoad) {
+            this.dispatchEvent(clipEvent, stage);
+            this.dispatchOnEvent("onEnterFrame", stage);
+            this.addTouchEvent(stage);
+            if (this.isAction) {
+                this.isAction = false;
+                const as = this.getActions(this.getCurrentFrame());
+                if (as)
+                    this.setActionQueue(as, stage);
             }
         } else {
             // init action
-            var initAction = myStage.initActions[_this.getCharacterId()];
-            if (typeof initAction === "function") {
-                initAction.apply(_this);
-            }
+            const initAction = myStage.initActions[this.getCharacterId()];
+            if (typeof initAction === "function")
+                initAction.apply(this);
         }
     }
 
@@ -1130,7 +1119,7 @@ export class MovieClip extends Sprite {
         _this.soundStopFlag = true;
     }
 
-    getTags(frame: number = this.getCurrentFrame()): any {
+    getTags(frame: number = this.getCurrentFrame()): number[] {
         return this.container[frame] || [];
     }
 

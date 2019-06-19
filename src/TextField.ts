@@ -11,6 +11,7 @@ import { cacheStore } from './CacheStore';
 import { ClipEvent } from './EventDispatcher';
 import { CLS } from './DisplayObject';
 import { InteractiveObject } from './InteractiveObject';
+import { MovieClip } from './MovieClip';
 import { Stage } from './Stage';
 import { DefineFont, TAG } from './SwfTag';
 import { vtc } from './VectorToCanvas';
@@ -52,7 +53,7 @@ export class TextFormat {
 export class TextField extends InteractiveObject {
     public fontId = 0;
     public fontScale = 1;
-    public inputActive = false;
+    public inputActive: boolean = false;
     public initialText: string = '';
 
     public input?: HTMLTextAreaElement;
@@ -625,7 +626,7 @@ export class TextField extends InteractiveObject {
                 preCtx.rect(rx - offsetX, ry, W, (H-40));
                 preCtx.clip();
 
-                if (_this.inputActive === false) {
+                if (!_this.inputActive) {
                     if (variables.embedFonts) {
                         _this.renderOutLine(preCtx, fontData, splitData, m3, rx - offsetX, W, fillStyle);
                     } else {
@@ -1265,11 +1266,10 @@ export class TextField extends InteractiveObject {
         }
     }
 
-    putFrame(stage: Stage, clipEvent: ClipEvent): void {
+    putFrame(stage: Stage, clipEvent: ClipEvent, newTags: MovieClip[]): void {
         this.active = true;
-        if (this.inputActive === false) {
+        if (!this.inputActive)
             this.dispatchEvent(clipEvent, stage);
-        }
     }
 
     renderHitTest(ctx: CanvasRenderingContext2D,
