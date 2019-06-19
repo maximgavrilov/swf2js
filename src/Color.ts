@@ -29,7 +29,6 @@ export class Color {
         this.variables[String(name)] = value;
     }
 
-
     setRGB(offset: number): void
     {
         if (!(this.mc instanceof MovieClip))

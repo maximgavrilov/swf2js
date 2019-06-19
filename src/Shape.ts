@@ -14,7 +14,7 @@ import { Graphics } from './Graphics';
 import { MovieClip } from './MovieClip';
 import { Stage } from './Stage';
 import { isLineStyle, StyleObj, vtc } from './VectorToCanvas';
-import { FillStyleType, LineStyleType } from './SwfTag';
+import { FillStyleType, LineStyleType, TAG } from './SwfTag';
 import {
     Bounds, ColorTransform, Matrix,
     tmpContext,
@@ -82,7 +82,7 @@ export class Shape extends DisplayObject {
 
     isMorphing(): boolean {
         const tagType = this.getTagType();
-        return (tagType === 46 || tagType === 84);
+        return (tagType === TAG.DefineMorphShape || tagType === TAG.DefineMorphShape2);
     }
 
     render(ctx: CanvasRenderingContext2D,

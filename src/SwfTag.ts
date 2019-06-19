@@ -2838,7 +2838,7 @@ export class SwfTag {
 
     private parseDefineFontName(): void
     {
-        var bitio = this.bitio;
+        const bitio = this.bitio;
         bitio.getUI16(); // FontId
         bitio.getDataUntil("\0"); // FontName
         bitio.getDataUntil("\0"); // FontCopyright
@@ -2848,24 +2848,27 @@ export class SwfTag {
     {
         const bitio = this.bitio;
 
-        const obj: DefineTextCharacter = {
-            tagType: tagType,
-            characterId: bitio.getUI16(),
-            bounds: this.rect(),
-            matrix: this.matrix(),
-            textRecords: this.getTextRecords(tagType,
-                                              bitio.getUI8(), // GlyphBits
-                                              bitio.getUI8()) // AdvanceBits
-        };
+        const characterId = bitio.getUI16();
+        const bounds = this.rect();
+        const matrix = this.matrix();
+        const GlyphBits = bitio.getUI8();
+        const AdvanceBits = bitio.getUI8();
+        const textRecords = this.getTextRecords(tagType, GlyphBits, AdvanceBits);
 
-        this.setCharacter<DefineTextCharacter>(obj.characterId, obj);
+        this.setCharacter<DefineTextCharacter>(characterId, {
+            tagType,
+            characterId,
+            bounds,
+            matrix,
+            textRecords
+        });
     }
 
-    private getTextRecords(tagType: number, GlyphBits: number, AdvanceBits: number): TextRecordData[]
+    private getTextRecords(tagType: TAG_DefineText, GlyphBits: number, AdvanceBits: number): TextRecordData[]
     {
-        var _this = this;
-        var bitio = _this.bitio;
-        var array: TextRecordData[] = [];
+        const bitio = this.bitio;
+        const array: TextRecordData[] = [];
+
         while (bitio.getUI8() !== 0) {
             bitio.incrementOffset(-1, 0);
 
@@ -2881,10 +2884,10 @@ export class SwfTag {
             }
 
             if (obj.StyleFlagsHasColor) {
-                if (tagType === 11) {
-                    obj.TextColor = _this.rgb();
+                if (tagType === TAG.DefineText) {
+                    obj.TextColor = this.rgb();
                 } else {
-                    obj.TextColor = _this.rgba();
+                    obj.TextColor = this.rgba();
                 }
             }
 
@@ -2901,11 +2904,11 @@ export class SwfTag {
             }
 
             obj.GlyphCount = bitio.getUI8();
-            obj.GlyphEntries = _this.getGlyphEntries(
+            obj.GlyphEntries = this.getGlyphEntries(
                 obj.GlyphCount, GlyphBits, AdvanceBits
             );
 
-            array[array.length] = obj;
+            array.push(obj);
         }
 
         return array;
