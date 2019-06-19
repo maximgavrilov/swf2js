@@ -593,12 +593,11 @@ export class BitIO {
 
     abcReadString(): string {
         const length = this.getU30();
-        const ret = [];
+        const ret: string[] = [];
         for (let i = 0; i < length; i++) {
             const code = this.data[this.byte_offset++];
-            if (code < 33) {
+            if (code < 33)
                 continue;
-            }
 
             switch (code) {
                 default:
@@ -614,7 +613,8 @@ export class BitIO {
                     continue;
             }
 
-            ret[ret.length] = String.fromCharCode(code);
+            const ch = String.fromCharCode(code);
+            ret.push(ch);
         }
         return ret.join("");
     }

@@ -2904,9 +2904,7 @@ export class SwfTag {
             }
 
             obj.GlyphCount = bitio.getUI8();
-            obj.GlyphEntries = this.getGlyphEntries(
-                obj.GlyphCount, GlyphBits, AdvanceBits
-            );
+            obj.GlyphEntries = this.getGlyphEntries(obj.GlyphCount, GlyphBits, AdvanceBits);
 
             array.push(obj);
         }
@@ -2916,14 +2914,16 @@ export class SwfTag {
 
     private getGlyphEntries(count: number, GlyphBits: number, AdvanceBits: number): GlyphEntry[]
     {
-        var bitio = this.bitio;
-        var array = [];
-        for (var i = count; i--;) {
-            array[array.length] = {
+        const bitio = this.bitio;
+        const array: GlyphEntry[] = [];
+
+        while (count--) {
+            array.push({
                 GlyphIndex: bitio.getUIBits(GlyphBits),
                 GlyphAdvance: bitio.getSIBits(AdvanceBits)
-            };
+            });
         }
+
         return array;
     }
 
