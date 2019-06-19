@@ -22,7 +22,7 @@ type TriangleCulling = 'negative' | 'none' | 'positive';
 export class Graphics {
     public isDraw: boolean;
 
-    private bounds: Bounds = new Bounds();
+    private bounds: Bounds = Bounds.new();
     public maxWidth: number;
     private cmd?: Command[];
     private isFillDraw: boolean;
@@ -36,7 +36,7 @@ export class Graphics {
     }
 
     clear(): this {
-        this.bounds.clear();
+        Bounds.clear(this.bounds);
         this.maxWidth = 0;
         this.cmd = null;
         this.isDraw = false;
@@ -61,7 +61,7 @@ export class Graphics {
     }
 
     setBounds(x: number, y: number): void {
-        this.bounds.set(x, y);
+        Bounds.set(this.bounds, x, y);
     }
 
     beginFill(rgb: number | string, alpha: number): Graphics {

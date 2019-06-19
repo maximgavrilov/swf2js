@@ -54,8 +54,8 @@ export class StaticText extends DisplayObject {
 
     getBounds(matrix?: Matrix): Bounds {
         if (matrix) {
-            const bounds = this.bounds.transform(matrix);
-            bounds.divide(20);
+            const bounds = Bounds.transform(this.bounds, matrix);
+            Bounds.divide(bounds, 20);
             return bounds;
         } else {
             return this.bounds;

@@ -66,63 +66,73 @@ export function cloneArray<T>(src: T[]): T[]
     return dst;
 }
 
-export class Bounds {
-    constructor(public xMin: number = Number.MAX_VALUE,
-                public yMin: number = Number.MAX_VALUE,
-                public xMax: number = -Number.MAX_VALUE,
-                public yMax: number = -Number.MAX_VALUE)
-    { }
+export type Bounds = {
+    xMin: number;
+    yMin: number;
+    xMax: number;
+    yMax: number;
+};
 
-    clone(): Bounds {
-        return new Bounds(this.xMin, this.yMin, this.xMax, this.yMax);
+export const Bounds = (class {
+    static new(xMin: number = Number.MAX_VALUE,
+               yMin: number = Number.MAX_VALUE,
+               xMax: number = -Number.MAX_VALUE,
+               yMax: number = -Number.MAX_VALUE)
+    {
+        return { xMin, yMin, xMax, yMax };
     }
 
-    clear(): void {
-        this.xMin = Number.MAX_VALUE;
-        this.yMin = Number.MAX_VALUE;
-        this.xMax = -Number.MAX_VALUE;
-        this.yMax = -Number.MAX_VALUE;
+    static clear(bounds: Bounds): void {
+        bounds.xMin = Number.MAX_VALUE;
+        bounds.yMin = Number.MAX_VALUE;
+        bounds.xMax = -Number.MAX_VALUE;
+        bounds.yMax = -Number.MAX_VALUE;
     }
 
-    set(x: number, y: number): void {
-        this.xMin = Math.min(this.xMin, x);
-        this.xMax = Math.max(this.xMax, x);
-        this.yMin = Math.min(this.yMin, y);
-        this.yMax = Math.max(this.yMax, y);
+    static clone(bounds: Bounds): Bounds {
+        const { xMin, yMin, xMax, yMax } = bounds;
+        return { xMin, yMin, xMax, yMax };
     }
 
-    divide(d: number): void {
-        this.xMin /= d;
-        this.yMin /= d;
-        this.xMax /= d;
-        this.yMax /= d;
+    static set(bounds: Bounds, x: number, y: number): void {
+        bounds.xMin = Math.min(bounds.xMin, x);
+        bounds.xMax = Math.max(bounds.xMax, x);
+        bounds.yMin = Math.min(bounds.yMin, y);
+        bounds.yMax = Math.max(bounds.yMax, y);
     }
 
-    update(bounds: Bounds): void {
-        this.xMin = Math.min(this.xMin, bounds.xMin);
-        this.xMax = Math.max(this.xMax, bounds.xMax);
-        this.yMin = Math.min(this.yMin, bounds.yMin);
-        this.yMax = Math.max(this.yMax, bounds.yMax);
+    static divide(bounds: Bounds, d: number): void {
+        bounds.xMin /= d;
+        bounds.yMin /= d;
+        bounds.xMax /= d;
+        bounds.yMax /= d;
     }
 
-    transform(matrix: Matrix): Bounds {
-        const x0 = this.xMax * matrix[0] + this.yMax * matrix[2] + matrix[4];
-        const x1 = this.xMax * matrix[0] + this.yMin * matrix[2] + matrix[4];
-        const x2 = this.xMin * matrix[0] + this.yMax * matrix[2] + matrix[4];
-        const x3 = this.xMin * matrix[0] + this.yMin * matrix[2] + matrix[4];
-        const y0 = this.xMax * matrix[1] + this.yMax * matrix[3] + matrix[5];
-        const y1 = this.xMax * matrix[1] + this.yMin * matrix[3] + matrix[5];
-        const y2 = this.xMin * matrix[1] + this.yMax * matrix[3] + matrix[5];
-        const y3 = this.xMin * matrix[1] + this.yMin * matrix[3] + matrix[5];
+    static update(bounds: Bounds, other: Bounds): void {
+        bounds.xMin = Math.min(bounds.xMin, other.xMin);
+        bounds.xMax = Math.max(bounds.xMax, other.xMax);
+        bounds.yMin = Math.min(bounds.yMin, other.yMin);
+        bounds.yMax = Math.max(bounds.yMax, other.yMax);
+    }
+
+    static transform(bounds: Bounds, matrix: Matrix): Bounds {
+        const x0 = bounds.xMax * matrix[0] + bounds.yMax * matrix[2] + matrix[4];
+        const x1 = bounds.xMax * matrix[0] + bounds.yMin * matrix[2] + matrix[4];
+        const x2 = bounds.xMin * matrix[0] + bounds.yMax * matrix[2] + matrix[4];
+        const x3 = bounds.xMin * matrix[0] + bounds.yMin * matrix[2] + matrix[4];
+        const y0 = bounds.xMax * matrix[1] + bounds.yMax * matrix[3] + matrix[5];
+        const y1 = bounds.xMax * matrix[1] + bounds.yMin * matrix[3] + matrix[5];
+        const y2 = bounds.xMin * matrix[1] + bounds.yMax * matrix[3] + matrix[5];
+        const y3 = bounds.xMin * matrix[1] + bounds.yMin * matrix[3] + matrix[5];
 
         const xMax = Math.max(-Number.MAX_VALUE, x0, x1, x2, x3);
         const xMin = Math.min(Number.MAX_VALUE, x0, x1, x2, x3);
         const yMax = Math.max(-Number.MAX_VALUE, y0, y1, y2, y3);
         const yMin = Math.min(Number.MAX_VALUE, y0, y1, y2, y3);
 
-        return new Bounds(xMin, yMin, xMax, yMax);
+        return { xMin, yMin, xMax, yMax };
     }
-}
+});
 
 export type Color = {
     R: number;

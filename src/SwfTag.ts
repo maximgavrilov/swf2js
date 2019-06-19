@@ -1887,7 +1887,7 @@ export class SwfTag {
         const xMax = this.bitio.getSIBits(nBits);
         const yMin = this.bitio.getSIBits(nBits);
         const yMax = this.bitio.getSIBits(nBits);
-        return new Bounds(xMin, yMin, xMax, yMax);
+        return Bounds.new(xMin, yMin, xMax, yMax);
     }
 
     private fillStyleArray(tagType: TAG_DefineShape): FillStyle[]
@@ -3397,7 +3397,7 @@ export class SwfTag {
         return {
             tagType,
             data: vtc.convert(shapes, true),
-            bounds: new Bounds(xMin, yMin, xMax, yMax)
+            bounds: Bounds.new(xMin, yMin, xMax, yMax)
         };
     }
 

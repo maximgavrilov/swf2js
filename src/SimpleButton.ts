@@ -163,7 +163,7 @@ export class SimpleButton extends InteractiveObject {
         var length = tags.length;
         if (length) {
             var stage = _this.getStage();
-            var result = new Bounds();
+            var result = Bounds.new();
 
             for (var depth in tags) {
                 if (!tags.hasOwnProperty(depth)) {
@@ -182,7 +182,7 @@ export class SimpleButton extends InteractiveObject {
                     continue;
                 }
 
-                result.update(bounds);
+                Bounds.update(result, bounds);
             }
         }
 

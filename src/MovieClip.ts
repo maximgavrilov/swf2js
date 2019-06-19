@@ -112,7 +112,7 @@ export class MovieClip extends Sprite {
         var textField = new TextField();
         textField.setName(name);
         textField.setLevel(depth);
-        textField.setBounds(new Bounds(0, 0, 20 * width, 20 * height));
+        textField.setBounds(Bounds.new(0, 0, 20 * width, 20 * height));
         textField.setX(x);
         textField.setY(y);
         textField.setParent(_this);

@@ -413,7 +413,7 @@ export class Sprite extends DisplayObjectContainer {
         var xMax = bounds.xMax - halfWidth;
         var yMin = bounds.yMin + halfWidth;
         var yMax = bounds.yMax - halfWidth;
-        return new Bounds(xMin, yMin, xMax, yMax);
+        return Bounds.new(xMin, yMin, xMax, yMax);
     }
 
     hitCheck(ctx: CanvasRenderingContext2D,

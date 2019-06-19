@@ -60,7 +60,7 @@ export class TextField extends InteractiveObject {
 
     protected variables: { [type: string]: any } = {};
 
-    private bounds = new Bounds(0, 0, 0, 0);
+    private bounds = Bounds.new(0, 0, 0, 0);
 
     get text(): string {
         return this.variables.text;
@@ -258,8 +258,8 @@ export class TextField extends InteractiveObject {
 
     getBounds(matrix?: Matrix): Bounds {
         if (matrix) {
-            var bounds = this.bounds.transform(matrix);
-            bounds.divide(20);
+            var bounds = Bounds.transform(this.bounds, matrix);
+            Bounds.divide(bounds, 20);
             return bounds;
         } else {
             return this.bounds;

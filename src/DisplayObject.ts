@@ -1878,7 +1878,7 @@ export class DisplayObject extends EventDispatcher {
             }
         }
 
-        return new Bounds(xMin, yMin, xMax, yMax);
+        return { xMin, yMin, xMax, yMax };
     }
 
 

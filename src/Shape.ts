@@ -26,7 +26,7 @@ import {
 type LinearGradientParams = [ number, number, number, number ];
 
 export class Shape extends DisplayObject {
-    private bounds: Bounds = new Bounds();
+    private bounds: Bounds = Bounds.new();
     private data: StyleObj[] = [];
     private _graphics: Graphics = new Graphics();
 
@@ -58,18 +58,18 @@ export class Shape extends DisplayObject {
         const isDraw = this.graphics.isDraw;
 
         if (matrix) {
-            const bounds = this.bounds.transform(matrix);
+            const bounds = Bounds.transform(this.bounds, matrix);
             if (isDraw) {
-                const gBounds = this.graphics.getBounds().transform(matrix);
-                bounds.update(gBounds);
+                const gBounds = Bounds.transform(this.graphics.getBounds(), matrix);
+                Bounds.update(bounds, gBounds);
             }
-            bounds.divide(20);
+            Bounds.divide(bounds, 20);
             return bounds;
         } else {
-            const bounds = this.bounds.clone();
+            const bounds = Bounds.clone(this.bounds);
             if (isDraw) {
                 const gBounds = this.graphics.getBounds();
-                bounds.update(gBounds);
+                Bounds.update(bounds, gBounds);
             }
             // no divide ?!
             return this.bounds;
@@ -77,7 +77,7 @@ export class Shape extends DisplayObject {
     }
 
     setBounds(bounds: Bounds): void {
-        this.bounds = bounds.clone();
+        this.bounds = Bounds.clone(bounds);
     }
 
     isMorphing(): boolean {
